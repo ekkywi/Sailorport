@@ -19,14 +19,14 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | belum dimulai |
-| API | `apps/api` | Step 2 selesai |
+| Portal | `apps/web` | belum dimulai (Step 6) |
+| API | `apps/api` | Step 5 selesai (CRUD services) |
 | Worker | `apps/worker` | belum |
 | Agent | `apps/agent` | belum |
 | Shared contracts | `packages/shared` | belum |
-| Compose | `deploy/compose` | belum |
+| Compose | `deploy/compose` | Postgres jalan |
 
-Infra: PostgreSQL + Redis (belum), auth OIDC + RBAC (belum).
+Infra: PostgreSQL (ada), Redis (belum), auth OIDC + RBAC (belum).
 
 ## Learning mode (PENTING)
 
