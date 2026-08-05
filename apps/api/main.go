@@ -1,39 +1,28 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/ekkywi/sailorport/apps/api/internal/config"
+	"github.com/ekkywi/sailorport/apps/api/internal/handler"
 )
 
-type HealthResponse struct {
-	Status  string `json:"status"`
-	Service string `json:"service"`
-	Version string `json:"version"`
-}
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	response := HealthResponse{
-		Status:  "ok",
-		Service: "sailorport-api",
-		Version: "0.1.0",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("Gagal menulis response: %v", err)
-	}
-}
-
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", healthHandler)
+	cfg := config.Load()
 
-	addr := ":8080"
-	log.Printf("Sailorport API berjalan di http://localhost%s", addr)
+	mux := http.NewServeMux()
+
+	health := handler.NewHealthHandler("sailorport-api", cfg.Version)
+	echo := handler.NewEchoHandler()
+
+	mux.Handle("/healthz", health)
+	mux.Handle("/api/v1/echo", echo)
+
+	addr := ":" + cfg.Port
+	log.Printf("Sailorport API (%s) running on http://localhost%s", cfg.AppEnv, addr)
 
 	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatalf("Server berhenti: %v", err)
+		log.Fatalf("Server stopped: %v", err)
 	}
 }
