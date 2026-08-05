@@ -5,3 +5,8 @@ build/
 .env.local
 *.log
 .DS_Store
+
+# Go binaries
+apps/api/api
+apps/worker/worker
+apps/agent/agent
