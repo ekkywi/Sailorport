@@ -9,6 +9,7 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/config"
 	"github.com/ekkywi/sailorport/apps/api/internal/db"
 	"github.com/ekkywi/sailorport/apps/api/internal/handler"
+	"github.com/ekkywi/sailorport/apps/api/internal/migrate"
 )
 
 func main() {
@@ -27,6 +28,11 @@ func main() {
 	}
 	log.Printf("Database OK (SELECT 1)")
 
+	if err := migrate.Up(sqlDB); err != nil {
+		log.Fatalf("Database migration failed: %v", err)
+	}
+	log.Printf("Database migrations OK")
+
 	mux := http.NewServeMux()
 
 	health := handler.NewHealthHandler("sailorport-api", cfg.Version)
@@ -37,7 +43,7 @@ func main() {
 
 	addr := ":" + cfg.Port
 	log.Printf("Sailorport API (%s) running on http://localhost%s", cfg.AppEnv, addr)
-	
+
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("Server stopped: %v", err)
 	}
