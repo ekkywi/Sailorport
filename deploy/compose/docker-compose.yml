@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sailorport-postgres
+    environment:
+      POSTGRES_USER: sailorport
+      POSTGRES_PASSWORD: sailorport
+      POSTGRES_DB: sailorport
+    ports:
+      - "5433:5432"
+    volumes:
+      - sailorport_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sailorport -d sailorport"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sailorport_pgdata:

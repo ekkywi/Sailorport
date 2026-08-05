@@ -14,7 +14,7 @@
 - [x] Step 0 — Struktur repo + README + git init
 - [x] Step 1 — Go install + endpoint GET `/healthz`
 - [x] Step 2 — Refactor `internal/` + config env + POST `/api/v1/echo`
-- [ ] Step 3 — PostgreSQL via Docker Compose + koneksi DB
+- [x] Step 3 — PostgreSQL via Docker Compose + koneksi DB
 - [ ] Step 4 — Migrasi tabel `services`
 - [ ] Step 5 — CRUD catalog API
 - [ ] Step 6 — Portal web menampilkan catalog
