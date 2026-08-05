@@ -6,10 +6,10 @@ import (
 )
 
 type Config struct {
-	Port string
-	AppEnv string
-	Version string
-	DatabaseURL string
+	Port		string
+	AppEnv		string
+	Version		string
+	DatabaseURL	string
 }
 
 func Load() Config {

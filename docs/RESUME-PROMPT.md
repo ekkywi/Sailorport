@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/worker/agent) + React/TS (web nanti) + PostgreSQL + Redis + Docker Compose.
 
-**Step terakhir selesai:** Step 2 (refactor internal, config env, POST `/api/v1/echo`).
+**Step terakhir selesai:** Step 5 (CRUD catalog API: list/create/get/update/delete `/api/v1/services`).
 
-**Step berikutnya:** Step 3 — PostgreSQL via Docker Compose + koneksi DB.
+**Step berikutnya:** Step 6 — Portal web menampilkan catalog (React + TypeScript + Vite di `apps/web`).
 
 Tolong lanjutkan dengan gaya panduan detail seperti sebelumnya: tujuan step, kode lengkap per file, penjelasan baris, cara test, lalu commit message.
 

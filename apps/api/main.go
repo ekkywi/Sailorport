@@ -10,6 +10,7 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/db"
 	"github.com/ekkywi/sailorport/apps/api/internal/handler"
 	"github.com/ekkywi/sailorport/apps/api/internal/migrate"
+	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
 func main() {
@@ -37,9 +38,16 @@ func main() {
 
 	health := handler.NewHealthHandler("sailorport-api", cfg.Version)
 	echo := handler.NewEchoHandler()
+	serviceStore := store.NewServicesStore(sqlDB)
+	services := handler.NewServicesHandler(serviceStore)
 
 	mux.Handle("/healthz", health)
 	mux.Handle("/api/v1/echo", echo)
+	mux.HandleFunc("GET /api/v1/services", services.List)
+	mux.HandleFunc("POST /api/v1/services", services.Create)
+	mux.HandleFunc("GET /api/v1/services/{id}", services.Get)
+	mux.HandleFunc("PUT /api/v1/services/{id}", services.Update)
+	mux.HandleFunc("DELETE /api/v1/services/{id}", services.Delete)
 
 	addr := ":" + cfg.Port
 	log.Printf("Sailorport API (%s) running on http://localhost%s", cfg.AppEnv, addr)

@@ -72,10 +72,10 @@ Satu flow ini harus jalan di mesin orang lain:
 | 0 | Struktur repo + Git | selesai |
 | 1 | Go HTTP server + `/healthz` | selesai |
 | 2 | Refactor + config + POST echo | selesai |
-| 3 | PostgreSQL via Compose + koneksi DB | berikutnya |
-| 4 | Migrasi tabel `services` | - |
-| 5 | CRUD catalog API | - |
-| 6 | Portal web catalog | - |
+| 3 | PostgreSQL via Compose + koneksi DB | selesai |
+| 4 | Migrasi tabel `services` | selesai |
+| 5 | CRUD catalog API | selesai |
+| 6 | Portal web catalog | berikutnya |
 | 7 | Auth OIDC + RBAC | - |
 | 8 | Worker registry | - |
 | 9 | Agent deploy end-to-end | - |
