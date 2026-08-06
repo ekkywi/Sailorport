@@ -47,7 +47,7 @@ docker compose ps
 ```
 
 Connection string default:
-`postgres://sailorport:sailorport@localhost:5432/sailorport?sslmode=disable`
+`postgres://sailorport:sailorport@localhost:5433/sailorport?sslmode=disable`
 
 ## Jalankan API lokal
 
@@ -96,11 +96,11 @@ npm install
 npm run dev
 ```
 
-Buka `http://localhost:5173` — list catalog + form create.
+Buka `http://localhost:5173` — halaman login (register dulu jika belum punya akun), lalu catalog + scaffold.
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
-Portal mendukung: list, create, edit, dan hapus service di catalog.
+Portal mendukung: auth (JWT), list/create/edit/delete catalog, scaffold dari template `go-api`.
 
 ## Environment variables
 
@@ -109,7 +109,8 @@ Portal mendukung: list, create, edit, dan hapus service di catalog.
 | `PORT` | `8080` | port HTTP API |
 | `APP_ENV` | `development` | environment label |
 | `APP_VERSION` | `0.1.0` | versi API di response health |
-| `DATABASE_URL` | lihat di atas | koneksi Postgres |
+| `DATABASE_URL` | lihat di atas (port **5433**) | koneksi Postgres |
+| `AUTH_JWT_SECRET` | `dev-only-change-me` | secret JWT (ganti di production) |
 
 Contoh:
 
@@ -122,22 +123,28 @@ PORT=9090 APP_ENV=production APP_VERSION=0.2.0 go run .
 ```text
 apps/api/
 ├── main.go
-├── go.mod
 └── internal/
-    ├── config/config.go
-    ├── db/db.go
-    ├── handler/   (health, echo, services, cors)
-    ├── migrate/
-    ├── model/service.go
-    └── store/service.go
+    ├── config/, db/, migrate/
+    ├── handler/   (health, services, scaffold, auth, middleware)
+    ├── service/   (catalog, scaffold, auth)
+    ├── store/     (service, user)
+    ├── model/     (service, user)
+    └── auth/      (jwt, password)
 
 apps/web/
 ├── vite.config.ts
+├── components.json
 └── src/
     ├── App.tsx
-    ├── api.ts
-    ├── types.ts
-    └── App.css
+    ├── index.css          # Tailwind v4 + shadcn theme
+    ├── components/ui/     # shadcn primitives
+    ├── layouts/           # AuthLayout
+    ├── features/
+    │   ├── auth/
+    │   ├── catalog/
+    │   └── scaffold/
+    ├── lib/               # http.ts, utils.ts
+    └── styles/app.css     # legacy CSS dashboard
 ```
 
 ## Setelah setup

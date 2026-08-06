@@ -19,7 +19,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | catalog CRUD + scaffold UI |
+| Portal | `apps/web` | catalog CRUD + scaffold UI + auth UI (Tailwind/shadcn) |
 | API | `apps/api` | layered + scaffold/templates |
 | Worker | `apps/worker` | belum |
 | Agent | `apps/agent` | belum |

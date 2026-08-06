@@ -47,14 +47,21 @@ Response error JSON seragam:
 src/
   app/                 shell / routing nanti
   features/<domain>/   UI + api client + types per fitur
-  styles/              CSS global / halaman
+  components/ui/       primitif shadcn (button, input, card, …)
+  layouts/             layout halaman (AuthLayout, nanti AppShell)
+  lib/                 http client, utils (cn)
+  styles/              CSS legacy catalog/scaffold (belum Tailwind)
+  index.css            Tailwind v4 + theme shadcn
 ```
 
 | Area | Tanggung jawab |
 |------|----------------|
 | `features/catalog/*` | Halaman, form, list, `fetch` ke `/api/v1/services` |
+| `features/auth/*` | Login/register UI, panggil `/api/v1/auth/*` |
+| `layouts/AuthLayout` | Shell split-screen untuk gate login |
+| `components/ui/*` | Primitif UI reusable (shadcn) |
 | `App.tsx` | Susun layout; jangan menumpuk logic semua fitur |
-| `api` client | HTTP saja; tanpa JSX |
+| `lib/http.ts` | Token + `apiFetch`; tanpa JSX |
 
 ## Batas sistem (produk)
 
@@ -74,5 +81,5 @@ Developer → Web → API → Postgres (+ Redis nanti)
 
 - Hexagonal/ports penuh per aggregate
 - Shared OpenAPI package (nanti di `packages/shared`)
-- Auth middleware (Step 9)
+- Migrasi penuh dashboard web ke Tailwind/shadcn (auth sudah)
 - State management global di web (Redux/Zustand) — belum perlu

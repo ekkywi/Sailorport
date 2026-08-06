@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 9 (Auth lokal + JWT + RBAC)
+- **Step selesai:** 9 (Auth lokal + JWT + RBAC + UI login shadcn)
 - **Step berikutnya:** 10 (Worker registry + agent deploy)
-- **Terakhir dikerjakan:** 2026-08-06
+- **Terakhir dikerjakan:** 2026-08-06 — polish auth UI (Tailwind v4 + shadcn)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -22,6 +22,7 @@
 - [x] Step 7.5 — Architecture foundation (lapisan service, router, pecah web)
 - [x] Step 8 — Scaffold / golden path (1 template `go-api`)
 - [x] Step 9 — Auth lokal + JWT + RBAC
+- [x] Step 9 polish — Auth UI profesional (Tailwind v4 + shadcn/ui)
 - [ ] Step 10 — Worker registry + agent deploy
 
 ## Yang sudah jalan
@@ -39,11 +40,21 @@ cd apps/web && npm run dev
 | `GET /api/v1/auth/me` | Bearer | profil user |
 | `GET /api/v1/services` | viewer+ | list |
 | `POST/PUT/DELETE services`, `POST scaffold` | developer/admin | mutasi |
-| Portal login | — | token di localStorage |
+| Portal login | — | split-screen AuthLayout, tabs sign in/register, token di localStorage |
 
 Env: `AUTH_JWT_SECRET` (default dev-only-change-me)
 
 Role: `admin`, `developer`, `viewer`
+
+### Web UI stack (auth)
+
+- Tailwind CSS v4 (`@tailwindcss/vite`) + theme shadcn di `src/index.css`
+- Komponen shadcn: `button`, `input`, `label`, `card`, `tabs`, `alert`
+- Layout: `src/layouts/AuthLayout.tsx` (brand panel kiri, form kanan)
+- Login: `src/features/auth/LoginPage.tsx`
+- Dashboard catalog/scaffold masih pakai `src/styles/app.css` (belum dimigrasi ke Tailwind)
+
+Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
 ## Next action (Step 10)
 

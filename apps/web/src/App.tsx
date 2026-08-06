@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { CatalogPage } from "./features/catalog/CatalogPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { logout, me } from "./features/auth/api";
 import type { AuthUser } from "./features/auth/types";
 import { ScaffoldPanel } from "./features/scaffold/ScaffoldPanel";
+import { AuthLayout } from "./layouts/AuthLayout";
 import { getToken } from "./lib/http";
 import "./styles/app.css";
 
@@ -40,21 +43,20 @@ function App() {
 
   if (checking) {
     return (
-      <div className="page">
-        <p>Memuat...</p>
+      <div className="flex min-h-svh items-center justify-center bg-background">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Loading session...
+        </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="page">
-        <header>
-          <h1>Sailorport</h1>
-          <p>Software catalog & golden path</p>
-        </header>
+      <AuthLayout>
         <LoginPage onSuccess={() => void loadSession()} />
-      </div>
+      </AuthLayout>
     );
   }
 
@@ -68,9 +70,9 @@ function App() {
               {user.name || user.email} · role: {user.role}
             </p>
           </div>
-          <button type="button" className="button-secondary" onClick={handleLogout}>
+          <Button type="button" variant="outline" onClick={handleLogout}>
             Logout
-          </button>
+          </Button>
         </div>
       </header>
       <ScaffoldPanel onSuccess={() => setCatalogTick((n) => n + 1)} />
