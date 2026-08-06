@@ -52,7 +52,7 @@ func main() {
 	addr := ":" + cfg.Port
 	log.Printf("Sailorport API (%s) running on http://localhost%s", cfg.AppEnv, addr)
 
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, handler.CORS(mux)); err != nil {
 		log.Fatalf("Server stopped: %v", err)
 	}
 }

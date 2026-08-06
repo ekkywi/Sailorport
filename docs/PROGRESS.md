@@ -17,7 +17,7 @@
 - [x] Step 3 — PostgreSQL via Docker Compose + koneksi DB
 - [x] Step 4 — Migrasi tabel `services`
 - [x] Step 5 — CRUD catalog API
-- [ ] Step 6 — Portal web menampilkan catalog
+- [x] Step 6 — Portal web menampilkan catalog
 
 ## Yang sudah jalan
 
@@ -29,15 +29,15 @@ cd deploy/compose && docker compose up -d
 cd apps/api && go run .
 ```
 
-| Endpoint | Method | Hasil |
-|----------|--------|-------|
-| `/healthz` | GET | `{"status":"ok","service":"sailorport-api","version":"0.1.0"}` |
-| `/api/v1/echo` | POST | `{"reply":"Sailorport received: ..."}` |
-| `/api/v1/services` | GET | list services (`[]` jika kosong) |
-| `/api/v1/services` | POST | create service → `201` |
-| `/api/v1/services/{id}` | GET | get satu service |
-| `/api/v1/services/{id}` | PUT | update service |
-| `/api/v1/services/{id}` | DELETE | hapus → `204` |
+| Endpoint                | Method | Hasil                                                          |
+| ----------------------- | ------ | -------------------------------------------------------------- |
+| `/healthz`              | GET    | `{"status":"ok","service":"sailorport-api","version":"0.1.0"}` |
+| `/api/v1/echo`          | POST   | `{"reply":"Sailorport received: ..."}`                         |
+| `/api/v1/services`      | GET    | list services (`[]` jika kosong)                               |
+| `/api/v1/services`      | POST   | create service → `201`                                         |
+| `/api/v1/services/{id}` | GET    | get satu service                                               |
+| `/api/v1/services/{id}` | PUT    | update service                                                 |
+| `/api/v1/services/{id}` | DELETE | hapus → `204`                                                  |
 
 Env vars: `PORT`, `APP_ENV`, `APP_VERSION`, `DATABASE_URL`
 
