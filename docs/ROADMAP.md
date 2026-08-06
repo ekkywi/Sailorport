@@ -77,6 +77,7 @@ Satu flow ini harus jalan di mesin orang lain:
 | 5 | CRUD catalog API | selesai |
 | 6 | Portal web catalog (list + create) | selesai |
 | 7 | Portal: update + delete service | selesai |
+| 7.5 | Architecture foundation | selesai |
 | 8 | Scaffold / golden path (1 template) | berikutnya |
 | 9 | Auth OIDC + RBAC | - |
 | 10 | Worker registry + agent deploy | - |

@@ -60,4 +60,6 @@ git push
 
 ## Status
 
-Step 7 selesai (portal catalog CRUD lengkap). Step berikutnya: scaffold / golden path.
+Step 7.5 selesai (architecture foundation). Step berikutnya: scaffold / golden path.
+
+Arsitektur: lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

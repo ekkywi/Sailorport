@@ -19,8 +19,8 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | Step 7 selesai (CRUD catalog UI) |
-| API | `apps/api` | Step 5 selesai (CRUD services) + CORS |
+| Portal | `apps/web` | Step 7.5 — `features/catalog` CRUD |
+| API | `apps/api` | Layered: handler → service → store |
 | Worker | `apps/worker` | belum |
 | Agent | `apps/agent` | belum |
 | Shared contracts | `packages/shared` | belum |
@@ -55,13 +55,15 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 
 ## Coding conventions
 
+- Baca `docs/ARCHITECTURE.md` sebelum menambah fitur
 - API routes: `/api/v1/...`
 - Health check: `GET /healthz`
 - `main.go` tipis — hanya wiring
-- Logic di `internal/*`
-- Portal: Vite + React + TypeScript; proxy `/api` ke `:8080`
+- Alur API: `handler` → `service` → `store` (jangan bypass service untuk domain logic)
+- Error API JSON: `{"error":"..."}`
+- Portal: fitur di `src/features/<domain>/`; `App.tsx` hanya shell
 - CORS: izinkan `http://localhost:5173` di development
-- Commit: `feat(api):`, `feat(web):`, `docs:`, `chore:`, `fix(api):`, `fix(web):`
+- Commit: `feat(api):`, `feat(web):`, `refactor(api):`, `docs:`, `fix:`
 
 ## Resume workflow
 

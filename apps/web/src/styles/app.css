@@ -80,8 +80,10 @@ button:disabled {
 }
 
 .list li {
-  display: grid;
-  gap: 0.2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 0.75rem 0;
   border-top: 1px solid #e2e8f0;
 }
@@ -99,15 +101,6 @@ button:disabled {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.list li {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid #e2e8f0;
 }
 
 .item-main {

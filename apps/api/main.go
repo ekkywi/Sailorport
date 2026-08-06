@@ -10,6 +10,7 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/db"
 	"github.com/ekkywi/sailorport/apps/api/internal/handler"
 	"github.com/ekkywi/sailorport/apps/api/internal/migrate"
+	"github.com/ekkywi/sailorport/apps/api/internal/service"
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
@@ -34,25 +35,17 @@ func main() {
 	}
 	log.Printf("Database migrations OK")
 
-	mux := http.NewServeMux()
-
-	health := handler.NewHealthHandler("sailorport-api", cfg.Version)
-	echo := handler.NewEchoHandler()
 	serviceStore := store.NewServicesStore(sqlDB)
-	services := handler.NewServicesHandler(serviceStore)
-
-	mux.Handle("/healthz", health)
-	mux.Handle("/api/v1/echo", echo)
-	mux.HandleFunc("GET /api/v1/services", services.List)
-	mux.HandleFunc("POST /api/v1/services", services.Create)
-	mux.HandleFunc("GET /api/v1/services/{id}", services.Get)
-	mux.HandleFunc("PUT /api/v1/services/{id}", services.Update)
-	mux.HandleFunc("DELETE /api/v1/services/{id}", services.Delete)
+	catalog := service.NewCatalog(serviceStore)
+	router := handler.NewRouter(handler.API{
+		Version: cfg.Version,
+		Catalog: catalog,
+	})
 
 	addr := ":" + cfg.Port
 	log.Printf("Sailorport API (%s) running on http://localhost%s", cfg.AppEnv, addr)
 
-	if err := http.ListenAndServe(addr, handler.CORS(mux)); err != nil {
+	if err := http.ListenAndServe(addr, router); err != nil {
 		log.Fatalf("Server stopped: %v", err)
 	}
 }
