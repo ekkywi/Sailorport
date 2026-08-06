@@ -13,11 +13,11 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - `docs/AGENTS.md` — konvensi & konteks proyek
 - `docs/ROADMAP.md` — arah besar
 
-**Stack:** Go (api/worker/agent) + React/TS (web nanti) + PostgreSQL + Redis + Docker Compose.
+**Stack:** Go (api/worker/agent) + React/TS (web) + PostgreSQL + Redis + Docker Compose.
 
-**Step terakhir selesai:** Step 5 (CRUD catalog API: list/create/get/update/delete `/api/v1/services`).
+**Step terakhir selesai:** Step 6 (Portal web catalog: list + create di `apps/web`, Vite proxy, CORS di API).
 
-**Step berikutnya:** Step 6 — Portal web menampilkan catalog (React + TypeScript + Vite di `apps/web`).
+**Step berikutnya:** Step 7 — Update & delete service di portal web (pakai `PUT` / `DELETE` yang sudah ada di API).
 
 Tolong lanjutkan dengan gaya panduan detail seperti sebelumnya: tujuan step, kode lengkap per file, penjelasan baris, cara test, lalu commit message.
 
