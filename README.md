@@ -13,7 +13,7 @@ Sailorport adalah platform internal yang bisa di-host sendiri, berisi:
 ## Struktur
 
 ```text
-apps/web          portal (React + TypeScript + Vite) — list + create catalog
+apps/web          portal (React + TypeScript + Vite) — CRUD catalog
 apps/api          control plane API (Go) — CRUD services + CORS
 apps/worker       background jobs (Go) — belum
 apps/agent        agent di node (Go) — belum
@@ -60,4 +60,4 @@ git push
 
 ## Status
 
-Step 6 selesai (portal catalog list + create). Step berikutnya: update & delete di portal.
+Step 7 selesai (portal catalog CRUD lengkap). Step berikutnya: scaffold / golden path.

@@ -4,8 +4,8 @@
 
 ## Status saat ini
 
-- **Step selesai:** 6
-- **Step berikutnya:** 7 (Update & delete service di portal web)
+- **Step selesai:** 7
+- **Step berikutnya:** 8 (Scaffold / golden path — 1 template)
 - **Terakhir dikerjakan:** 2026-08-06
 - **Mesin terakhir:** rumah / lokal
 
@@ -18,7 +18,7 @@
 - [x] Step 4 — Migrasi tabel `services`
 - [x] Step 5 — CRUD catalog API
 - [x] Step 6 — Portal web menampilkan catalog (list + create)
-- [ ] Step 7 — Update & delete service di portal
+- [x] Step 7 — Update & delete service di portal (CRUD UI lengkap)
 - [ ] Step 8 — Scaffold / golden path (1 template)
 - [ ] Step 9 — Auth OIDC + RBAC dasar
 - [ ] Step 10 — Worker registry + agent deploy
@@ -45,7 +45,7 @@ cd apps/web && npm install && npm run dev
 | `/api/v1/services/{id}` | GET | get satu service |
 | `/api/v1/services/{id}` | PUT | update service |
 | `/api/v1/services/{id}` | DELETE | hapus → `204` |
-| `http://localhost:5173` | UI | list catalog + form create |
+| `http://localhost:5173` | UI | list + create + edit + delete |
 
 Env vars API: `PORT`, `APP_ENV`, `APP_VERSION`, `DATABASE_URL`
 
@@ -53,7 +53,7 @@ Default `DATABASE_URL`:
 `postgres://sailorport:sailorport@localhost:5432/sailorport?sslmode=disable`
 
 Portal: Vite proxy `/api` dan `/healthz` → `http://localhost:8080`  
-API: middleware CORS mengizinkan `http://localhost:5173`
+API: middleware CORS untuk `http://localhost:5173`
 
 ## Struktur file saat ini
 
@@ -66,21 +66,21 @@ Sailorport/
 │       ├── config/
 │       ├── db/
 │       ├── handler/   (health, echo, services, cors)
-│       ├── migrate/   (goose + SQL 00001_create_services)
+│       ├── migrate/
 │       ├── model/
 │       └── store/
-├── apps/web/          ← React + TS + Vite (Step 6)
-│   ├── vite.config.ts (proxy ke API)
+├── apps/web/
+│   ├── vite.config.ts
 │   └── src/
-│       ├── App.tsx
-│       ├── api.ts
+│       ├── App.tsx      (form dual-mode create/edit + list + hapus)
+│       ├── api.ts       (list/create/update/delete)
 │       ├── types.ts
 │       ├── App.css
 │       └── main.tsx
 ├── apps/worker/       ← kosong
 ├── apps/agent/        ← kosong
 ├── packages/shared/   ← kosong
-├── deploy/compose/    ← docker-compose.yml (Postgres)
+├── deploy/compose/    ← Postgres
 └── docs/
 ```
 
@@ -88,42 +88,31 @@ Sailorport/
 
 ### Backend (Step 0–5)
 
-- `package main` = program yang bisa dijalankan
-- `:=` mendeklarasikan variabel baru; `!=` membandingkan
-- Handler HTTP: `ServeHTTP` atau method + `HandleFunc("GET /path", ...)`
-- `json.NewDecoder(r.Body).Decode(&req)` baca JSON dari client
-- Status: 200 OK, 201 Created, 204 No Content, 400 Bad Request, 404 Not Found, 409 Conflict
-- `internal/` = kode privat proyek
-- `os.Getenv` / `DATABASE_URL` untuk config
-- `database/sql` + driver `pgx`; `SELECT 1` untuk ping
-- Goose + `embed` untuk migrasi SQL berversi
-- Lapisan: handler → store (SQL) → model
-- `$1`, `$2` = parameter query (hindari SQL injection)
-- `r.PathValue("id")` ambil `{id}` dari route Go 1.22+
-- CORS middleware: izinkan browser Vite memanggil API lintas-port
+- Handler → store → model; `$1` parameter query
+- Goose + embed untuk migrasi
+- CORS middleware untuk browser Vite
+- Status: 200, 201, 204, 400, 404, 409
 
-### Frontend (Step 6)
+### Frontend (Step 6–7)
 
-- Vite = tooling frontend (dev server + hot reload)
-- `useState` = state yang berubah di layar
-- `useEffect(..., [])` = jalan sekali saat halaman dibuka
-- `fetch` = HTTP dari browser (mirip curl)
-- `import type { ... }` wajib untuk tipe saja (`FormEvent`) karena `verbatimModuleSyntax`
-- Nama file di Linux case-sensitive: `App.css` ≠ `app.css`
-- Nama export harus sama: `listServices` ≠ `listenServices` (typo bikin blank putih)
-- Blank putih → cek Console browser (F12), bukan hanya terminal Vite
+- `useState` / `useEffect` / `fetch`
+- `import type` untuk tipe saja (`FormEvent`)
+- Form dual-mode: `editingId === null` → create, ada id → update
+- `window.confirm` sebelum delete
+- URL harus exact: `/api/v1/services/{id}` (bukan `/api/api/service/...`)
+- Linux case-sensitive: `App.css` ≠ `app.css`
+- Blank putih / 404 → cek Console + Network (F12)
 
 ## Blocker / pertanyaan
 
-- Cek nama file CORS: ada kemungkinan typo `cors..go` (titik ganda). Rename ke `cors.go` jika masih salah.
-- Portal belum punya UI update/delete (API sudah siap).
+- (kosong)
 
-## Next action (urutan Step 7)
+## Next action (urutan Step 8)
 
-1. Tombol/form edit service (panggil `PUT /api/v1/services/{id}`)
-2. Tombol hapus service (panggil `DELETE /api/v1/services/{id}`)
-3. Pastikan file CORS bernama `cors.go`
-4. Test end-to-end: list → create → update → delete dari browser
+1. Rancang endpoint scaffold (mis. `POST /api/v1/scaffold`)
+2. Siapkan 1 template service (API Go atau Node sederhana)
+3. Generate file dari template + daftar ke catalog
+4. Tombol/form “Create from template” di portal
 
 ## Cara lanjut di mesin lain
 
