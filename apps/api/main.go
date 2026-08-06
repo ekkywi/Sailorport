@@ -42,11 +42,15 @@ func main() {
 	catalog := service.NewCatalog(serviceStore)
 	templates := template.NewRegistry(cfg.TemplatesDir)
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
+	usersStore := store.NewUsersStore(sqlDB)
+	authSvc := service.NewAuth(usersStore, cfg.JWTSecret)
 
 	router := handler.NewRouter(handler.API{
-		Version:  cfg.Version,
-		Catalog:  catalog,
-		Scaffold: scaffold,
+		Version:   cfg.Version,
+		JWTSecret: cfg.JWTSecret,
+		Catalog:   catalog,
+		Scaffold:  scaffold,
+		Auth:      authSvc,
 	})
 
 	addr := ":" + cfg.Port

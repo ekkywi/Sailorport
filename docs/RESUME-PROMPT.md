@@ -12,15 +12,14 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - `docs/PROGRESS.md` — step terakhir yang selesai
 - `docs/ARCHITECTURE.md` — aturan lapisan (wajib diikuti)
 - `docs/AGENTS.md` — konvensi & konteks proyek
-- `docs/ROADMAP.md` — arah besar
 
 **Stack:** Go (api/worker/agent) + React/TS (web) + PostgreSQL + Redis + Docker Compose.
 
-**Step terakhir selesai:** Step 8 (Scaffold golden path: `GET /api/v1/templates`, `POST /api/v1/scaffold`, template `go-api`, UI Create from template).
+**Step terakhir selesai:** Step 9 (Auth lokal JWT + RBAC: register/login/me, middleware, portal login).
 
-**Step berikutnya:** Step 9 — Auth OIDC + RBAC dasar (atau environments bila lebih cocok dulu untuk deploy).
+**Step berikutnya:** Step 10 — Worker registry + agent deploy end-to-end.
 
-Tolong lanjutkan dengan gaya panduan detail seperti sebelumnya: tujuan step, kode lengkap per file, penjelasan baris, cara test, lalu commit message.
+Tolong lanjutkan dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

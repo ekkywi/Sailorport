@@ -38,7 +38,7 @@ Satu flow ini harus jalan di mesin orang lain:
 
 ## MVP (wajib)
 
-- [ ] Auth + RBAC dasar
+- [x] Auth + RBAC dasar (JWT lokal; OIDC menyusul)
 - [x] Software catalog (API + portal CRUD lengkap)
 - [x] Scaffolder / golden path (template `go-api`)
 - [ ] Environments (dev/staging/prod)
@@ -79,6 +79,6 @@ Satu flow ini harus jalan di mesin orang lain:
 | 7 | Portal: update + delete service | selesai |
 | 7.5 | Architecture foundation | selesai |
 | 8 | Scaffold / golden path (1 template) | selesai |
-| 9 | Auth OIDC + RBAC | berikutnya |
-| 10 | Worker registry + agent deploy | - |
+| 9 | Auth lokal + JWT + RBAC | selesai |
+| 10 | Worker registry + agent deploy | berikutnya |
 | 11 | Docker Compose full stack | - |

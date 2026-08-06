@@ -27,7 +27,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 | Shared contracts | `packages/shared` | belum |
 | Compose | `deploy/compose` | Postgres (host port 5433) |
 
-Infra: PostgreSQL (ada), Redis (belum), auth OIDC + RBAC (belum).
+Infra: PostgreSQL (ada), Redis (belum), auth JWT lokal (ada), OIDC (belum).
 
 ## Learning mode (PENTING)
 

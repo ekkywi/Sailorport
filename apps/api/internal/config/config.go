@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseURL  string
 	WorkspaceDir string
 	TemplatesDir string
+	JWTSecret    string
 }
 
 func Load() Config {
@@ -25,6 +26,7 @@ func Load() Config {
 	)
 	workspaceDir := getenv("SAILORPORT_WORKSPACE", filepath.Join(os.TempDir(), "sailorport-workspace"))
 	templatesDir := getenv("SAILORPORT_TEMPLATES", defaultTemplatesDir())
+	jwtSecret := getenv("AUTH_JWT_SECRET", "dev-only-change-me")
 
 	return Config{
 		Port:         port,
@@ -33,6 +35,7 @@ func Load() Config {
 		DatabaseURL:  databaseURL,
 		WorkspaceDir: workspaceDir,
 		TemplatesDir: templatesDir,
+		JWTSecret:    jwtSecret,
 	}
 }
 

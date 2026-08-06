@@ -90,6 +90,10 @@ func writeCatalogError(w http.ResponseWriter, op string, err error) {
 		writeError(w, http.StatusNotFound, "service not found")
 	case errors.Is(err, service.ErrConflict):
 		writeError(w, http.StatusConflict, "service already exists")
+	case errors.Is(err, service.ErrUnauthorized):
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+	case errors.Is(err, service.ErrForbidden):
+		writeError(w, http.StatusForbidden, "forbidden")
 	default:
 		log.Printf("%s: %v", op, err)
 		writeError(w, http.StatusInternalServerError, "internal server error")

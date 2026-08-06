@@ -11,12 +11,13 @@ import (
 )
 
 var (
-	ErrInvalid  = errors.New("invalid input")
-	ErrNotFound = errors.New("service not found")
-	ErrConflict = errors.New("service already exists")
+	ErrInvalid      = errors.New("invalid input")
+	ErrNotFound     = errors.New("service not found")
+	ErrConflict     = errors.New("service already exists")
+	ErrUnauthorized = errors.New("unauthorized")
+	ErrForbidden    = errors.New("forbidden")
 )
 
-// Repository is the persistence port for catalog services.
 type Repository interface {
 	List(ctx context.Context) ([]model.Service, error)
 	Get(ctx context.Context, id string) (model.Service, error)
