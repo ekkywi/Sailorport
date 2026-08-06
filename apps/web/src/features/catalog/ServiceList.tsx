@@ -41,6 +41,13 @@ export function ServiceList({
               <span className="muted">
                 {svc.owner || "no owner"} · {svc.description || "no description"}
               </span>
+              {(svc.template_id || svc.workspace_path) && (
+                <span className="muted">
+                  {svc.template_id ? `template: ${svc.template_id}` : ""}
+                  {svc.template_id && svc.workspace_path ? " · " : ""}
+                  {svc.workspace_path ? `path: ${svc.workspace_path}` : ""}
+                </span>
+              )}
             </div>
             <div className="item-actions">
               <button

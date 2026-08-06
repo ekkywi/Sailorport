@@ -1,0 +1,7 @@
+{
+  "id": "go-api",
+  "name": "Go HTTP API",
+  "description": "Minimal Go service with a /healthz endpoint. Good default golden path for new backend services.",
+  "language": "go",
+  "tags": ["api", "backend", "go"]
+}

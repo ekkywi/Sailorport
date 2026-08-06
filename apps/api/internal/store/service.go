@@ -24,7 +24,7 @@ func NewServicesStore(db *sql.DB) *ServicesStore {
 
 func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 	const q = `
-	SELECT id, name, description, owner, created_at, updated_at
+	SELECT id, name, description, owner, template_id, workspace_path, created_at, updated_at
 	FROM services
 	ORDER BY created_at DESC`
 
@@ -42,6 +42,8 @@ func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 			&svc.Name,
 			&svc.Description,
 			&svc.Owner,
+			&svc.TemplateID,
+			&svc.WorkspacePath,
 			&svc.CreatedAt,
 			&svc.UpdatedAt,
 		); err != nil {
@@ -57,16 +59,18 @@ func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 
 func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, error) {
 	const q = `
-		SELECT id, name, description, owner, created_at, updated_at
+		SELECT id, name, description, owner, template_id, workspace_path, created_at, updated_at
 		FROM services
 		WHERE id = $1`
-	
+
 	var svc model.Service
 	err := s.db.QueryRowContext(ctx, q, id).Scan(
 		&svc.ID,
 		&svc.Name,
 		&svc.Description,
 		&svc.Owner,
+		&svc.TemplateID,
+		&svc.WorkspacePath,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)
@@ -81,16 +85,24 @@ func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, erro
 
 func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceRequest) (model.Service, error) {
 	const q = `
-		INSERT INTO services (name, description, owner)
-		VALUES ($1, $2, $3)
-		RETURNING id, name, description, owner, created_at, updated_at`
+		INSERT INTO services (name, description, owner, template_id, workspace_path)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, name, description, owner, template_id, workspace_path, created_at, updated_at`
 
 	var svc model.Service
-	err := s.db.QueryRowContext(ctx, q, req.Name, req.Description, req.Owner).Scan(
+	err := s.db.QueryRowContext(ctx, q,
+		req.Name,
+		req.Description,
+		req.Owner,
+		req.TemplateID,
+		req.WorkspacePath,
+	).Scan(
 		&svc.ID,
 		&svc.Name,
 		&svc.Description,
 		&svc.Owner,
+		&svc.TemplateID,
+		&svc.WorkspacePath,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)
@@ -111,14 +123,16 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 		    owner = $3,
 		    updated_at = NOW()
 		WHERE id = $4
-		RETURNING id, name, description, owner, created_at, updated_at`
-	
+		RETURNING id, name, description, owner, template_id, workspace_path, created_at, updated_at`
+
 	var svc model.Service
 	err := s.db.QueryRowContext(ctx, q, req.Name, req.Description, req.Owner, id).Scan(
 		&svc.ID,
 		&svc.Name,
 		&svc.Description,
 		&svc.Owner,
+		&svc.TemplateID,
+		&svc.WorkspacePath,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)

@@ -19,12 +19,13 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | Step 7.5 — `features/catalog` CRUD |
-| API | `apps/api` | Layered: handler → service → store |
+| Portal | `apps/web` | catalog CRUD + scaffold UI |
+| API | `apps/api` | layered + scaffold/templates |
 | Worker | `apps/worker` | belum |
 | Agent | `apps/agent` | belum |
+| Templates | `templates/` | `go-api` |
 | Shared contracts | `packages/shared` | belum |
-| Compose | `deploy/compose` | Postgres jalan |
+| Compose | `deploy/compose` | Postgres (host port 5433) |
 
 Infra: PostgreSQL (ada), Redis (belum), auth OIDC + RBAC (belum).
 

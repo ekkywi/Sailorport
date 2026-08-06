@@ -96,6 +96,8 @@ func normalizeCreate(req model.CreateServiceRequest) (model.CreateServiceRequest
 	req.Name = strings.TrimSpace(req.Name)
 	req.Description = strings.TrimSpace(req.Description)
 	req.Owner = strings.TrimSpace(req.Owner)
+	req.TemplateID = strings.TrimSpace(req.TemplateID)
+	req.WorkspacePath = strings.TrimSpace(req.WorkspacePath)
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
 	}

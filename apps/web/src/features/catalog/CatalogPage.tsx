@@ -16,7 +16,7 @@ const emptyForm: ServiceFormValues = {
   owner: "",
 };
 
-export function CatalogPage() {
+export function CatalogPage({ refreshToken = 0 }: { refreshToken?: number }) {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,7 +39,7 @@ export function CatalogPage() {
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [refreshToken]);
 
   function resetForm() {
     setValues(emptyForm);

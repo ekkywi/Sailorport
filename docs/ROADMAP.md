@@ -40,7 +40,7 @@ Satu flow ini harus jalan di mesin orang lain:
 
 - [ ] Auth + RBAC dasar
 - [x] Software catalog (API + portal CRUD lengkap)
-- [ ] Scaffolder / golden path
+- [x] Scaffolder / golden path (template `go-api`)
 - [ ] Environments (dev/staging/prod)
 - [ ] Deploy via agent
 - [ ] Worker registry + health
@@ -78,7 +78,7 @@ Satu flow ini harus jalan di mesin orang lain:
 | 6 | Portal web catalog (list + create) | selesai |
 | 7 | Portal: update + delete service | selesai |
 | 7.5 | Architecture foundation | selesai |
-| 8 | Scaffold / golden path (1 template) | berikutnya |
-| 9 | Auth OIDC + RBAC | - |
+| 8 | Scaffold / golden path (1 template) | selesai |
+| 9 | Auth OIDC + RBAC | berikutnya |
 | 10 | Worker registry + agent deploy | - |
 | 11 | Docker Compose full stack | - |

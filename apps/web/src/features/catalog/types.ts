@@ -3,6 +3,8 @@ export type Service = {
   name: string;
   description: string;
   owner: string;
+  template_id: string;
+  workspace_path: string;
   created_at: string;
   updated_at: string;
 };

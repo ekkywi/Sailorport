@@ -1,0 +1,46 @@
+# {{.Name}}
+
+Service ini digenerate Sailorport dari golden path template **go-api**.
+
+## Apa isinya
+
+Service Go HTTP minimal dengan endpoint:
+
+- `GET /healthz` — health check JSON
+
+## Prasyarat
+
+- Go 1.22+ (disarankan 1.26+)
+
+## Menjalankan
+
+```bash
+cd {{.Name}}
+go run .
+```
+
+Lalu panggil:
+
+```bash
+curl http://localhost:8080/healthz
+```
+
+Contoh response:
+
+```json
+{"status":"ok","service":"{{.Name}}"}
+```
+
+## Struktur
+
+```text
+.
+├── README.md
+└── main.go
+```
+
+## Catatan
+
+- Port default: `8080`
+- Ubah logic di `main.go` sesuai kebutuhan
+- Service ini juga terdaftar di software catalog Sailorport setelah scaffold
