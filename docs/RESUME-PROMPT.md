@@ -16,9 +16,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/worker/agent) + React/TS (web) + PostgreSQL + Redis + Docker Compose.
 
-**Step terakhir selesai:** Step 7.5 (Architecture foundation: `handler → service → store`, router, pecah `features/catalog` di web).
+**Step terakhir selesai:** Step 8 (Scaffold golden path: `GET /api/v1/templates`, `POST /api/v1/scaffold`, template `go-api`, UI Create from template).
 
-**Step berikutnya:** Step 8 — Scaffold / golden path (1 template: generate service baru + daftar ke catalog), ikut arsitektur di `docs/ARCHITECTURE.md`.
+**Step berikutnya:** Step 9 — Auth OIDC + RBAC dasar (atau environments bila lebih cocok dulu untuk deploy).
 
 Tolong lanjutkan dengan gaya panduan detail seperti sebelumnya: tujuan step, kode lengkap per file, penjelasan baris, cara test, lalu commit message.
 

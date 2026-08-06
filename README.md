@@ -13,13 +13,14 @@ Sailorport adalah platform internal yang bisa di-host sendiri, berisi:
 ## Struktur
 
 ```text
-apps/web          portal (React + TypeScript + Vite) — CRUD catalog
-apps/api          control plane API (Go) — CRUD services + CORS
+apps/web          portal — catalog CRUD + scaffold
+apps/api          control plane — layered + scaffold
 apps/worker       background jobs (Go) — belum
 apps/agent        agent di node (Go) — belum
+templates/        golden path templates (`go-api`)
 packages/shared   kontrak & tipe bersama — belum
-deploy/compose    Docker Compose (Postgres)
-docs/             progress, setup, panduan lanjut
+deploy/compose    Docker Compose (Postgres :5433)
+docs/             progress, architecture, panduan lanjut
 ```
 
 ## Quick start (lokal)
@@ -60,6 +61,6 @@ git push
 
 ## Status
 
-Step 7.5 selesai (architecture foundation). Step berikutnya: scaffold / golden path.
+Step 8 selesai (scaffold golden path `go-api`). Step berikutnya: auth OIDC + RBAC.
 
 Arsitektur: lihat [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).

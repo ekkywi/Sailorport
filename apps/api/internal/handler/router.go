@@ -7,16 +7,18 @@ import (
 )
 
 type API struct {
-	Version string
-	Catalog *service.Catalog
+	Version  string
+	Catalog  *service.Catalog
+	Scaffold *service.Scaffold
 }
 
 func NewRouter(api API) http.Handler {
 	mux := http.NewServeMux()
 
 	health := NewHealthHandler("sailorport-api", api.Version)
-	echo := NewEchoHandler() // demo endpoint; keep for learning, remove later
+	echo := NewEchoHandler() // demo endpoint; remove later
 	services := NewServicesHandler(api.Catalog)
+	scaffold := NewScaffoldHandler(api.Scaffold)
 
 	mux.Handle("/healthz", health)
 	mux.Handle("/api/v1/echo", echo)
@@ -25,6 +27,8 @@ func NewRouter(api API) http.Handler {
 	mux.HandleFunc("GET /api/v1/services/{id}", services.Get)
 	mux.HandleFunc("PUT /api/v1/services/{id}", services.Update)
 	mux.HandleFunc("DELETE /api/v1/services/{id}", services.Delete)
+	mux.HandleFunc("GET /api/v1/templates", scaffold.ListTemplates)
+	mux.HandleFunc("POST /api/v1/scaffold", scaffold.Create)
 
 	return CORS(mux)
 }

@@ -3,18 +3,22 @@ package model
 import "time"
 
 type Service struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Owner       string    `json:"owner"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Description   string    `json:"description"`
+	Owner         string    `json:"owner"`
+	TemplateID    string    `json:"template_id"`
+	WorkspacePath string    `json:"workspace_path"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type CreateServiceRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Owner       string `json:"owner"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	Owner         string `json:"owner"`
+	TemplateID    string `json:"template_id"`
+	WorkspacePath string `json:"workspace_path"`
 }
 
 type UpdateServiceRequest struct {

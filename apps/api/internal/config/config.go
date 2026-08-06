@@ -2,14 +2,17 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
 type Config struct {
-	Port		string
-	AppEnv		string
-	Version		string
-	DatabaseURL	string
+	Port         string
+	AppEnv       string
+	Version      string
+	DatabaseURL  string
+	WorkspaceDir string
+	TemplatesDir string
 }
 
 func Load() Config {
@@ -20,13 +23,34 @@ func Load() Config {
 		"DATABASE_URL",
 		"postgres://sailorport:sailorport@localhost:5433/sailorport?sslmode=disable",
 	)
+	workspaceDir := getenv("SAILORPORT_WORKSPACE", filepath.Join(os.TempDir(), "sailorport-workspace"))
+	templatesDir := getenv("SAILORPORT_TEMPLATES", defaultTemplatesDir())
 
 	return Config{
-		Port: port,
-		AppEnv: appEnv,
-		Version: version,
-		DatabaseURL: databaseURL,
+		Port:         port,
+		AppEnv:       appEnv,
+		Version:      version,
+		DatabaseURL:  databaseURL,
+		WorkspaceDir: workspaceDir,
+		TemplatesDir: templatesDir,
 	}
+}
+
+func defaultTemplatesDir() string {
+	candidates := []string{
+		"templates",
+		filepath.Join("..", "..", "templates"),
+		filepath.Join("..", "templates"),
+	}
+	for _, c := range candidates {
+		if info, err := os.Stat(c); err == nil && info.IsDir() {
+			if abs, err := filepath.Abs(c); err == nil {
+				return abs
+			}
+			return c
+		}
+	}
+	return "templates"
 }
 
 func getenv(key, fallback string) string {

@@ -97,6 +97,24 @@ button:disabled {
   color: #b91c1c;
 }
 
+.success {
+  color: #047857;
+  font-size: 0.95rem;
+}
+
+select {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+
+code {
+  font-size: 0.85em;
+  word-break: break-all;
+}
+
 .form-actions {
   display: flex;
   gap: 0.5rem;

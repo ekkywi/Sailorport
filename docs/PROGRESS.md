@@ -4,8 +4,8 @@
 
 ## Status saat ini
 
-- **Step selesai:** 7.5 (Architecture foundation)
-- **Step berikutnya:** 8 (Scaffold / golden path — 1 template)
+- **Step selesai:** 8 (Scaffold / golden path — template `go-api`)
+- **Step berikutnya:** 9 (Auth OIDC + RBAC dasar) — atau environments bila ingin dulu
 - **Terakhir dikerjakan:** 2026-08-06
 - **Mesin terakhir:** rumah / lokal
 
@@ -20,7 +20,7 @@
 - [x] Step 6 — Portal web menampilkan catalog (list + create)
 - [x] Step 7 — Update & delete service di portal (CRUD UI lengkap)
 - [x] Step 7.5 — Architecture foundation (lapisan service, router, pecah web)
-- [ ] Step 8 — Scaffold / golden path (1 template)
+- [x] Step 8 — Scaffold / golden path (1 template `go-api`)
 - [ ] Step 9 — Auth OIDC + RBAC dasar
 - [ ] Step 10 — Worker registry + agent deploy
 
@@ -30,61 +30,39 @@
 # 1. Postgres
 cd deploy/compose && docker compose up -d
 
-# 2. API
+# 2. API (dari apps/api; templates auto-detect ../../templates)
 cd apps/api && go run .
 
-# 3. Portal web
-cd apps/web && npm install && npm run dev
+# opsional override:
+# export SAILORPORT_TEMPLATES=~/Projects/Sailorport/templates
+# export SAILORPORT_WORKSPACE=~/sailorport-workspace
+
+# 3. Portal
+cd apps/web && npm run dev
 ```
 
-| Endpoint / UI | Method / aksi | Hasil |
-|---------------|---------------|-------|
-| `/healthz` | GET | health JSON |
-| `/api/v1/echo` | POST | demo (akan dihapus nanti) |
-| `/api/v1/services` | CRUD | lewat `handler → service → store` |
-| `http://localhost:5173` | UI | catalog CRUD (`features/catalog`) |
+| Endpoint / UI | Method | Hasil |
+|---------------|--------|-------|
+| `/api/v1/templates` | GET | daftar template |
+| `/api/v1/scaffold` | POST | generate folder + create catalog |
+| `http://localhost:5173` | UI | form “Create from template” + catalog CRUD |
 
-Error API sekarang JSON: `{"error":"..."}`
-
-## Struktur file saat ini
+## Struktur penting Step 8
 
 ```text
-apps/api/
-├── main.go                    # wiring saja
-└── internal/
-    ├── config/ db/ migrate/
-    ├── handler/               # HTTP: router, cors, respond, services
-    ├── service/               # use case + validasi (+ test)
-    ├── store/                 # SQL
-    └── model/
-
-apps/web/src/
-├── App.tsx                    # shell
-├── styles/app.css
-└── features/catalog/          # page, form, list, api, types
-
-docs/ARCHITECTURE.md           # aturan lapisan
+templates/go-api/          manifest + *.tmpl
+apps/api/internal/template registry + generate
+apps/api/internal/service/scaffold.go
+apps/web/src/features/scaffold/
 ```
 
-## Catatan belajar (7.5)
+## Catatan belajar
 
-- Lapisan: handler (HTTP) → service (bisnis) → store (SQL)
-- Interface `Repository` di service = port persistence
-- `writeError` / `writeJSON` seragam
-- Web: pecah per feature agar `App.tsx` tidak membengkak
-- CORS header harus exact: `Access-Control-Allow-Origin`
+- Scaffold: validasi → generate files → insert catalog
+- `{{.Name}}` di `*.tmpl` diganti `text/template`
+- Nama service: kebab-case lowercase (`payments-api`)
+- Env: `SAILORPORT_TEMPLATES`, `SAILORPORT_WORKSPACE`
 
-## Blocker / pertanyaan
+## Next action (Step 9 arah)
 
-- (kosong)
-
-## Next action (urutan Step 8)
-
-1. Baca `docs/ARCHITECTURE.md` — scaffold ikut lapisan yang sama
-2. Endpoint scaffold + 1 template
-3. Generate + daftar ke catalog
-4. UI “Create from template”
-
-## Cara lanjut di mesin lain
-
-Lihat `docs/CONTINUE.md` dan paste prompt dari `docs/RESUME-PROMPT.md`.
+Auth OIDC + RBAC, atau environments (dev/staging/prod) sebelum deploy agent.

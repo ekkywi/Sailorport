@@ -12,6 +12,7 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/migrate"
 	"github.com/ekkywi/sailorport/apps/api/internal/service"
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
+	"github.com/ekkywi/sailorport/apps/api/internal/template"
 )
 
 func main() {
@@ -34,12 +35,18 @@ func main() {
 		log.Fatalf("Database migration failed: %v", err)
 	}
 	log.Printf("Database migrations OK")
+	log.Printf("Templates dir: %s", cfg.TemplatesDir)
+	log.Printf("Workspace dir: %s", cfg.WorkspaceDir)
 
 	serviceStore := store.NewServicesStore(sqlDB)
 	catalog := service.NewCatalog(serviceStore)
+	templates := template.NewRegistry(cfg.TemplatesDir)
+	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
+
 	router := handler.NewRouter(handler.API{
-		Version: cfg.Version,
-		Catalog: catalog,
+		Version:  cfg.Version,
+		Catalog:  catalog,
+		Scaffold: scaffold,
 	})
 
 	addr := ":" + cfg.Port
