@@ -2,7 +2,7 @@
 
 Peta besar proyek. Detail step harian ada di `docs/PROGRESS.md`.
 
-## Visi v1 (definisi suukses)
+## Visi v1 (definisi sukses)
 
 Satu flow ini harus jalan di mesin orang lain:
 
@@ -39,7 +39,7 @@ Satu flow ini harus jalan di mesin orang lain:
 ## MVP (wajib)
 
 - [ ] Auth + RBAC dasar
-- [ ] Software catalog
+- [x] Software catalog (API CRUD + portal list/create — update/delete UI menyusul)
 - [ ] Scaffolder / golden path
 - [ ] Environments (dev/staging/prod)
 - [ ] Deploy via agent
@@ -75,8 +75,9 @@ Satu flow ini harus jalan di mesin orang lain:
 | 3 | PostgreSQL via Compose + koneksi DB | selesai |
 | 4 | Migrasi tabel `services` | selesai |
 | 5 | CRUD catalog API | selesai |
-| 6 | Portal web catalog | berikutnya |
-| 7 | Auth OIDC + RBAC | - |
-| 8 | Worker registry | - |
-| 9 | Agent deploy end-to-end | - |
-| 10 | Docker Compose full stack | - |
+| 6 | Portal web catalog (list + create) | selesai |
+| 7 | Portal: update + delete service | berikutnya |
+| 8 | Scaffold / golden path (1 template) | - |
+| 9 | Auth OIDC + RBAC | - |
+| 10 | Worker registry + agent deploy | - |
+| 11 | Docker Compose full stack | - |

@@ -19,8 +19,8 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | belum dimulai (Step 6) |
-| API | `apps/api` | Step 5 selesai (CRUD services) |
+| Portal | `apps/web` | Step 6 selesai (list + create catalog) |
+| API | `apps/api` | Step 5 selesai (CRUD services) + CORS |
 | Worker | `apps/worker` | belum |
 | Agent | `apps/agent` | belum |
 | Shared contracts | `packages/shared` | belum |
@@ -59,7 +59,9 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 - Health check: `GET /healthz`
 - `main.go` tipis — hanya wiring
 - Logic di `internal/*`
-- Commit: `feat(api):`, `docs:`, `chore:`, `fix(api):`
+- Portal: Vite + React + TypeScript; proxy `/api` ke `:8080`
+- CORS: izinkan `http://localhost:5173` di development
+- Commit: `feat(api):`, `feat(web):`, `docs:`, `chore:`, `fix(api):`, `fix(web):`
 
 ## Resume workflow
 

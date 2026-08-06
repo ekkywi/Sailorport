@@ -9,7 +9,7 @@ Panduan ini dipakai saat pertama kali membuka proyek di laptop/komputer lain.
 | Git | sinkron kode antar mesin | `git --version` |
 | Go 1.26+ | API, worker, agent | `go version` |
 | Docker + Compose | Postgres, Redis, self-host | `docker --version` & `docker compose version` |
-| Node.js (nanti Step 6) | portal web | `node --version` |
+| Node.js 22+ | portal web | `node --version` |
 
 ## Install cepat (Ubuntu / Debian)
 
@@ -88,6 +88,18 @@ curl -X POST http://localhost:8080/api/v1/services \
   -d '{"name":"payments-api","description":"Payment service","owner":"platform"}'
 ```
 
+## Jalankan portal web
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+Buka `http://localhost:5173` — list catalog + form create.
+
+Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
+
 ## Environment variables
 
 | Variable | Default | Keterangan |
@@ -103,7 +115,7 @@ Contoh:
 PORT=9090 APP_ENV=production APP_VERSION=0.2.0 go run .
 ```
 
-## Struktur kode API saat ini
+## Struktur kode saat ini
 
 ```text
 apps/api/
@@ -112,15 +124,18 @@ apps/api/
 └── internal/
     ├── config/config.go
     ├── db/db.go
-    ├── handler/
-    │   ├── health.go
-    │   ├── echo.go
-    │   └── service.go
+    ├── handler/   (health, echo, services, cors)
     ├── migrate/
-    │   ├── migrate.go
-    │   └── migrations/00001_create_services.sql
     ├── model/service.go
     └── store/service.go
+
+apps/web/
+├── vite.config.ts
+└── src/
+    ├── App.tsx
+    ├── api.ts
+    ├── types.ts
+    └── App.css
 ```
 
 ## Setelah setup

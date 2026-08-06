@@ -13,25 +13,30 @@ Sailorport adalah platform internal yang bisa di-host sendiri, berisi:
 ## Struktur
 
 ```text
-apps/web          portal (React + TypeScript) — belum dimulai
-apps/api          control plane API (Go) — aktif
+apps/web          portal (React + TypeScript + Vite) — list + create catalog
+apps/api          control plane API (Go) — CRUD services + CORS
 apps/worker       background jobs (Go) — belum
 apps/agent        agent di node (Go) — belum
 packages/shared   kontrak & tipe bersama — belum
-deploy/compose    Docker Compose self-hosting — belum
+deploy/compose    Docker Compose (Postgres)
 docs/             progress, setup, panduan lanjut
 ```
 
-## Quick start (API lokal)
+## Quick start (lokal)
 
 ```bash
-cd apps/api
-go run .
+# 1. Database
+cd deploy/compose && docker compose up -d
+
+# 2. API
+cd apps/api && go run .
+
+# 3. Portal (terminal lain)
+cd apps/web && npm install && npm run dev
 ```
 
-```bash
-curl http://localhost:8080/healthz
-```
+- API: `http://localhost:8080/healthz`
+- Portal: `http://localhost:5173`
 
 ## Lanjut di mesin lain
 
@@ -55,4 +60,4 @@ git push
 
 ## Status
 
-Dalam pengembangan awal. Step 2 selesai (API health + echo). Step berikutnya: PostgreSQL.
+Step 6 selesai (portal catalog list + create). Step berikutnya: update & delete di portal.

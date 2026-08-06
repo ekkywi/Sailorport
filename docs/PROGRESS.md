@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 5
-- **Step berikutnya:** 6 (Portal web menampilkan catalog)
-- **Terakhir dikerjakan:** 2026-08-05
-- **Mesin terakhir:** kantor
+- **Step selesai:** 6
+- **Step berikutnya:** 7 (Update & delete service di portal web)
+- **Terakhir dikerjakan:** 2026-08-06
+- **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
 
@@ -17,7 +17,11 @@
 - [x] Step 3 — PostgreSQL via Docker Compose + koneksi DB
 - [x] Step 4 — Migrasi tabel `services`
 - [x] Step 5 — CRUD catalog API
-- [x] Step 6 — Portal web menampilkan catalog
+- [x] Step 6 — Portal web menampilkan catalog (list + create)
+- [ ] Step 7 — Update & delete service di portal
+- [ ] Step 8 — Scaffold / golden path (1 template)
+- [ ] Step 9 — Auth OIDC + RBAC dasar
+- [ ] Step 10 — Worker registry + agent deploy
 
 ## Yang sudah jalan
 
@@ -27,22 +31,29 @@ cd deploy/compose && docker compose up -d
 
 # 2. API
 cd apps/api && go run .
+
+# 3. Portal web
+cd apps/web && npm install && npm run dev
 ```
 
-| Endpoint                | Method | Hasil                                                          |
-| ----------------------- | ------ | -------------------------------------------------------------- |
-| `/healthz`              | GET    | `{"status":"ok","service":"sailorport-api","version":"0.1.0"}` |
-| `/api/v1/echo`          | POST   | `{"reply":"Sailorport received: ..."}`                         |
-| `/api/v1/services`      | GET    | list services (`[]` jika kosong)                               |
-| `/api/v1/services`      | POST   | create service → `201`                                         |
-| `/api/v1/services/{id}` | GET    | get satu service                                               |
-| `/api/v1/services/{id}` | PUT    | update service                                                 |
-| `/api/v1/services/{id}` | DELETE | hapus → `204`                                                  |
+| Endpoint / UI | Method / aksi | Hasil |
+|---------------|---------------|-------|
+| `/healthz` | GET | `{"status":"ok","service":"sailorport-api","version":"0.1.0"}` |
+| `/api/v1/echo` | POST | `{"reply":"Sailorport received: ..."}` |
+| `/api/v1/services` | GET | list services (`[]` jika kosong) |
+| `/api/v1/services` | POST | create service → `201` |
+| `/api/v1/services/{id}` | GET | get satu service |
+| `/api/v1/services/{id}` | PUT | update service |
+| `/api/v1/services/{id}` | DELETE | hapus → `204` |
+| `http://localhost:5173` | UI | list catalog + form create |
 
-Env vars: `PORT`, `APP_ENV`, `APP_VERSION`, `DATABASE_URL`
+Env vars API: `PORT`, `APP_ENV`, `APP_VERSION`, `DATABASE_URL`
 
 Default `DATABASE_URL`:
 `postgres://sailorport:sailorport@localhost:5432/sailorport?sslmode=disable`
+
+Portal: Vite proxy `/api` dan `/healthz` → `http://localhost:8080`  
+API: middleware CORS mengizinkan `http://localhost:5173`
 
 ## Struktur file saat ini
 
@@ -54,11 +65,18 @@ Sailorport/
 │   └── internal/
 │       ├── config/
 │       ├── db/
-│       ├── handler/   (health, echo, services)
+│       ├── handler/   (health, echo, services, cors)
 │       ├── migrate/   (goose + SQL 00001_create_services)
 │       ├── model/
 │       └── store/
-├── apps/web/          ← kosong (Step 6)
+├── apps/web/          ← React + TS + Vite (Step 6)
+│   ├── vite.config.ts (proxy ke API)
+│   └── src/
+│       ├── App.tsx
+│       ├── api.ts
+│       ├── types.ts
+│       ├── App.css
+│       └── main.tsx
 ├── apps/worker/       ← kosong
 ├── apps/agent/        ← kosong
 ├── packages/shared/   ← kosong
@@ -67,6 +85,8 @@ Sailorport/
 ```
 
 ## Catatan belajar
+
+### Backend (Step 0–5)
 
 - `package main` = program yang bisa dijalankan
 - `:=` mendeklarasikan variabel baru; `!=` membandingkan
@@ -80,17 +100,30 @@ Sailorport/
 - Lapisan: handler → store (SQL) → model
 - `$1`, `$2` = parameter query (hindari SQL injection)
 - `r.PathValue("id")` ambil `{id}` dari route Go 1.22+
+- CORS middleware: izinkan browser Vite memanggil API lintas-port
+
+### Frontend (Step 6)
+
+- Vite = tooling frontend (dev server + hot reload)
+- `useState` = state yang berubah di layar
+- `useEffect(..., [])` = jalan sekali saat halaman dibuka
+- `fetch` = HTTP dari browser (mirip curl)
+- `import type { ... }` wajib untuk tipe saja (`FormEvent`) karena `verbatimModuleSyntax`
+- Nama file di Linux case-sensitive: `App.css` ≠ `app.css`
+- Nama export harus sama: `listServices` ≠ `listenServices` (typo bikin blank putih)
+- Blank putih → cek Console browser (F12), bukan hanya terminal Vite
 
 ## Blocker / pertanyaan
 
-- (kosong)
+- Cek nama file CORS: ada kemungkinan typo `cors..go` (titik ganda). Rename ke `cors.go` jika masih salah.
+- Portal belum punya UI update/delete (API sudah siap).
 
-## Next action (urutan Step 6)
+## Next action (urutan Step 7)
 
-1. Init portal React + TypeScript + Vite di `apps/web`
-2. Halaman list catalog (panggil `GET /api/v1/services`)
-3. Form create service sederhana
-4. Test end-to-end: web → API → Postgres
+1. Tombol/form edit service (panggil `PUT /api/v1/services/{id}`)
+2. Tombol hapus service (panggil `DELETE /api/v1/services/{id}`)
+3. Pastikan file CORS bernama `cors.go`
+4. Test end-to-end: list → create → update → delete dari browser
 
 ## Cara lanjut di mesin lain
 
