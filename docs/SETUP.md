@@ -100,6 +100,8 @@ Buka `http://localhost:5173` — list catalog + form create.
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
+Portal mendukung: list, create, edit, dan hapus service di catalog.
+
 ## Environment variables
 
 | Variable | Default | Keterangan |

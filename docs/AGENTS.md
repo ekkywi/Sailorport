@@ -19,7 +19,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | Step 6 selesai (list + create catalog) |
+| Portal | `apps/web` | Step 7 selesai (CRUD catalog UI) |
 | API | `apps/api` | Step 5 selesai (CRUD services) + CORS |
 | Worker | `apps/worker` | belum |
 | Agent | `apps/agent` | belum |
