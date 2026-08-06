@@ -10,14 +10,15 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Baca dulu file ini di repo:**
 - `docs/PROGRESS.md` — step terakhir yang selesai
+- `docs/ARCHITECTURE.md` — aturan lapisan (wajib diikuti)
 - `docs/AGENTS.md` — konvensi & konteks proyek
 - `docs/ROADMAP.md` — arah besar
 
 **Stack:** Go (api/worker/agent) + React/TS (web) + PostgreSQL + Redis + Docker Compose.
 
-**Step terakhir selesai:** Step 7 (Portal CRUD catalog lengkap: list/create/edit/delete di `apps/web`).
+**Step terakhir selesai:** Step 7.5 (Architecture foundation: `handler → service → store`, router, pecah `features/catalog` di web).
 
-**Step berikutnya:** Step 8 — Scaffold / golden path (1 template: generate service baru + daftar ke catalog).
+**Step berikutnya:** Step 8 — Scaffold / golden path (1 template: generate service baru + daftar ke catalog), ikut arsitektur di `docs/ARCHITECTURE.md`.
 
 Tolong lanjutkan dengan gaya panduan detail seperti sebelumnya: tujuan step, kode lengkap per file, penjelasan baris, cara test, lalu commit message.
 

@@ -4,7 +4,7 @@
 
 ## Status saat ini
 
-- **Step selesai:** 7
+- **Step selesai:** 7.5 (Architecture foundation)
 - **Step berikutnya:** 8 (Scaffold / golden path — 1 template)
 - **Terakhir dikerjakan:** 2026-08-06
 - **Mesin terakhir:** rumah / lokal
@@ -19,6 +19,7 @@
 - [x] Step 5 — CRUD catalog API
 - [x] Step 6 — Portal web menampilkan catalog (list + create)
 - [x] Step 7 — Update & delete service di portal (CRUD UI lengkap)
+- [x] Step 7.5 — Architecture foundation (lapisan service, router, pecah web)
 - [ ] Step 8 — Scaffold / golden path (1 template)
 - [ ] Step 9 — Auth OIDC + RBAC dasar
 - [ ] Step 10 — Worker registry + agent deploy
@@ -38,70 +39,40 @@ cd apps/web && npm install && npm run dev
 
 | Endpoint / UI | Method / aksi | Hasil |
 |---------------|---------------|-------|
-| `/healthz` | GET | `{"status":"ok","service":"sailorport-api","version":"0.1.0"}` |
-| `/api/v1/echo` | POST | `{"reply":"Sailorport received: ..."}` |
-| `/api/v1/services` | GET | list services (`[]` jika kosong) |
-| `/api/v1/services` | POST | create service → `201` |
-| `/api/v1/services/{id}` | GET | get satu service |
-| `/api/v1/services/{id}` | PUT | update service |
-| `/api/v1/services/{id}` | DELETE | hapus → `204` |
-| `http://localhost:5173` | UI | list + create + edit + delete |
+| `/healthz` | GET | health JSON |
+| `/api/v1/echo` | POST | demo (akan dihapus nanti) |
+| `/api/v1/services` | CRUD | lewat `handler → service → store` |
+| `http://localhost:5173` | UI | catalog CRUD (`features/catalog`) |
 
-Env vars API: `PORT`, `APP_ENV`, `APP_VERSION`, `DATABASE_URL`
-
-Default `DATABASE_URL`:
-`postgres://sailorport:sailorport@localhost:5432/sailorport?sslmode=disable`
-
-Portal: Vite proxy `/api` dan `/healthz` → `http://localhost:8080`  
-API: middleware CORS untuk `http://localhost:5173`
+Error API sekarang JSON: `{"error":"..."}`
 
 ## Struktur file saat ini
 
 ```text
-Sailorport/
-├── apps/api/
-│   ├── main.go
-│   ├── go.mod
-│   └── internal/
-│       ├── config/
-│       ├── db/
-│       ├── handler/   (health, echo, services, cors)
-│       ├── migrate/
-│       ├── model/
-│       └── store/
-├── apps/web/
-│   ├── vite.config.ts
-│   └── src/
-│       ├── App.tsx      (form dual-mode create/edit + list + hapus)
-│       ├── api.ts       (list/create/update/delete)
-│       ├── types.ts
-│       ├── App.css
-│       └── main.tsx
-├── apps/worker/       ← kosong
-├── apps/agent/        ← kosong
-├── packages/shared/   ← kosong
-├── deploy/compose/    ← Postgres
-└── docs/
+apps/api/
+├── main.go                    # wiring saja
+└── internal/
+    ├── config/ db/ migrate/
+    ├── handler/               # HTTP: router, cors, respond, services
+    ├── service/               # use case + validasi (+ test)
+    ├── store/                 # SQL
+    └── model/
+
+apps/web/src/
+├── App.tsx                    # shell
+├── styles/app.css
+└── features/catalog/          # page, form, list, api, types
+
+docs/ARCHITECTURE.md           # aturan lapisan
 ```
 
-## Catatan belajar
+## Catatan belajar (7.5)
 
-### Backend (Step 0–5)
-
-- Handler → store → model; `$1` parameter query
-- Goose + embed untuk migrasi
-- CORS middleware untuk browser Vite
-- Status: 200, 201, 204, 400, 404, 409
-
-### Frontend (Step 6–7)
-
-- `useState` / `useEffect` / `fetch`
-- `import type` untuk tipe saja (`FormEvent`)
-- Form dual-mode: `editingId === null` → create, ada id → update
-- `window.confirm` sebelum delete
-- URL harus exact: `/api/v1/services/{id}` (bukan `/api/api/service/...`)
-- Linux case-sensitive: `App.css` ≠ `app.css`
-- Blank putih / 404 → cek Console + Network (F12)
+- Lapisan: handler (HTTP) → service (bisnis) → store (SQL)
+- Interface `Repository` di service = port persistence
+- `writeError` / `writeJSON` seragam
+- Web: pecah per feature agar `App.tsx` tidak membengkak
+- CORS header harus exact: `Access-Control-Allow-Origin`
 
 ## Blocker / pertanyaan
 
@@ -109,11 +80,11 @@ Sailorport/
 
 ## Next action (urutan Step 8)
 
-1. Rancang endpoint scaffold (mis. `POST /api/v1/scaffold`)
-2. Siapkan 1 template service (API Go atau Node sederhana)
-3. Generate file dari template + daftar ke catalog
-4. Tombol/form “Create from template” di portal
+1. Baca `docs/ARCHITECTURE.md` — scaffold ikut lapisan yang sama
+2. Endpoint scaffold + 1 template
+3. Generate + daftar ke catalog
+4. UI “Create from template”
 
 ## Cara lanjut di mesin lain
 
-Lihat `docs/CONTINUE.md` dan paste prompt dari `docs/RESUME-PROMPT.md` ke chat Cursor baru.
+Lihat `docs/CONTINUE.md` dan paste prompt dari `docs/RESUME-PROMPT.md`.
