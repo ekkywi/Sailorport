@@ -12,3 +12,9 @@ export type CreateServiceInput = {
     description: string
     owner: string;
 }
+
+export type UpdateServiceInput = {
+    name: string;
+    description: string;
+    owner: string;
+}

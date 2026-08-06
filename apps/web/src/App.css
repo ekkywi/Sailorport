@@ -94,3 +94,39 @@ button:disabled {
 .error {
   color: #b91c1c;
 }
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.item-main {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.item-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.button-secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.button-danger {
+  background: #b91c1c;
+  color: #fff;
+}
