@@ -1,30 +1,23 @@
-:root {
-  font-family: "Segoe UI", system-ui, sans-serif;
-  color: #0f172a;
-  background: #f1f5f9;
-}
-
-body {
-  margin: 0;
-}
-
+/* Legacy dashboard styles — scoped to .page so auth/Tailwind are not overridden */
 .page {
   max-width: 720px;
   margin: 0 auto;
   padding: 2rem 1rem 4rem;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: #0f172a;
 }
 
-header h1 {
+.page header h1 {
   margin: 0;
   font-size: 2rem;
 }
 
-header p {
+.page header p {
   margin: 0.25rem 0 1.5rem;
   color: #64748b;
 }
 
-.card {
+.page .card {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -32,25 +25,27 @@ header p {
   margin-bottom: 1rem;
 }
 
-.form {
+.page .form {
   display: grid;
   gap: 0.75rem;
 }
 
-label {
+.page label {
   display: grid;
   gap: 0.35rem;
   font-size: 0.9rem;
 }
 
-input {
+.page input,
+.page select {
   padding: 0.55rem 0.7rem;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   font: inherit;
+  background: #fff;
 }
 
-button {
+.page button {
   width: fit-content;
   padding: 0.55rem 0.9rem;
   border: 0;
@@ -61,25 +56,25 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+.page button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.row {
+.page .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.list {
+.page .list {
   list-style: none;
   padding: 0;
   margin: 1rem 0 0;
 }
 
-.list li {
+.page .list li {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -88,56 +83,48 @@ button:disabled {
   border-top: 1px solid #e2e8f0;
 }
 
-.muted {
+.page .muted {
   color: #64748b;
   font-size: 0.9rem;
 }
 
-.error {
+.page .error {
   color: #b91c1c;
 }
 
-.success {
+.page .success {
   color: #047857;
   font-size: 0.95rem;
 }
 
-select {
-  padding: 0.55rem 0.7rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font: inherit;
-  background: #fff;
-}
-
-code {
+.page code {
   font-size: 0.85em;
   word-break: break-all;
 }
 
-.form-actions {
+.page .form-actions {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-.item-main {
+.page .item-main {
   display: grid;
   gap: 0.2rem;
 }
 
-.item-actions {
+.page .item-actions {
   display: flex;
   gap: 0.4rem;
   flex-shrink: 0;
 }
 
-.button-secondary {
+.page .button-secondary {
   background: #e2e8f0;
   color: #0f172a;
 }
 
-.button-danger {
+.page .button-danger {
   background: #b91c1c;
   color: #fff;
 }

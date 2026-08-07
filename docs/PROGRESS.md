@@ -48,11 +48,12 @@ Role: `admin`, `developer`, `viewer`
 
 ### Web UI stack (auth)
 
-- Tailwind CSS v4 (`@tailwindcss/vite`) + theme shadcn di `src/index.css`
-- Komponen shadcn: `button`, `input`, `label`, `card`, `tabs`, `alert`
-- Layout: `src/layouts/AuthLayout.tsx` (brand panel kiri, form kanan)
-- Login: `src/features/auth/LoginPage.tsx`
-- Dashboard catalog/scaffold masih pakai `src/styles/app.css` (belum dimigrasi ke Tailwind)
+- Routes: `/login`, `/register` (react-router); unauthenticated → redirect `/login`
+- Theme: ocean biru–putih (light) + harbour malam (dark); toggle di auth & dashboard (`localStorage`)
+- Font: Geist Variable (sama seperti Vercel)
+- Tailwind CSS v4 + shadcn primitives; layout `AuthLayout` full-bleed laut + gelombang
+- Login/Register: halaman terpisah di `features/auth/`
+- Dashboard catalog/scaffold masih pakai `src/styles/app.css` (belum dimigrasi)
 
 Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
