@@ -44,6 +44,8 @@ func main() {
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
 	usersStore := store.NewUsersStore(sqlDB)
 	authSvc := service.NewAuth(usersStore, cfg.JWTSecret)
+	workersStore := store.NewWorkersStore(sqlDB)
+	workersSvc := service.NewWorkers(workersStore)
 
 	router := handler.NewRouter(handler.API{
 		Version:   cfg.Version,
@@ -51,6 +53,7 @@ func main() {
 		Catalog:   catalog,
 		Scaffold:  scaffold,
 		Auth:      authSvc,
+		Workers:   workersSvc,
 	})
 
 	addr := ":" + cfg.Port

@@ -12,6 +12,7 @@ type API struct {
 	Catalog   *service.Catalog
 	Scaffold  *service.Scaffold
 	Auth      *service.Auth
+	Workers   *service.Workers
 }
 
 func NewRouter(api API) http.Handler {
@@ -22,6 +23,7 @@ func NewRouter(api API) http.Handler {
 	authH := NewAuthHandler(api.Auth)
 	services := NewServicesHandler(api.Catalog)
 	scaffold := NewScaffoldHandler(api.Scaffold)
+	workersH := NewWorkersHandler(api.Workers)
 
 	writer := []string{"developer", "admin"}
 	reader := []string{"viewer", "developer", "admin"}
@@ -40,6 +42,10 @@ func NewRouter(api API) http.Handler {
 
 	mux.Handle("GET /api/v1/templates", withRole(secret, reader, scaffold.ListTemplates))
 	mux.Handle("POST /api/v1/scaffold", withRole(secret, writer, scaffold.Create))
+
+	mux.HandleFunc("POST /api/v1/workers/register", workersH.Register)
+	mux.HandleFunc("POST /api/v1/workers/{id}/heartbeat", workersH.Heartbeat)
+	mux.Handle("GET /api/v1/workers", withRole(secret, reader, workersH.List))
 
 	return CORS(mux)
 }

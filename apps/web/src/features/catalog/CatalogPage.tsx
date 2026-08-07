@@ -1,5 +1,26 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { Plus, RefreshCw } from "lucide-react";
+import { Toolbar } from "@/components/app";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { CreateServiceForm } from "../scaffold/CreateServiceForm";
 import {
   createService,
   deleteService,
@@ -16,22 +37,28 @@ const emptyForm: ServiceFormValues = {
   owner: "",
 };
 
-export function CatalogPage({ refreshToken = 0 }: { refreshToken?: number }) {
+type DialogMode = "none" | "create" | "register" | "edit";
+
+export function CatalogPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [listError, setListError] = useState("");
+  const [formError, setFormError] = useState("");
   const [values, setValues] = useState<ServiceFormValues>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<DialogMode>("none");
+  const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
+  const [createdPath, setCreatedPath] = useState("");
 
   async function load() {
     setLoading(true);
-    setError("");
+    setListError("");
     try {
-      const data = await listServices();
-      setServices(data);
+      setServices(await listServices());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat catalog");
+      setListError(err instanceof Error ? err.message : "Failed to load catalog");
     } finally {
       setLoading(false);
     }
@@ -39,11 +66,30 @@ export function CatalogPage({ refreshToken = 0 }: { refreshToken?: number }) {
 
   useEffect(() => {
     void load();
-  }, [refreshToken]);
+  }, []);
 
-  function resetForm() {
+  function closeDialog() {
     setValues(emptyForm);
     setEditingId(null);
+    setFormError("");
+    setCreatedPath("");
+    setDialog("none");
+  }
+
+  function startCreate() {
+    setEditingId(null);
+    setValues(emptyForm);
+    setFormError("");
+    setCreatedPath("");
+    setDialog("create");
+  }
+
+  function startRegister() {
+    setEditingId(null);
+    setValues(emptyForm);
+    setFormError("");
+    setCreatedPath("");
+    setDialog("register");
   }
 
   function startEdit(svc: Service) {
@@ -53,74 +99,242 @@ export function CatalogPage({ refreshToken = 0 }: { refreshToken?: number }) {
       description: svc.description,
       owner: svc.owner,
     });
-    setError("");
+    setFormError("");
+    setDialog("edit");
   }
 
   function onChange(field: keyof ServiceFormValues, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
   }
 
-  async function onSubmit(e: FormEvent) {
+  async function onSubmitMetadata(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError("");
+    setFormError("");
     try {
       if (editingId) {
         await updateService(editingId, values);
       } else {
         await createService(values);
       }
-      resetForm();
+      closeDialog();
       await load();
     } catch (err) {
-      setError(
+      setFormError(
         err instanceof Error
           ? err.message
           : editingId
-            ? "Gagal mengupdate service"
-            : "Gagal membuat service",
+            ? "Failed to update service"
+            : "Failed to register service",
       );
     } finally {
       setSaving(false);
     }
   }
 
-  async function onDelete(svc: Service) {
-    const ok = window.confirm(`Hapus service "${svc.name}"?`);
-    if (!ok) {
-      return;
-    }
-    setError("");
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setListError("");
     try {
-      await deleteService(svc.id);
-      if (editingId === svc.id) {
-        resetForm();
+      await deleteService(deleteTarget.id);
+      if (editingId === deleteTarget.id) {
+        closeDialog();
       }
+      setDeleteTarget(null);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus service");
+      setListError(err instanceof Error ? err.message : "Failed to delete service");
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
     }
   }
 
+  const dialogOpen = dialog !== "none";
+
   return (
-    <>
-      <ServiceForm
-        title={editingId ? "Edit service" : "Tambah service"}
-        values={values}
-        saving={saving}
-        isEditing={editingId !== null}
-        onChange={onChange}
-        onSubmit={onSubmit}
-        onCancel={resetForm}
+    <div className="space-y-4">
+      <Toolbar
+        title={`${services.length} service${services.length === 1 ? "" : "s"}`}
+        description="Harbour software catalog"
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-[13px]"
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+              Refresh
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 gap-1.5 text-[13px]"
+              onClick={startCreate}
+            >
+              <Plus className="size-3.5" />
+              Create service
+            </Button>
+          </>
+        }
       />
+
+      {listError ? (
+        <p className="text-[13px] text-destructive">{listError}</p>
+      ) : null}
+
       <ServiceList
         services={services}
         loading={loading}
-        error={error}
-        onRefresh={() => void load()}
         onEdit={startEdit}
-        onDelete={(svc) => void onDelete(svc)}
+        onDelete={setDeleteTarget}
+        onCreate={startCreate}
       />
-    </>
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-lg" showCloseButton={!saving}>
+          {dialog === "create" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {createdPath ? "Service created" : "Create service"}
+                </DialogTitle>
+                <DialogDescription>
+                  {createdPath
+                    ? "Workspace generated and registered in the catalog."
+                    : "Generate a workspace from a template and register it in the catalog."}
+                </DialogDescription>
+              </DialogHeader>
+              {createdPath ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+                    <p className="text-[12px] text-muted-foreground">Workspace</p>
+                    <p
+                      className="mt-1 break-all font-mono text-[12px] text-foreground"
+                      title={createdPath}
+                    >
+                      {createdPath}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-[13px]"
+                    onClick={closeDialog}
+                  >
+                    Done
+                  </Button>
+                </div>
+              ) : (
+                <CreateServiceForm
+                  onSuccess={(path) => {
+                    setCreatedPath(path);
+                    void load();
+                  }}
+                  onRegisterExisting={startRegister}
+                />
+              )}
+            </>
+          ) : null}
+
+          {dialog === "register" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Register existing service</DialogTitle>
+                <DialogDescription>
+                  Catalog only — no workspace is generated. Use this for services
+                  that already exist elsewhere.
+                </DialogDescription>
+              </DialogHeader>
+              <ServiceForm
+                mode="register"
+                values={values}
+                saving={saving}
+                error={formError}
+                onChange={onChange}
+                onSubmit={onSubmitMetadata}
+                onCancel={closeDialog}
+                onCreateInstead={startCreate}
+              />
+            </>
+          ) : null}
+
+          {dialog === "edit" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Edit service</DialogTitle>
+                <DialogDescription>
+                  Update catalog metadata for this service.
+                </DialogDescription>
+              </DialogHeader>
+              <ServiceForm
+                mode="edit"
+                values={values}
+                saving={saving}
+                error={formError}
+                onChange={onChange}
+                onSubmit={onSubmitMetadata}
+                onCancel={closeDialog}
+              />
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete service?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.name}
+              </span>{" "}
+              from the catalog. Generated workspace files on disk are not deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[13px]"
+                  disabled={deleting}
+                />
+              }
+            >
+              Cancel
+            </AlertDialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="h-8 text-[13px]"
+              disabled={deleting}
+              onClick={() => void confirmDelete()}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

@@ -1,70 +1,107 @@
 import type { FormEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { ServiceFormValues } from "./types";
 
 type ServiceFormProps = {
-  title: string;
+  mode: "register" | "edit";
   values: ServiceFormValues;
   saving: boolean;
-  isEditing: boolean;
+  error?: string;
   onChange: (field: keyof ServiceFormValues, value: string) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
+  onCreateInstead?: () => void;
 };
 
 export function ServiceForm({
-  title,
+  mode,
   values,
   saving,
-  isEditing,
+  error,
   onChange,
   onSubmit,
   onCancel,
+  onCreateInstead,
 }: ServiceFormProps) {
+  const isEdit = mode === "edit";
+
   return (
-    <section className="card">
-      <h2>{title}</h2>
-      <form onSubmit={onSubmit} className="form">
-        <label>
+    <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2">
+      {error ? (
+        <p className="text-[13px] text-destructive sm:col-span-2">{error}</p>
+      ) : null}
+
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor="svc-name" className="text-[12px] text-muted-foreground">
           Name
-          <input
-            value={values.name}
-            onChange={(e) => onChange("name", e.target.value)}
-            required
-            placeholder="payments-api"
-          />
-        </label>
-        <label>
+        </Label>
+        <Input
+          id="svc-name"
+          value={values.name}
+          onChange={(e) => onChange("name", e.target.value)}
+          required
+          placeholder="payments-api"
+          className="h-9 text-[13px]"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="svc-owner" className="text-[12px] text-muted-foreground">
           Owner
-          <input
-            value={values.owner}
-            onChange={(e) => onChange("owner", e.target.value)}
-            placeholder="platform-team"
-          />
-        </label>
-        <label>
+        </Label>
+        <Input
+          id="svc-owner"
+          value={values.owner}
+          onChange={(e) => onChange("owner", e.target.value)}
+          placeholder="platform-team"
+          className="h-9 text-[13px]"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="svc-description"
+          className="text-[12px] text-muted-foreground"
+        >
           Description
-          <input
-            value={values.description}
-            onChange={(e) => onChange("description", e.target.value)}
-            placeholder="Handles payments"
-          />
-        </label>
-        <div className="form-actions">
-          <button type="submit" disabled={saving}>
-            {saving ? "Menyimpan..." : isEditing ? "Update" : "Create"}
+        </Label>
+        <Input
+          id="svc-description"
+          value={values.description}
+          onChange={(e) => onChange("description", e.target.value)}
+          placeholder="Handles payments"
+          className="h-9 text-[13px]"
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-3 pt-1 sm:col-span-2">
+        <Button type="submit" size="sm" className="h-8 text-[13px]" disabled={saving}>
+          {saving
+            ? "Saving…"
+            : isEdit
+              ? "Save changes"
+              : "Register in catalog"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 text-[13px]"
+          onClick={onCancel}
+          disabled={saving}
+        >
+          Cancel
+        </Button>
+        {onCreateInstead ? (
+          <button
+            type="button"
+            className="text-[12px] text-muted-foreground transition-colors hover:text-foreground"
+            onClick={onCreateInstead}
+            disabled={saving}
+          >
+            Create from template instead
           </button>
-          {isEditing && (
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={onCancel}
-              disabled={saving}
-            >
-              Batal
-            </button>
-          )}
-        </div>
-      </form>
-    </section>
+        ) : null}
+      </div>
+    </form>
   );
 }

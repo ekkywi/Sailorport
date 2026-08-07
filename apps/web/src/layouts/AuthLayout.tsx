@@ -1,19 +1,12 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { BrandMark } from "@/components/app";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 type AuthLayoutProps = {
   mode: "login" | "register";
   children: ReactNode;
 };
-
-function BrandMark() {
-  return (
-    <span className="flex size-[18px] items-center justify-center rounded-[4px] bg-primary text-[10px] font-semibold leading-none tracking-tight text-primary-foreground">
-      S
-    </span>
-  );
-}
 
 export function AuthLayout({ mode, children }: AuthLayoutProps) {
   const headline =

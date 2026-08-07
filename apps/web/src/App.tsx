@@ -6,17 +6,16 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { CatalogPage } from "./features/catalog/CatalogPage";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RegisterPage } from "./features/auth/RegisterPage";
 import { logout, me } from "./features/auth/api";
 import type { AuthUser } from "./features/auth/types";
-import { ScaffoldPanel } from "./features/scaffold/ScaffoldPanel";
+import { OverviewPage } from "./features/overview/OverviewPage";
+import { WorkersPage } from "./features/workers/WorkersPage";
+import { AppShell } from "./layouts/AppShell";
 import { AuthLayout } from "./layouts/AuthLayout";
 import { getToken } from "./lib/http";
-import "./styles/app.css";
 
 function SessionGate({
   children,
@@ -59,39 +58,6 @@ function SessionGate({
   return <>{children({ user, checking, reload, signOut })}</>;
 }
 
-function Dashboard({
-  user,
-  onLogout,
-}: {
-  user: AuthUser;
-  onLogout: () => void;
-}) {
-  const [catalogTick, setCatalogTick] = useState(0);
-
-  return (
-    <div className="page">
-      <header>
-        <div className="row">
-          <div>
-            <h1>Sailorport</h1>
-            <p className="muted">
-              {user.name || user.email} · role: {user.role}
-            </p>
-          </div>
-          <div className="row" style={{ gap: "0.5rem" }}>
-            <ThemeToggle />
-            <Button type="button" variant="outline" onClick={onLogout}>
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-      <ScaffoldPanel onSuccess={() => setCatalogTick((n) => n + 1)} />
-      <CatalogPage refreshToken={catalogTick} />
-    </div>
-  );
-}
-
 function LoginRoute({ onSuccess }: { onSuccess: () => void }) {
   const navigate = useNavigate();
   return (
@@ -99,7 +65,7 @@ function LoginRoute({ onSuccess }: { onSuccess: () => void }) {
       <LoginPage
         onSuccess={() => {
           onSuccess();
-          void navigate("/", { replace: true });
+          void navigate("/overview", { replace: true });
         }}
       />
     </AuthLayout>
@@ -113,7 +79,7 @@ function RegisterRoute({ onSuccess }: { onSuccess: () => void }) {
       <RegisterPage
         onSuccess={() => {
           onSuccess();
-          void navigate("/", { replace: true });
+          void navigate("/overview", { replace: true });
         }}
       />
     </AuthLayout>
@@ -152,13 +118,15 @@ function App() {
         }
 
         return (
-          <Routes>
-            <Route
-              path="/"
-              element={<Dashboard user={user} onLogout={signOut} />}
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <AppShell user={user} onLogout={signOut}>
+            <Routes>
+              <Route path="/overview" element={<OverviewPage />} />
+              <Route path="/catalog" element={<CatalogPage />} />
+              <Route path="/worker" element={<WorkersPage />} />
+              <Route path="/" element={<Navigate to="/overview" replace />} />
+              <Route path="*" element={<Navigate to="/overview" replace />} />
+            </Routes>
+          </AppShell>
         );
       }}
     </SessionGate>
