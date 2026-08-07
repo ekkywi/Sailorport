@@ -13,15 +13,21 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - `docs/ARCHITECTURE.md` — aturan lapisan (wajib diikuti)
 - `docs/AGENTS.md` — konvensi & konteks proyek
 
-**Stack:** Go (api/worker/agent) + React/TS (web) + PostgreSQL + Redis + Docker Compose.
+**Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** Step 9 + polish UI auth — JWT/RBAC; portal auth di `/login` dan `/register` (terpisah), tema laut biru–putih + dark mode, font Geist Variable (seperti Vercel).
+**Step terakhir selesai:** Step 10B — worker registry (API + portal `/worker`), app shell Linear-style (`/overview`, `/catalog`, `/worker`), catalog dengan dialog create/register/edit/delete, agent binary `apps/agent` (register + heartbeat).
 
-**Step berikutnya:** Step 10 — Worker registry + agent deploy end-to-end.
+**Step berikutnya:** Step 10C — deploy end-to-end via agent (build/run di node, status ke API).
 
-**Catatan web:** auth sudah Tailwind/shadcn + router; catalog/scaffold masih CSS lama di `styles/app.css`. Jangan refactor dashboard kecuali diminta.
+**Catatan produk:**
+- Create service (default) = scaffold dari template + daftar catalog
+- Register existing = metadata saja, tanpa generate folder
+- Template masih di folder `templates/`, bukan database
+- Delete catalog tidak hapus folder workspace (debt known)
 
-Tolong lanjutkan dengan gaya panduan detail seperti sebelumnya.
+**Cara jalankan lokal:** lihat `docs/PROGRESS.md` (compose + api + web + agent).
+
+Tolong lanjutkan Step 10C dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

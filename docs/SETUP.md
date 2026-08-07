@@ -96,11 +96,27 @@ npm install
 npm run dev
 ```
 
-Buka `http://localhost:5173` — halaman login (register dulu jika belum punya akun), lalu catalog + scaffold.
+Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar: Overview, Catalog, Workers.
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
-Portal mendukung: auth (JWT), list/create/edit/delete catalog, scaffold dari template `go-api`.
+Portal mendukung: auth (JWT), catalog CRUD + scaffold (dialog), worker list, overview dashboard.
+
+## Jalankan agent (Step 10B)
+
+Terminal terpisah, API harus sudah jalan:
+
+```bash
+cd apps/agent
+SAILORPORT_API_URL=http://localhost:8080 \
+SAILORPORT_WORKER_NAME=local-dev \
+SAILORPORT_HEARTBEAT_INTERVAL=15s \
+go run .
+```
+
+Cek portal `/worker` — worker muncul **online** dengan heartbeat berkala.
+
+Register/heartbeat **tanpa JWT** (endpoint publik untuk agent).
 
 ## Environment variables
 
@@ -111,6 +127,14 @@ Portal mendukung: auth (JWT), list/create/edit/delete catalog, scaffold dari tem
 | `APP_VERSION` | `0.1.0` | versi API di response health |
 | `DATABASE_URL` | lihat di atas (port **5433**) | koneksi Postgres |
 | `AUTH_JWT_SECRET` | `dev-only-change-me` | secret JWT (ganti di production) |
+
+Agent (`apps/agent`):
+
+| Variable | Default | Keterangan |
+|----------|---------|------------|
+| `SAILORPORT_API_URL` | `http://localhost:8080` | base URL API |
+| `SAILORPORT_WORKER_NAME` | hostname | nama worker |
+| `SAILORPORT_HEARTBEAT_INTERVAL` | `15s` | interval heartbeat |
 
 Contoh:
 
@@ -125,26 +149,37 @@ apps/api/
 ├── main.go
 └── internal/
     ├── config/, db/, migrate/
-    ├── handler/   (health, services, scaffold, auth, middleware)
-    ├── service/   (catalog, scaffold, auth)
-    ├── store/     (service, user)
-    ├── model/     (service, user)
+    ├── handler/   (health, services, scaffold, auth, workers, middleware)
+    ├── service/   (catalog, scaffold, auth, workers)
+    ├── store/     (service, user, worker)
+    ├── model/     (service, user, worker)
+    ├── template/  (registry + generate dari disk)
     └── auth/      (jwt, password)
+
+apps/agent/
+├── main.go
+└── internal/
+    ├── config/
+    ├── client/    (HTTP ke API workers)
+    └── agent/     (register + heartbeat loop)
 
 apps/web/
 ├── vite.config.ts
 ├── components.json
 └── src/
     ├── App.tsx
-    ├── index.css          # Tailwind v4 + shadcn theme
-    ├── components/ui/     # shadcn primitives
-    ├── layouts/           # AuthLayout
+    ├── index.css          # Tailwind v4 + harbour theme
+    ├── components/
+    │   ├── app/           # DataPanel, Toolbar, EmptyState, …
+    │   └── ui/            # shadcn primitives + dialog
+    ├── layouts/           # AuthLayout, AppShell
     ├── features/
     │   ├── auth/
     │   ├── catalog/
-    │   └── scaffold/
-    ├── lib/               # http.ts, utils.ts
-    └── styles/app.css     # legacy CSS dashboard
+    │   ├── overview/
+    │   ├── scaffold/      # CreateServiceForm
+    │   └── workers/
+    └── lib/               # http.ts, utils.ts, theme.ts
 ```
 
 ## Setelah setup

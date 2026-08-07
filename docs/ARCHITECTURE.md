@@ -45,23 +45,26 @@ Response error JSON seragam:
 
 ```text
 src/
-  app/                 shell / routing nanti
-  features/<domain>/   UI + api client + types per fitur
-  components/ui/       primitif shadcn (button, input, card, …)
-  layouts/             layout halaman (AuthLayout, nanti AppShell)
-  lib/                 http client, utils (cn)
-  styles/              CSS legacy catalog/scaffold (belum Tailwind)
-  index.css            Tailwind v4 + theme shadcn
+  components/
+    app/                 primitif UI portal (DataPanel, Toolbar, …)
+    ui/                  shadcn (button, input, dialog, …)
+  features/<domain>/     UI + api client + types per fitur
+  layouts/               AuthLayout, AppShell
+  lib/                   http client, utils, theme
+  index.css              Tailwind v4 + theme shadcn harbour
 ```
 
 | Area | Tanggung jawab |
 |------|----------------|
-| `features/catalog/*` | Halaman, form, list, `fetch` ke `/api/v1/services` |
-| `features/auth/*` | Login/register UI, panggil `/api/v1/auth/*` |
-| `layouts/AuthLayout` | Shell split-screen untuk gate login |
-| `components/ui/*` | Primitif UI reusable (shadcn) |
-| `App.tsx` | Susun layout; jangan menumpuk logic semua fitur |
-| `lib/http.ts` | Token + `apiFetch`; tanpa JSX |
+| `features/catalog/*` | Daftar services, dialog create/register/edit/delete |
+| `features/workers/*` | Daftar workers + status |
+| `features/overview/*` | Dashboard ringkasan harbour |
+| `features/scaffold/*` | CreateServiceForm (dipakai dialog catalog) |
+| `features/auth/*` | Login/register UI |
+| `layouts/AppShell` | Sidebar + topbar setelah login |
+| `layouts/AuthLayout` | Gate login/register |
+| `App.tsx` | Session gate + flat routes `/overview`, `/catalog`, `/worker` |
+| `lib/http.ts` | Token + `apiFetch` |
 
 ## Batas sistem (produk)
 

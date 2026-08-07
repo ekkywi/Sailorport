@@ -14,16 +14,17 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 - GitHub: `github.com/ekkywi/Sailorport`
 - Go module API: `github.com/ekkywi/sailorport/apps/api`
+- Go module Agent: `github.com/ekkywi/sailorport/apps/agent`
 
 ## Stack
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | catalog CRUD + scaffold UI + auth UI (Tailwind/shadcn) |
-| API | `apps/api` | layered + scaffold/templates |
-| Worker | `apps/worker` | belum |
-| Agent | `apps/agent` | belum |
-| Templates | `templates/` | `go-api` |
+| Portal | `apps/web` | auth + app shell + overview/catalog/workers UI |
+| API | `apps/api` | layered + scaffold/templates + workers |
+| Worker | `apps/worker` | belum (job queue / orchestrator) |
+| Agent | `apps/agent` | register + heartbeat loop |
+| Templates | `templates/` | `go-api` (disk, bukan DB) |
 | Shared contracts | `packages/shared` | belum |
 | Compose | `deploy/compose` | Postgres (host port 5433) |
 
@@ -47,12 +48,28 @@ Aturan panduan:
 Developer → Web Portal
               → API (Go)
                  → PostgreSQL + Redis
-                 → Worker (jobs)
-                 → Agent di node (Docker build/run)
+                 → Worker (jobs) [belum]
+                 → Agent di node (register, heartbeat; deploy menyusul)
                  → callback status
 ```
 
 Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi.
+
+## Portal routes (setelah login)
+
+| Path | Isi |
+|------|-----|
+| `/overview` | ringkasan services + workers |
+| `/catalog` | daftar services; create via dialog (scaffold) |
+| `/worker` | daftar workers + status |
+
+Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
+
+## Catalog vs scaffold (mental model)
+
+- **Create service** (default) = pilih template → generate workspace → daftar ke catalog
+- **Register existing** = metadata saja di catalog, tanpa folder
+- **Delete service** = hapus row DB saja; folder workspace orphan (debt)
 
 ## Coding conventions
 
@@ -62,9 +79,9 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 - `main.go` tipis — hanya wiring
 - Alur API: `handler` → `service` → `store` (jangan bypass service untuk domain logic)
 - Error API JSON: `{"error":"..."}`
-- Portal: fitur di `src/features/<domain>/`; `App.tsx` hanya shell
+- Portal: fitur di `src/features/<domain>/`; `App.tsx` hanya shell + routing
 - CORS: izinkan `http://localhost:5173` di development
-- Commit: `feat(api):`, `feat(web):`, `refactor(api):`, `docs:`, `fix:`
+- Commit: `feat(api):`, `feat(web):`, `feat(agent):`, `docs:`, `fix:`
 
 ## Resume workflow
 
@@ -75,3 +92,5 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 ## MVP v1 success criteria
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
+
+(Saat ini: agent register + heartbeat sudah; deploy belum — Step 10C.)

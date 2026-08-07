@@ -43,7 +43,7 @@ Satu flow ini harus jalan di mesin orang lain:
 - [x] Scaffolder / golden path (template `go-api`)
 - [ ] Environments (dev/staging/prod)
 - [ ] Deploy via agent
-- [ ] Worker registry + health
+- [x] Worker registry + health (API + portal + agent heartbeat)
 - [ ] Audit log
 - [ ] Self-hosting pack (compose + docs)
 
@@ -80,5 +80,7 @@ Satu flow ini harus jalan di mesin orang lain:
 | 7.5 | Architecture foundation | selesai |
 | 8 | Scaffold / golden path (1 template) | selesai |
 | 9 | Auth lokal + JWT + RBAC | selesai |
-| 10 | Worker registry + agent deploy | berikutnya |
+| 10A | Worker registry API + portal UI | selesai |
+| 10B | Agent binary (register + heartbeat) | selesai |
+| 10C | Deploy end-to-end via agent | berikutnya |
 | 11 | Docker Compose full stack | - |
