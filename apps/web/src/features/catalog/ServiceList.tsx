@@ -6,7 +6,6 @@ import {
   userInitials,
 } from "@/components/app";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { Service } from "./types";
 
 type ServiceListProps = {
@@ -141,16 +140,12 @@ export function ServiceList({
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div
-                    className={cn(
-                      "flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100",
-                    )}
-                  >
+                  <div className="flex justify-end gap-1">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      className="text-muted-foreground"
+                      className="text-muted-foreground/80 group-hover:text-muted-foreground"
                       aria-label={`Edit ${svc.name}`}
                       onClick={() => onEdit(svc)}
                     >
@@ -160,7 +155,7 @@ export function ServiceList({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive group-hover:text-muted-foreground"
                       aria-label={`Delete ${svc.name}`}
                       onClick={() => onDelete(svc)}
                     >

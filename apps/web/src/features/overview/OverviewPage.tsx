@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Boxes, Server } from "lucide-react";
 import {
   DataPanel,
   EmptyState,
+  ErrorBanner,
   StatusDot,
   skeletonClass,
 } from "@/components/app";
@@ -35,31 +36,25 @@ export function OverviewPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError("");
-      try {
-        const [services, workers] = await Promise.all([
-          listServices(),
-          listWorkers(),
-        ]);
-        if (cancelled) return;
-        setData({ services, workers });
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load overview");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [services, workers] = await Promise.all([
+        listServices(),
+        listWorkers(),
+      ]);
+      setData({ services, workers });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load overview");
+    } finally {
+      setLoading(false);
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const services = data?.services ?? [];
   const workers = data?.workers ?? [];
@@ -71,7 +66,7 @@ export function OverviewPage() {
   return (
     <div className="space-y-6">
       {error ? (
-        <p className="text-[13px] text-destructive">{error}</p>
+        <ErrorBanner message={error} onRetry={() => void load()} />
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -160,14 +155,19 @@ export function OverviewPage() {
           ) : (
             <ul className="divide-y divide-border">
               {recentServices.map((svc) => (
-                <li key={svc.id} className="px-4 py-2.5">
-                  <p className="truncate text-[13px] font-medium tracking-[-0.01em]">
-                    {svc.name}
-                  </p>
-                  <p className="truncate text-[12px] text-muted-foreground">
-                    {svc.owner || "Unassigned"}
-                    {svc.description ? ` · ${svc.description}` : ""}
-                  </p>
+                <li key={svc.id}>
+                  <Link
+                    to="/catalog"
+                    className="block px-4 py-2.5 transition-colors hover:bg-muted/35"
+                  >
+                    <p className="truncate text-[13px] font-medium tracking-[-0.01em]">
+                      {svc.name}
+                    </p>
+                    <p className="truncate text-[12px] text-muted-foreground">
+                      {svc.owner || "Unassigned"}
+                      {svc.description ? ` · ${svc.description}` : ""}
+                    </p>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -208,22 +208,24 @@ export function OverviewPage() {
           ) : (
             <ul className="divide-y divide-border">
               {recentWorkers.map((w) => (
-                <li
-                  key={w.id}
-                  className="flex items-center justify-between gap-3 px-4 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium tracking-[-0.01em]">
-                      {w.name}
-                    </p>
-                    <p className="truncate text-[12px] text-muted-foreground">
-                      {w.hostname || "—"}
-                    </p>
-                  </div>
-                  <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] capitalize text-muted-foreground">
-                    <StatusDot status={w.status} />
-                    {w.status}
-                  </span>
+                <li key={w.id}>
+                  <Link
+                    to="/worker"
+                    className="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-muted/35"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-medium tracking-[-0.01em]">
+                        {w.name}
+                      </p>
+                      <p className="truncate text-[12px] text-muted-foreground">
+                        {w.hostname || "—"}
+                      </p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1.5 text-[11px] capitalize text-muted-foreground">
+                      <StatusDot status={w.status} />
+                      {w.status}
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>

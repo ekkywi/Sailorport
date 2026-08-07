@@ -2,13 +2,12 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Toolbar({
-  title,
-  description,
+  meta,
   actions,
   className,
 }: {
-  title: ReactNode;
-  description?: ReactNode;
+  /** Compact count / status line — page title lives in the topbar */
+  meta?: ReactNode;
   actions?: ReactNode;
   className?: string;
 }) {
@@ -19,16 +18,15 @@ export function Toolbar({
         className,
       )}
     >
-      <div className="min-w-0">
-        <div className="text-[13px] font-medium tracking-[-0.01em] text-foreground">
-          {title}
-        </div>
-        {description ? (
-          <p className="mt-0.5 text-[12px] text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
+      {meta ? (
+        <p className="min-w-0 text-[12px] text-muted-foreground">{meta}</p>
+      ) : (
+        <span className="hidden sm:block" />
+      )}
       {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:ml-auto">
+          {actions}
+        </div>
       ) : null}
     </div>
   );

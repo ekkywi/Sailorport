@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { Plus, RefreshCw } from "lucide-react";
-import { Toolbar } from "@/components/app";
+import { ErrorBanner, Toolbar, useToast } from "@/components/app";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -40,6 +40,7 @@ const emptyForm: ServiceFormValues = {
 type DialogMode = "none" | "create" | "register" | "edit";
 
 export function CatalogPage() {
+  const { toast } = useToast();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -114,8 +115,10 @@ export function CatalogPage() {
     try {
       if (editingId) {
         await updateService(editingId, values);
+        toast("Service updated");
       } else {
         await createService(values);
+        toast("Service registered");
       }
       closeDialog();
       await load();
@@ -134,6 +137,7 @@ export function CatalogPage() {
 
   async function confirmDelete() {
     if (!deleteTarget) return;
+    const name = deleteTarget.name;
     setDeleting(true);
     setListError("");
     try {
@@ -142,6 +146,7 @@ export function CatalogPage() {
         closeDialog();
       }
       setDeleteTarget(null);
+      toast(`Deleted “${name}”`);
       await load();
     } catch (err) {
       setListError(err instanceof Error ? err.message : "Failed to delete service");
@@ -152,12 +157,15 @@ export function CatalogPage() {
   }
 
   const dialogOpen = dialog !== "none";
+  const countLabel =
+    loading && services.length === 0
+      ? "Loading…"
+      : `${services.length} service${services.length === 1 ? "" : "s"}`;
 
   return (
     <div className="space-y-4">
       <Toolbar
-        title={`${services.length} service${services.length === 1 ? "" : "s"}`}
-        description="Harbour software catalog"
+        meta={countLabel}
         actions={
           <>
             <Button
@@ -185,7 +193,7 @@ export function CatalogPage() {
       />
 
       {listError ? (
-        <p className="text-[13px] text-destructive">{listError}</p>
+        <ErrorBanner message={listError} onRetry={() => void load()} />
       ) : null}
 
       <ServiceList
@@ -239,6 +247,7 @@ export function CatalogPage() {
                 <CreateServiceForm
                   onSuccess={(path) => {
                     setCreatedPath(path);
+                    toast("Service created");
                     void load();
                   }}
                   onRegisterExisting={startRegister}

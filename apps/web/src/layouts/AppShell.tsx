@@ -2,18 +2,22 @@ import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Boxes,
+  ChevronDown,
   LayoutDashboard,
   LogOut,
   Menu,
   Server,
   X,
 } from "lucide-react";
+import { BrandMark, userInitials } from "@/components/app";
 import {
-  BrandMark,
-  SectionLabel,
-  userInitials,
-} from "@/components/app";
-import { Button } from "@/components/ui/button";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { AuthUser } from "@/features/auth/types";
 import { cn } from "@/lib/utils";
@@ -47,7 +51,7 @@ const pageMeta: Record<string, { title: string; description: string }> = {
 
 function navClass({ isActive }: { isActive: boolean }) {
   return cn(
-    "group flex items-center gap-2 rounded-md px-2 py-[6px] text-[13px] font-medium tracking-[-0.01em] transition-colors",
+    "group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors",
     isActive
       ? "bg-sidebar-accent text-sidebar-accent-foreground"
       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
@@ -87,49 +91,30 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 px-2 py-2">
-        <SectionLabel className="mb-1">Workspace</SectionLabel>
-        <nav className="flex flex-col gap-0.5" aria-label="Main">
-          {navItems.map(({ to, label, icon: Icon, ...rest }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={"end" in rest ? rest.end : false}
-              className={navClass}
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon
-                    className={cn(
-                      "size-4 shrink-0",
-                      isActive
-                        ? "text-sidebar-accent-foreground"
-                        : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
-                    )}
-                  />
-                  {label}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-
-      <div className="mt-auto border-t border-sidebar-border px-3 py-3">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-[11px] font-semibold tracking-tight text-sidebar-accent-foreground">
-            {userInitials(displayName)}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-medium text-sidebar-foreground">
-              {displayName}
-            </p>
-            <span className="mt-0.5 inline-flex rounded bg-muted px-1.5 py-px text-[10px] font-medium capitalize text-muted-foreground">
-              {user.role}
-            </span>
-          </div>
-        </div>
-      </div>
+      <nav className="flex flex-1 flex-col gap-1 px-2 py-3" aria-label="Main">
+        {navItems.map(({ to, label, icon: Icon, ...rest }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={"end" in rest ? rest.end : false}
+            className={navClass}
+          >
+            {({ isActive }) => (
+              <>
+                <Icon
+                  className={cn(
+                    "size-4 shrink-0",
+                    isActive
+                      ? "text-sidebar-accent-foreground"
+                      : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
+                  )}
+                />
+                {label}
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
     </div>
   );
 
@@ -175,18 +160,49 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
             ) : null}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <ThemeToggle />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1.5 px-2 text-[13px] text-muted-foreground hover:text-foreground"
-              onClick={onLogout}
-            >
-              <LogOut className="size-3.5" />
-              <span className="hidden sm:inline">Log out</span>
-            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  "inline-flex h-8 max-w-[200px] items-center gap-2 rounded-md px-1.5 text-left",
+                  "text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                  "data-popup-open:bg-muted data-popup-open:text-foreground",
+                )}
+              >
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold tracking-tight text-foreground">
+                  {userInitials(displayName)}
+                </span>
+                <span className="hidden min-w-0 sm:block">
+                  <span className="block truncate text-[13px] font-medium text-foreground">
+                    {displayName}
+                  </span>
+                </span>
+                <ChevronDown className="hidden size-3.5 shrink-0 opacity-60 sm:block" />
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="space-y-0.5">
+                  <p className="truncate text-[13px] font-medium text-foreground">
+                    {displayName}
+                  </p>
+                  <p className="truncate text-[12px]">{user.email}</p>
+                  <p className="pt-0.5 text-[11px] font-medium capitalize">
+                    {user.role}
+                  </p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive data-highlighted:bg-destructive/10 data-highlighted:text-destructive"
+                  onClick={onLogout}
+                >
+                  <LogOut />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

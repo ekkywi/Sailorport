@@ -3,11 +3,13 @@ import { RefreshCw, Server } from "lucide-react";
 import {
   DataPanel,
   EmptyState,
+  ErrorBanner,
   StatusBadge,
   Toolbar,
   formatAbsoluteTime,
   formatRelativeTime,
   labelEntries,
+  skeletonClass,
 } from "@/components/app";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,6 +31,21 @@ function LabelChips({ labels }: { labels: Worker["labels"] }) {
         >
           {value ? `${key}=${value}` : key}
         </span>
+      ))}
+    </div>
+  );
+}
+
+function WorkersTableSkeleton() {
+  return (
+    <div className="space-y-0 divide-y divide-border">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-4 px-4 py-3">
+          <div className={skeletonClass("h-3.5 w-28")} />
+          <div className={skeletonClass("h-3.5 w-24")} />
+          <div className={skeletonClass("h-5 w-16 rounded-full")} />
+          <div className={skeletonClass("h-3.5 w-20")} />
+        </div>
       ))}
     </div>
   );
@@ -56,20 +73,17 @@ export function WorkersPage() {
   }, [load]);
 
   const online = workers.filter((w) => w.status === "online").length;
+  const meta =
+    loading && workers.length === 0
+      ? "Loading…"
+      : workers.length > 0
+        ? `${workers.length} worker${workers.length === 1 ? "" : "s"} · ${online} online`
+        : "No workers registered";
 
   return (
     <div className="space-y-4">
       <Toolbar
-        title={
-          loading && workers.length === 0
-            ? "Workers"
-            : `${workers.length} worker${workers.length === 1 ? "" : "s"}`
-        }
-        description={
-          workers.length > 0
-            ? `${online} online · agents keep status via heartbeat`
-            : "Agents register here and keep status alive via heartbeat"
-        }
+        meta={meta}
         actions={
           <Button
             type="button"
@@ -86,17 +100,11 @@ export function WorkersPage() {
       />
 
       {error ? (
-        <p className="text-[13px] text-destructive">{error}</p>
+        <ErrorBanner message={error} onRetry={() => void load()} />
       ) : null}
 
       <DataPanel>
-        {loading && workers.length === 0 ? (
-          <EmptyState
-            title="Loading workers…"
-            description="Fetching registered agent nodes."
-            className="py-14"
-          />
-        ) : null}
+        {loading && workers.length === 0 ? <WorkersTableSkeleton /> : null}
 
         {!loading && workers.length === 0 && !error ? (
           <EmptyState
