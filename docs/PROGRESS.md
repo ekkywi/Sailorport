@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 10C.1 (Deployments API + agent claim)
-- **Step berikutnya:** 10C.2 (Agent poll + docker build/run)
-- **Terakhir dikerjakan:** 2026-08-10 — deployments table/API, claim job, status update
+- **Step selesai:** 10C.2 (Agent poll + docker build/run)
+- **Step berikutnya:** 10C.3 (Portal UI tombol Deploy + list deployments)
+- **Terakhir dikerjakan:** 2026-08-10 — agent poll job, docker build/run, status `building`/`running`/`failed`
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -26,7 +26,7 @@
 - [x] Step 10A — Worker registry API + portal UI (Overview, Catalog, Workers)
 - [x] Step 10B — Agent binary (`apps/agent`: register + heartbeat loop)
 - [x] Step 10C.1 — Deployments API (create/list/get + agent claim/update)
-- [ ] Step 10C.2 — Agent poll job + Docker build/run + PATCH status
+- [x] Step 10C.2 — Agent poll job + Docker build/run + PATCH status
 - [ ] Step 10C.3 — Portal UI tombol Deploy + list deployments
 
 ## Yang sudah jalan
@@ -69,6 +69,8 @@ Env agent:
 | `SAILORPORT_API_URL` | `http://localhost:8080` | base URL API |
 | `SAILORPORT_WORKER_NAME` | hostname mesin | nama worker di registry |
 | `SAILORPORT_HEARTBEAT_INTERVAL` | `15s` | interval heartbeat |
+| `SAILORPORT_POLL_INTERVAL` | `5s` | interval poll job deploy |
+| `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | host port untuk container (MVP: satu port) |
 
 Role: `admin`, `developer`, `viewer`
 
@@ -79,7 +81,24 @@ Role: `admin`, `developer`, `viewer`
 - Status: `pending` → `claimed` → `building` → `running` | `failed` | `stopped`
 - Claim atomik (`FOR UPDATE SKIP LOCKED`) + join service → `service_name`, `workspace_path`
 - Create menolak service tanpa workspace (scaffold dulu)
-- **Belum:** agent belum poll/docker; portal belum tombol Deploy
+- **Belum:** portal belum tombol Deploy (10C.3)
+
+### Agent deploy (10C.2)
+
+- Poll `POST /api/v1/agent/jobs/next` setiap `SAILORPORT_POLL_INTERVAL`
+- Flow: claim → `building` → `docker build` + `docker run` → `running` | `failed`
+- Image tag: `sailorport/{service_name}:{deployment_id[:8]}`
+- Container name: `sailorport-{service_name}`; map host port → container `:8080`
+- Template `go-api` punya `Dockerfile.tmpl` (scaffold baru otomatis dapat `Dockerfile`)
+- Service scaffold **lama** (sebelum 10C.2) perlu `Dockerfile` manual di workspace
+
+**Test deploy end-to-end:**
+
+```bash
+# API + agent jalan; scaffold service baru (dapat Dockerfile)
+# Buat deployment pending (JWT developer+), agent akan pick up otomatis
+curl http://localhost:18080/healthz   # service yang di-deploy
+```
 
 ### Web UI (portal setelah login)
 
@@ -101,16 +120,14 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - **Agent stop** (Ctrl+C) belum otomatis set status `offline` di API
 - **Template management** belum CRUD di DB/portal
 - **Agent endpoints publik** (claim/update) — token agent menyusul saat harden
-- **go-api template** belum punya Dockerfile (dibutuhkan di 10C.2)
+- **Deploy port** MVP pakai satu `PortBase` (18080); multi-service collision belum di-handle
+- **Workspace lama** tanpa Dockerfile perlu file manual sebelum deploy
 
-## Next action (Step 10C.2)
+## Next action (Step 10C.3)
 
-1. Tambah `Dockerfile.tmpl` di `templates/go-api/`
-2. Agent: poll `POST /api/v1/agent/jobs/next`
-3. `docker build` + `docker run` dari `workspace_path`
-4. `PATCH /api/v1/agent/deployments/{id}` → `building` / `running` / `failed`
-
-Lalu 10C.3: tombol Deploy + list deployments di portal Catalog.
+1. Tombol **Deploy** di Catalog (create deployment `pending`)
+2. List deployments per service (status badge: pending/claimed/building/running/failed)
+3. Optional: link ke `http://localhost:{port}/healthz` saat `running`
 
 ## Cara lanjut di mesin lain
 

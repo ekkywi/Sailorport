@@ -102,21 +102,39 @@ Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
 Portal mendukung: auth (JWT), catalog CRUD + scaffold (dialog), worker list, overview dashboard.
 
-## Jalankan agent (Step 10B)
+## Jalankan agent (Step 10B + 10C.2)
 
-Terminal terpisah, API harus sudah jalan:
+Terminal terpisah, API harus sudah jalan. Agent butuh **Docker CLI** di PATH untuk build/run deploy.
 
 ```bash
 cd apps/agent
 SAILORPORT_API_URL=http://localhost:8080 \
 SAILORPORT_WORKER_NAME=local-dev \
 SAILORPORT_HEARTBEAT_INTERVAL=15s \
+SAILORPORT_POLL_INTERVAL=5s \
+SAILORPORT_DEPLOY_PORT_BASE=18080 \
 go run .
 ```
 
 Cek portal `/worker` — worker muncul **online** dengan heartbeat berkala.
 
-Register/heartbeat **tanpa JWT** (endpoint publik untuk agent).
+Register/heartbeat/claim/update deploy **tanpa JWT** (endpoint publik untuk agent).
+
+**Test deploy (curl, setelah scaffold service baru):**
+
+```bash
+# 1. Login → dapat token
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"yourpass"}' | jq -r .token)
+
+# 2. Buat deployment pending (ganti SERVICE_ID)
+curl -X POST "http://localhost:8080/api/v1/services/SERVICE_ID/deployments" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 3. Agent poll → build → run; cek health service
+curl http://localhost:18080/healthz
+```
 
 ## Environment variables
 
@@ -135,6 +153,8 @@ Agent (`apps/agent`):
 | `SAILORPORT_API_URL` | `http://localhost:8080` | base URL API |
 | `SAILORPORT_WORKER_NAME` | hostname | nama worker |
 | `SAILORPORT_HEARTBEAT_INTERVAL` | `15s` | interval heartbeat |
+| `SAILORPORT_POLL_INTERVAL` | `5s` | interval poll job deploy |
+| `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | host port container deploy |
 
 Contoh:
 
@@ -160,8 +180,9 @@ apps/agent/
 ├── main.go
 └── internal/
     ├── config/
-    ├── client/    (HTTP ke API workers)
-    └── agent/     (register + heartbeat loop)
+    ├── client/    (HTTP ke API: workers + deployments)
+    ├── docker/    (docker build + run)
+    └── agent/     (register + heartbeat + poll/deploy loop)
 
 apps/web/
 ├── vite.config.ts

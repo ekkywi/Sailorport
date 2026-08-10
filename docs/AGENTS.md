@@ -23,7 +23,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 | Portal | `apps/web` | auth + app shell + overview/catalog/workers UI |
 | API | `apps/api` | layered + scaffold/templates + workers + deployments |
 | Worker | `apps/worker` | belum (job queue / orchestrator) |
-| Agent | `apps/agent` | register + heartbeat; deploy poll belum (10C.2) |
+| Agent | `apps/agent` | register + heartbeat + poll/deploy (docker build/run) |
 | Templates | `templates/` | `go-api` (disk, bukan DB) |
 | Shared contracts | `packages/shared` | belum |
 | Compose | `deploy/compose` | Postgres (host port 5433) |
@@ -49,7 +49,7 @@ Developer → Web Portal
               → API (Go)
                  → PostgreSQL + Redis
                  → Worker (jobs) [belum]
-                 → Agent di node (register, heartbeat; claim job API ada; docker deploy menyusul)
+                 → Agent di node (register, heartbeat, poll job, docker build/run)
                  → callback status
 ```
 
@@ -93,4 +93,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: agent register + heartbeat + claim job API sudah; docker build/run belum — Step 10C.2.)
+(Saat ini: agent deploy end-to-end jalan via API/curl; portal tombol Deploy — Step 10C.3.)
