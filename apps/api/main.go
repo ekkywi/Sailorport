@@ -46,6 +46,10 @@ func main() {
 	authSvc := service.NewAuth(usersStore, cfg.JWTSecret)
 	workersStore := store.NewWorkersStore(sqlDB)
 	workersSvc := service.NewWorkers(workersStore)
+	deploymentsStore := store.NewDeploymentsStore(sqlDB)
+	deploymentsSvc := service.NewDeployments(deploymentsStore, catalog)
+
+
 
 	router := handler.NewRouter(handler.API{
 		Version:   cfg.Version,
@@ -54,6 +58,7 @@ func main() {
 		Scaffold:  scaffold,
 		Auth:      authSvc,
 		Workers:   workersSvc,
+		Deployments: deploymentsSvc,
 	})
 
 	addr := ":" + cfg.Port

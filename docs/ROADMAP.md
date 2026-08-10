@@ -82,5 +82,7 @@ Satu flow ini harus jalan di mesin orang lain:
 | 9 | Auth lokal + JWT + RBAC | selesai |
 | 10A | Worker registry API + portal UI | selesai |
 | 10B | Agent binary (register + heartbeat) | selesai |
-| 10C | Deploy end-to-end via agent | berikutnya |
+| 10C.1 | Deployments API + agent claim | selesai |
+| 10C.2 | Agent docker build/run | berikutnya |
+| 10C.3 | Portal UI Deploy | - |
 | 11 | Docker Compose full stack | - |

@@ -7,12 +7,13 @@ import (
 )
 
 type API struct {
-	Version   string
-	JWTSecret string
-	Catalog   *service.Catalog
-	Scaffold  *service.Scaffold
-	Auth      *service.Auth
-	Workers   *service.Workers
+	Version     string
+	JWTSecret   string
+	Catalog     *service.Catalog
+	Scaffold    *service.Scaffold
+	Auth        *service.Auth
+	Workers     *service.Workers
+	Deployments *service.Deployments
 }
 
 func NewRouter(api API) http.Handler {
@@ -24,6 +25,7 @@ func NewRouter(api API) http.Handler {
 	services := NewServicesHandler(api.Catalog)
 	scaffold := NewScaffoldHandler(api.Scaffold)
 	workersH := NewWorkersHandler(api.Workers)
+	deploymentsH := NewDeploymentsHandler(api.Deployments)
 
 	writer := []string{"developer", "admin"}
 	reader := []string{"viewer", "developer", "admin"}
@@ -46,6 +48,16 @@ func NewRouter(api API) http.Handler {
 	mux.HandleFunc("POST /api/v1/workers/register", workersH.Register)
 	mux.HandleFunc("POST /api/v1/workers/{id}/heartbeat", workersH.Heartbeat)
 	mux.Handle("GET /api/v1/workers", withRole(secret, reader, workersH.List))
+
+	mux.Handle("POST /api/v1/services/{id}/deployments", withRole(secret, writer, deploymentsH.Create))
+	mux.Handle("GET /api/v1/services/{id}/deployments", withRole(secret, reader, deploymentsH.ListByService))
+	mux.Handle("GET /api/v1/deployments", withRole(secret, reader, deploymentsH.List))
+	mux.Handle("GET /api/v1/deployments/{id}", withRole(secret, reader, deploymentsH.Get))
+	mux.Handle("PATCH /api/v1/deployments/{id}", withRole(secret, writer, deploymentsH.Update))
+
+	// Agent poll / status — publik dulu (sama seperti register/heartbeat)
+	mux.HandleFunc("POST /api/v1/agent/jobs/next", deploymentsH.ClaimNext)
+	mux.HandleFunc("PATCH /api/v1/agent/deployments/{id}", deploymentsH.Update)
 
 	return CORS(mux)
 }

@@ -149,10 +149,10 @@ apps/api/
 ├── main.go
 └── internal/
     ├── config/, db/, migrate/
-    ├── handler/   (health, services, scaffold, auth, workers, middleware)
-    ├── service/   (catalog, scaffold, auth, workers)
-    ├── store/     (service, user, worker)
-    ├── model/     (service, user, worker)
+    ├── handler/   (health, services, scaffold, auth, workers, deployments, middleware)
+    ├── service/   (catalog, scaffold, auth, workers, deployments)
+    ├── store/     (service, user, worker, deployment)
+    ├── model/     (service, user, worker, deployment)
     ├── template/  (registry + generate dari disk)
     └── auth/      (jwt, password)
 
