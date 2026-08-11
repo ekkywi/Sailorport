@@ -155,6 +155,12 @@ curl -s -X PATCH "http://localhost:8080/api/v1/users/USER_ID" \
 
 Non-admin mendapat **403** pada `/api/v1/users`. Admin tidak bisa mengubah role dirinya sendiri.
 
+### Portal users UI (Step 12b — B2)
+
+Komponen `UsersPage` sudah ada di `apps/web/src/features/users/` — tabel user, dropdown role, baris sendiri read-only. Helper `apps/web/src/lib/rbac.ts`: `isAdmin()`, `canWriteCatalog()`.
+
+Route `/users` dan nav admin di sidebar **belum** di-wire (Step 12b B3). Lanjut B3 untuk buka halaman dari portal.
+
 ## Jalankan agent (Step 10B + 10C.2)
 
 Terminal terpisah, API harus sudah jalan. Agent butuh **Docker CLI** di PATH untuk build/run deploy.

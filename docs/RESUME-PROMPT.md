@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** Step 12a — admin API `GET /api/v1/users`, `PATCH /api/v1/users/{id}` (ubah role). Admin pertama via SQL promote. Tested: admin 200, non-admin 403.
+**Step terakhir selesai:** Step 12b B2 — portal `UsersPage` (tabel + ubah role), `features/users/` + `lib/rbac.ts` (`isAdmin`, `canWriteCatalog`). API 12a sudah jalan.
 
-**Step berikutnya:** Step 12b — portal users UI + sembunyikan aksi write untuk viewer (coding manual).
+**Step berikutnya:** Step 12b B3–B4 — route `/users` + nav admin-only; sembunyikan aksi write di Catalog untuk `viewer` (coding manual).
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog

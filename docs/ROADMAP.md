@@ -88,4 +88,4 @@ Satu flow ini harus jalan di mesin orang lain:
 | 11 | Docker Compose full stack | selesai |
 | 12 | Harden (agent token) | - |
 | 12a | User management API | selesai |
-| 12b | Portal users + RBAC UI | berikutnya |
+| 12b | Portal users + RBAC UI | B2 selesai; B3–B4 (route/nav + catalog hide) berikutnya |
