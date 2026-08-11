@@ -6,7 +6,7 @@
 
 - **Step selesai:** 10C.3 (Portal Deploy UI + list deployments)
 - **Step berikutnya:** 11 (Docker Compose full stack)
-- **Terakhir dikerjakan:** 2026-08-11 — tombol Deploy, dialog deployments, sidebar collapse, fix go-api `ListenAndServe(mux)`
+- **Terakhir dikerjakan:** 2026-08-11 — debt: workspace `data/workspaces`, agent offline on stop, delete cleans workspace
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -129,13 +129,16 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
 ## Known debt (sengaja ditunda)
 
-- **Delete service** hanya hapus row DB; folder workspace di disk **tidak** dihapus → recreate dengan nama sama bisa gagal (`workspace folder already exists`)
-- **Agent stop** (Ctrl+C) belum otomatis set status `offline` di API
 - **Template management** belum CRUD di DB/portal
 - **Agent endpoints publik** (claim/update) — token agent menyusul saat harden
 - **Deploy port** MVP pakai satu `PortBase` (18080); multi-service collision belum di-handle
-- **Workspace lama** tanpa Dockerfile perlu file manual sebelum deploy
-- **Workspace di `/tmp`** bisa hilang setelah reboot → deploy gagal `chdir ... no such file` (scaffold ulang)
+- **Workspace lama** (path `/tmp/...`) tidak ikut terhapus saat delete (di luar root baru); scaffold ulang ke `data/workspaces`
+
+### Debt yang sudah diperbaiki (2026-08-11)
+
+- Workspace default → `data/workspaces` (bukan `/tmp`), override `SAILORPORT_WORKSPACE`
+- Agent Ctrl+C mengirim heartbeat `offline`
+- Delete service menghapus folder workspace jika path di bawah workspace root
 
 ## Next action (Step 11)
 

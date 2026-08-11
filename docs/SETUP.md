@@ -145,6 +145,8 @@ curl http://localhost:18080/healthz
 | `APP_VERSION` | `0.1.0` | versi API di response health |
 | `DATABASE_URL` | lihat di atas (port **5433**) | koneksi Postgres |
 | `AUTH_JWT_SECRET` | `dev-only-change-me` | secret JWT (ganti di production) |
+| `SAILORPORT_WORKSPACE` | `<repo>/data/workspaces` | folder hasil scaffold |
+| `SAILORPORT_TEMPLATES` | `<repo>/templates` | template di disk |
 
 Agent (`apps/agent`):
 

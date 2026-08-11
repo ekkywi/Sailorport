@@ -333,7 +333,8 @@ export function CatalogPage() {
               <span className="font-medium text-foreground">
                 {deleteTarget?.name}
               </span>{" "}
-              from the catalog. Generated workspace files on disk are not deleted.
+              from the catalog and deletes its workspace folder on disk (if it
+              lives under the configured workspace directory).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

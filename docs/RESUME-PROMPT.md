@@ -23,10 +23,10 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Create service (default) = scaffold dari template + daftar catalog
 - Register existing = metadata saja, tanpa generate folder
 - Template masih di folder `templates/`, bukan database
-- Delete catalog tidak hapus folder workspace (debt known)
+- Delete catalog menghapus workspace di bawah `data/workspaces` (path legacy `/tmp` di-skip)
 - Agent claim/update masih endpoint publik (harden nanti)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
-- Workspace default di `/tmp` bisa hilang setelah reboot
+- Workspace default: `data/workspaces` (bukan `/tmp`)
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` (compose + api + web + agent).
 

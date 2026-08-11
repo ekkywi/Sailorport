@@ -51,6 +51,11 @@ func (a *Agent) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			log.Printf("Shutting down")
+			if _, err := a.client.Heartbeat(workerID, "offline"); err != nil {
+				log.Printf("offline heartbeat error: %v", err)
+			} else {
+				log.Printf("Heartbeat ok status=offline")
+			}
 			return nil
 		case <-ticker.C:
 			if _, err := a.client.Heartbeat(workerID, "online"); err != nil {

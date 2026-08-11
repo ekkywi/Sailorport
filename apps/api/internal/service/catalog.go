@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
@@ -27,11 +30,12 @@ type Repository interface {
 }
 
 type Catalog struct {
-	repo Repository
+	repo         Repository
+	workspaceDir string
 }
 
-func NewCatalog(repo Repository) *Catalog {
-	return &Catalog{repo: repo}
+func NewCatalog(repo Repository, workspaceDir string) *Catalog {
+	return &Catalog{repo: repo, workspaceDir: workspaceDir}
 }
 
 func (c *Catalog) List(ctx context.Context) ([]model.Service, error) {
@@ -87,8 +91,46 @@ func (c *Catalog) Delete(ctx context.Context, id string) error {
 	if id == "" {
 		return fmt.Errorf("%w: id is required", ErrInvalid)
 	}
+
+	svc, err := c.repo.Get(ctx, id)
+	if err != nil {
+		return mapRepoErr(err)
+	}
+
 	if err := c.repo.Delete(ctx, id); err != nil {
 		return mapRepoErr(err)
+	}
+
+	if err := c.removeWorkspace(svc.WorkspacePath); err != nil {
+		log.Printf("catalog delete: workspace cleanup failed for %s: %v", svc.Name, err)
+		return fmt.Errorf("deleted from catalog but workspace cleanup failed: %w", err)
+	}
+	return nil
+}
+
+func (c *Catalog) removeWorkspace(workspacePath string) error {
+	workspacePath = strings.TrimSpace(workspacePath)
+	if workspacePath == "" || strings.TrimSpace(c.workspaceDir) == "" {
+		return nil
+	}
+
+	cleanRoot, err := filepath.Abs(filepath.Clean(c.workspaceDir))
+	if err != nil {
+		return err
+	}
+	cleanPath, err := filepath.Abs(filepath.Clean(workspacePath))
+	if err != nil {
+		return err
+	}
+
+	sep := string(filepath.Separator)
+	if cleanPath == cleanRoot || !strings.HasPrefix(cleanPath+sep, cleanRoot+sep) {
+		// Outside configured workspace root (e.g. legacy /tmp paths) — skip
+		return nil
+	}
+
+	if err := os.RemoveAll(cleanPath); err != nil {
+		return err
 	}
 	return nil
 }

@@ -24,7 +24,7 @@ func Load() Config {
 		"DATABASE_URL",
 		"postgres://sailorport:sailorport@localhost:5433/sailorport?sslmode=disable",
 	)
-	workspaceDir := getenv("SAILORPORT_WORKSPACE", filepath.Join(os.TempDir(), "sailorport-workspace"))
+	workspaceDir := getenv("SAILORPORT_WORKSPACE", defaultWorkspaceDir())
 	templatesDir := getenv("SAILORPORT_TEMPLATES", defaultTemplatesDir())
 	jwtSecret := getenv("AUTH_JWT_SECRET", "dev-only-change-me")
 
@@ -54,6 +54,29 @@ func defaultTemplatesDir() string {
 		}
 	}
 	return "templates"
+}
+
+func defaultWorkspaceDir() string {
+	candidates := []string{
+		filepath.Join("data", "workspaces"),
+		filepath.Join("..", "..", "data", "workspaces"),
+		filepath.Join("..", "data", "workspaces"),
+	}
+	for _, c := range candidates {
+		abs, err := filepath.Abs(c)
+		if err != nil {
+			continue
+		}
+		// Prefer path whose repo root (parent of data/) contains templates/
+		repoRoot := filepath.Dir(filepath.Dir(abs))
+		if info, err := os.Stat(filepath.Join(repoRoot, "templates")); err == nil && info.IsDir() {
+			return abs
+		}
+	}
+	if abs, err := filepath.Abs(filepath.Join("..", "..", "data", "workspaces")); err == nil {
+		return abs
+	}
+	return filepath.Join("data", "workspaces")
 }
 
 func getenv(key, fallback string) string {

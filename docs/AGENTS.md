@@ -69,7 +69,7 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 - **Create service** (default) = pilih template → generate workspace → daftar ke catalog
 - **Register existing** = metadata saja di catalog, tanpa folder
-- **Delete service** = hapus row DB saja; folder workspace orphan (debt)
+- **Delete service** = hapus row DB + folder workspace jika path di bawah `SAILORPORT_WORKSPACE`
 
 ## Coding conventions
 

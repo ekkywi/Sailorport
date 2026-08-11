@@ -10,3 +10,6 @@ build/
 apps/api/api
 apps/worker/worker
 apps/agent/agent
+
+# Generated service workspaces (scaffold output)
+data/workspaces/

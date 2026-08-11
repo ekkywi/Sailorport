@@ -39,7 +39,7 @@ func main() {
 	log.Printf("Workspace dir: %s", cfg.WorkspaceDir)
 
 	serviceStore := store.NewServicesStore(sqlDB)
-	catalog := service.NewCatalog(serviceStore)
+	catalog := service.NewCatalog(serviceStore, cfg.WorkspaceDir)
 	templates := template.NewRegistry(cfg.TemplatesDir)
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
 	usersStore := store.NewUsersStore(sqlDB)
