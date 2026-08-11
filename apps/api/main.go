@@ -44,6 +44,7 @@ func main() {
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
 	usersStore := store.NewUsersStore(sqlDB)
 	authSvc := service.NewAuth(usersStore, cfg.JWTSecret)
+	usersSvc := service.NewUsers(usersStore)
 	workersStore := store.NewWorkersStore(sqlDB)
 	workersSvc := service.NewWorkers(workersStore)
 	deploymentsStore := store.NewDeploymentsStore(sqlDB)
@@ -52,12 +53,13 @@ func main() {
 
 
 	router := handler.NewRouter(handler.API{
-		Version:   cfg.Version,
-		JWTSecret: cfg.JWTSecret,
-		Catalog:   catalog,
-		Scaffold:  scaffold,
-		Auth:      authSvc,
-		Workers:   workersSvc,
+		Version:     cfg.Version,
+		JWTSecret:   cfg.JWTSecret,
+		Catalog:     catalog,
+		Scaffold:    scaffold,
+		Auth:        authSvc,
+		Users:       usersSvc,
+		Workers:     workersSvc,
 		Deployments: deploymentsSvc,
 	})
 

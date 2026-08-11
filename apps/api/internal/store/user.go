@@ -73,3 +73,52 @@ func (s *UsersStore) GetByID(ctx context.Context, id string) (model.User, error)
 	}
 	return u, nil
 }
+
+func (s *UsersStore) List(ctx context.Context) ([]model.User, error) {
+	const q = `
+		SELECT id, email, name, role, created_at, updated_at
+		FROM users
+		ORDER BY created_at DESC`
+
+	rows, err := s.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("List users: %w", err)
+	}
+	defer rows.Close()
+
+	var out []model.User
+	for rows.Next() {
+		var u model.User
+		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("Scan user: %w", err)
+		}
+		out = append(out, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("List users: %w", err)
+	}
+	if out == nil {
+		out = []model.User{}
+	}
+	return out, nil
+}
+
+func (s *UsersStore) UpdateRole(ctx context.Context, id, role string) (model.User, error) {
+	const q = `
+		UPDATE users
+		SET role = $2, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, email, name, role, created_at, updated_at`
+
+	var u model.User
+	err := s.db.QueryRowContext(ctx, q, id, role).Scan(
+		&u.ID, &u.Email, &u.Name, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.User{}, ErrNotFound
+	}
+	if err != nil {
+		return model.User{}, fmt.Errorf("Update user role: %w", err)
+	}
+	return u, nil
+}

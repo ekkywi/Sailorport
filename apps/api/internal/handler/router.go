@@ -12,6 +12,7 @@ type API struct {
 	Catalog     *service.Catalog
 	Scaffold    *service.Scaffold
 	Auth        *service.Auth
+	Users       *service.Users
 	Workers     *service.Workers
 	Deployments *service.Deployments
 }
@@ -29,12 +30,17 @@ func NewRouter(api API) http.Handler {
 
 	writer := []string{"developer", "admin"}
 	reader := []string{"viewer", "developer", "admin"}
+	admin := []string{"admin"}
 
 	mux.Handle("/healthz", health)
 
 	mux.HandleFunc("POST /api/v1/auth/register", authH.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authH.Login)
 	mux.Handle("GET /api/v1/auth/me", withAuth(secret, authH.Me))
+
+	usersH := NewUsersHandler(api.Users)
+	mux.Handle("GET /api/v1/users", withRole(secret, admin, usersH.List))
+	mux.Handle("PATCH /api/v1/users/{id}", withRole(secret, admin, usersH.UpdateRole))
 
 	mux.Handle("GET /api/v1/services", withRole(secret, reader, services.List))
 	mux.Handle("POST /api/v1/services", withRole(secret, writer, services.Create))

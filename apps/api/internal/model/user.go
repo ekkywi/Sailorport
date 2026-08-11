@@ -32,3 +32,7 @@ type LoginResponse struct {
 	Token string `json:"token"`
 	User  User   `json:"user"`
 }
+
+type UpdateUserRoleRequest struct {
+	Role string `json:"role"`
+}

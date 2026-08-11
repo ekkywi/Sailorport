@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** Step 11 — Docker Compose full stack (`postgres` + `api` + `web`). Dual mode: **dev** = hanya Postgres di compose + `go run` / `npm run dev`; **self-host** = `docker compose up -d --build`. Agent tetap di host.
+**Step terakhir selesai:** Step 12a — admin API `GET /api/v1/users`, `PATCH /api/v1/users/{id}` (ubah role). Admin pertama via SQL promote. Tested: admin 200, non-admin 403.
 
-**Step berikutnya:** Harden (agent token untuk claim/update) dan/atau multi-port deploy; atau Environments.
+**Step berikutnya:** Step 12b — portal users UI + sembunyikan aksi write untuk viewer (coding manual).
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -30,7 +30,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan harden (agent token) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan Step 12b (portal users + RBAC UI) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

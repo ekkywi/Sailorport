@@ -129,6 +129,32 @@ Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
 Portal mendukung: auth (JWT), catalog CRUD + scaffold + **Deploy** (dialog status), worker list, overview dashboard.
 
+## Admin user & user management API (Step 12a)
+
+Register tidak bisa self-assign `admin`. Promote user pertama:
+
+```bash
+docker exec -it sailorport-postgres psql -U sailorport -d sailorport \
+  -c "UPDATE users SET role = 'admin' WHERE email = 'you@example.com';"
+```
+
+Login ulang, lalu (sebagai admin):
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"yourpass"}' | jq -r .token)
+
+curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users | jq
+
+curl -s -X PATCH "http://localhost:8080/api/v1/users/USER_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"role":"viewer"}' | jq
+```
+
+Non-admin mendapat **403** pada `/api/v1/users`. Admin tidak bisa mengubah role dirinya sendiri.
+
 ## Jalankan agent (Step 10B + 10C.2)
 
 Terminal terpisah, API harus sudah jalan. Agent butuh **Docker CLI** di PATH untuk build/run deploy.

@@ -86,4 +86,6 @@ Satu flow ini harus jalan di mesin orang lain:
 | 10C.2 | Agent docker build/run | selesai |
 | 10C.3 | Portal UI Deploy | selesai |
 | 11 | Docker Compose full stack | selesai |
-| 12 | Harden (agent token) | berikutnya |
+| 12 | Harden (agent token) | - |
+| 12a | User management API | selesai |
+| 12b | Portal users + RBAC UI | berikutnya |

@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 11 (Docker Compose full stack)
-- **Step berikutnya:** Harden (agent token) + multi-port deploy (opsional); atau Environments
-- **Terakhir dikerjakan:** 2026-08-11 — compose api+web+postgres; docs dual-mode (dev vs self-host)
+- **Step selesai:** 12a (User management API — admin)
+- **Step berikutnya:** 12b (Portal users UI + RBAC hide actions) — manual
+- **Terakhir dikerjakan:** 2026-08-11 — GET/PATCH users admin-only; promote admin via SQL
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -29,6 +29,8 @@
 - [x] Step 10C.2 — Agent poll job + Docker build/run + PATCH status
 - [x] Step 10C.3 — Portal UI tombol Deploy + list deployments
 - [x] Step 11 — Docker Compose full stack
+- [x] Step 12a — User management API (list users, patch role — admin only)
+- [ ] Step 12b — Portal users page + RBAC UI (hide actions for viewer)
 - [ ] Harden — agent token + (opsional) multi-port deploy
 - [ ] Environments (dev/staging/prod)
 
@@ -66,6 +68,8 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 go run .
 | `POST /api/v1/auth/register` | publik | buat user |
 | `POST /api/v1/auth/login` | publik | JWT token |
 | `GET /api/v1/auth/me` | Bearer | profil user |
+| `GET /api/v1/users` | admin | list semua user |
+| `PATCH /api/v1/users/{id}` | admin | ubah role (`admin`/`developer`/`viewer`; tidak boleh ubah role sendiri) |
 | `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD |
 | `GET /api/v1/templates`, `POST /api/v1/scaffold` | viewer+ / developer+ | golden path |
 | `POST /api/v1/workers/register` | publik | agent register |
@@ -94,6 +98,21 @@ Env agent:
 | `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | host port untuk container (MVP: satu port) |
 
 Role: `admin`, `developer`, `viewer`
+
+**Admin pertama:** register user biasa, lalu promote di Postgres:
+
+```bash
+docker exec -it sailorport-postgres psql -U sailorport -d sailorport \
+  -c "UPDATE users SET role = 'admin' WHERE email = 'you@example.com';"
+```
+
+Login ulang agar JWT berisi role baru.
+
+### User management API (12a)
+
+- Lapisan: `store/user` → `service/users` → `handler/user`
+- `GET /api/v1/users` — admin only
+- `PATCH /api/v1/users/{id}` body `{"role":"..."}` — admin only; tidak bisa patch role diri sendiri
 
 ### Deployments (10C.1)
 
@@ -167,11 +186,17 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - Volume: `../../templates` → `/templates`, `../../data/workspaces` → `/data/workspaces`
 - Agent **tidak** di compose (perlu Docker daemon di host untuk deploy workload)
 
-## Next action
+## Next action (Step 12b)
 
-1. Harden: token untuk endpoint agent (claim/update tidak publik)
-2. Multi-port deploy (hindari collision di `18080`)
-3. Atau Environments (dev/staging/prod)
+1. Portal halaman list users (admin only)
+2. Dropdown / select ubah role → `PATCH /api/v1/users/{id}`
+3. Sembunyikan Deploy / Create / Delete untuk role `viewer`
+
+## Next after 12b
+
+- Agent token (harden claim/update endpoints)
+- Multi-port deploy (opsional)
+- Environments
 
 ## Cara lanjut di mesin lain
 
