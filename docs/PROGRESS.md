@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 10C.2 (Agent poll + docker build/run)
-- **Step berikutnya:** 10C.3 (Portal UI tombol Deploy + list deployments)
-- **Terakhir dikerjakan:** 2026-08-10 — agent poll job, docker build/run, status `building`/`running`/`failed`
+- **Step selesai:** 10C.3 (Portal Deploy UI + list deployments)
+- **Step berikutnya:** 11 (Docker Compose full stack)
+- **Terakhir dikerjakan:** 2026-08-11 — tombol Deploy, dialog deployments, sidebar collapse, fix go-api `ListenAndServe(mux)`
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -27,7 +27,8 @@
 - [x] Step 10B — Agent binary (`apps/agent`: register + heartbeat loop)
 - [x] Step 10C.1 — Deployments API (create/list/get + agent claim/update)
 - [x] Step 10C.2 — Agent poll job + Docker build/run + PATCH status
-- [ ] Step 10C.3 — Portal UI tombol Deploy + list deployments
+- [x] Step 10C.3 — Portal UI tombol Deploy + list deployments
+- [ ] Step 11 — Docker Compose full stack
 
 ## Yang sudah jalan
 
@@ -81,7 +82,6 @@ Role: `admin`, `developer`, `viewer`
 - Status: `pending` → `claimed` → `building` → `running` | `failed` | `stopped`
 - Claim atomik (`FOR UPDATE SKIP LOCKED`) + join service → `service_name`, `workspace_path`
 - Create menolak service tanpa workspace (scaffold dulu)
-- **Belum:** portal belum tombol Deploy (10C.3)
 
 ### Agent deploy (10C.2)
 
@@ -100,11 +100,24 @@ Role: `admin`, `developer`, `viewer`
 curl http://localhost:18080/healthz   # service yang di-deploy
 ```
 
+### Portal Deploy UI (10C.3)
+
+- Feature: `apps/web/src/features/deployments/` (`types`, `api`, `DeploymentsDialog`)
+- Catalog: tombol **Deploy** (rocket) hanya jika service punya `workspace_path`
+- Setelah create → dialog list deployments (status badge, refresh, poll 3s saat job aktif)
+- Link `http://localhost:{port}/healthz` saat status `running`
+- **AppShell:** sidebar desktop bisa collapse/expand (persisted di `localStorage`)
+- Catalog table: layout actions lebih rapi (`table-fixed`, overflow)
+
+### Template fix
+
+- `templates/go-api/main.go.tmpl`: `ListenAndServe(":8080", mux)` (bukan `nil`) — tanpa ini `/healthz` di container selalu 404
+
 ### Web UI (portal setelah login)
 
-- **Layout:** `AppShell` — sidebar + topbar (Linear-style), harbour theme + dark mode
+- **Layout:** `AppShell` — sidebar collapsible + topbar (Linear-style), harbour theme + dark mode
 - **Routes (flat):** `/overview`, `/catalog`, `/worker` (bukan nested)
-- **Catalog UX:** daftar saja; **Create service** = scaffold dari template (dialog); **Register existing** = metadata saja (dialog sekunder); edit/delete via dialog
+- **Catalog UX:** daftar saja; **Create service** = scaffold; **Register existing** = metadata; edit/delete/deploy via actions; dialog deployments
 - **Workers:** tabel dengan status badge, relative last seen
 - **Overview:** metrik services/workers + panel recent
 - **Shared:** `src/components/app/` (DataPanel, Toolbar, EmptyState, …)
@@ -122,12 +135,13 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - **Agent endpoints publik** (claim/update) — token agent menyusul saat harden
 - **Deploy port** MVP pakai satu `PortBase` (18080); multi-service collision belum di-handle
 - **Workspace lama** tanpa Dockerfile perlu file manual sebelum deploy
+- **Workspace di `/tmp`** bisa hilang setelah reboot → deploy gagal `chdir ... no such file` (scaffold ulang)
 
-## Next action (Step 10C.3)
+## Next action (Step 11)
 
-1. Tombol **Deploy** di Catalog (create deployment `pending`)
-2. List deployments per service (status badge: pending/claimed/building/running/failed)
-3. Optional: link ke `http://localhost:{port}/healthz` saat `running`
+1. Docker Compose full stack (API + web + Postgres dalam satu pack self-host)
+2. Docs runbook: satu perintah / alur untuk mesin baru
+3. (Opsional menyusul) agent token, multi-port deploy
 
 ## Cara lanjut di mesin lain
 

@@ -42,7 +42,7 @@ Satu flow ini harus jalan di mesin orang lain:
 - [x] Software catalog (API + portal CRUD lengkap)
 - [x] Scaffolder / golden path (template `go-api`)
 - [ ] Environments (dev/staging/prod)
-- [~] Deploy via agent (agent docker deploy jalan; portal UI menyusul 10C.3)
+- [x] Deploy via agent (API + agent docker + portal Deploy UI)
 - [x] Worker registry + health (API + portal + agent heartbeat)
 - [ ] Audit log
 - [ ] Self-hosting pack (compose + docs)
@@ -84,5 +84,5 @@ Satu flow ini harus jalan di mesin orang lain:
 | 10B | Agent binary (register + heartbeat) | selesai |
 | 10C.1 | Deployments API + agent claim | selesai |
 | 10C.2 | Agent docker build/run | selesai |
-| 10C.3 | Portal UI Deploy | berikutnya |
-| 11 | Docker Compose full stack | - |
+| 10C.3 | Portal UI Deploy | selesai |
+| 11 | Docker Compose full stack | berikutnya |

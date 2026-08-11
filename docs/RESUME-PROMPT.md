@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** Step 10C.2 — agent poll job (`SAILORPORT_POLL_INTERVAL`), `docker build`/`docker run` dari `workspace_path`, update status `building`/`running`/`failed`. Template `go-api` punya `Dockerfile.tmpl`. Client agent: `ClaimNext`, `UpdateDeployment`.
+**Step terakhir selesai:** Step 10C.3 — portal tombol Deploy di Catalog, dialog list deployments (status + poll + link healthz), sidebar AppShell collapsible, fix template `go-api` `ListenAndServe(mux)`. Flow scaffold → deploy → `curl :18080/healthz` sudah teruji dari portal.
 
-**Step berikutnya:** Step 10C.3 — portal UI tombol Deploy + list deployments di Catalog.
+**Step berikutnya:** Step 11 — Docker Compose full stack (packaging self-host).
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -26,10 +26,11 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Delete catalog tidak hapus folder workspace (debt known)
 - Agent claim/update masih endpoint publik (harden nanti)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
+- Workspace default di `/tmp` bisa hilang setelah reboot
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` (compose + api + web + agent).
 
-Tolong lanjutkan Step 10C.3 dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan Step 11 dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

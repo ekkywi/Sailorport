@@ -30,6 +30,8 @@ import {
 import { ServiceForm } from "./ServiceForm";
 import { ServiceList } from "./ServiceList";
 import type { Service, ServiceFormValues } from "./types";
+import { createDeployment } from "../deployments/api";
+import { DeploymentsDialog } from "../deployments/DeploymentsDialog";
 
 const emptyForm: ServiceFormValues = {
   name: "",
@@ -52,6 +54,8 @@ export function CatalogPage() {
   const [dialog, setDialog] = useState<DialogMode>("none");
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
   const [createdPath, setCreatedPath] = useState("");
+  const [deployTarget, setDeployTarget] = useState<Service | null>(null);
+  const [, setDeploying] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -62,6 +66,20 @@ export function CatalogPage() {
       setListError(err instanceof Error ? err.message : "Failed to load catalog");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function startDeploy(svc: Service) {
+    setDeploying(true);
+    setListError("");
+    try {
+      await createDeployment(svc.id);
+      toast(`Deploy started for "${svc.name}"`);
+      setDeployTarget(svc);
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : "Failed to deploy");
+    } finally {
+      setDeploying(false);
     }
   }
 
@@ -201,6 +219,7 @@ export function CatalogPage() {
         loading={loading}
         onEdit={startEdit}
         onDelete={setDeleteTarget}
+        onDeploy={(svc) => void startDeploy(svc)}
         onCreate={startCreate}
       />
 
@@ -344,6 +363,14 @@ export function CatalogPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <DeploymentsDialog
+        open={deployTarget !== null}
+        serviceId={deployTarget?.id ?? null}
+        serviceName={deployTarget?.name ?? ""}
+        onOpenChange={(open) => {
+          if (!open) setDeployTarget(null);
+        }}
+      />
     </div>
   );
 }

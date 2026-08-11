@@ -96,11 +96,11 @@ npm install
 npm run dev
 ```
 
-Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar: Overview, Catalog, Workers.
+Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar (bisa collapse di desktop): Overview, Catalog, Workers.
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
-Portal mendukung: auth (JWT), catalog CRUD + scaffold (dialog), worker list, overview dashboard.
+Portal mendukung: auth (JWT), catalog CRUD + scaffold + **Deploy** (dialog status), worker list, overview dashboard.
 
 ## Jalankan agent (Step 10B + 10C.2)
 
@@ -197,6 +197,7 @@ apps/web/
     ├── features/
     │   ├── auth/
     │   ├── catalog/
+    │   ├── deployments/   # Deploy API client + DeploymentsDialog
     │   ├── overview/
     │   ├── scaffold/      # CreateServiceForm
     │   └── workers/

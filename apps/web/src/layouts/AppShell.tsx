@@ -5,6 +5,8 @@ import {
   ChevronDown,
   LayoutDashboard,
   LogOut,
+  ChevronLeft,
+  ChevronRight,
   Menu,
   Server,
   X,
@@ -28,6 +30,8 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+const SIDEBAR_COLLAPSED_KEY = "sailorport.sidebar.collapsed";
+
 const navItems = [
   { to: "/overview", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/catalog", label: "Catalog", icon: Boxes },
@@ -49,55 +53,84 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   },
 };
 
-function navClass({ isActive }: { isActive: boolean }) {
-  return cn(
-    "group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium tracking-[-0.01em] transition-colors",
-    isActive
-      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
-  );
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
-export function AppShell({ user, onLogout, children }: AppShellProps) {
-  const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const meta = pageMeta[location.pathname] ?? {
-    title: "Sailorport",
-    description: "",
-  };
-  const displayName = user.name || user.email;
+function writeCollapsed(collapsed: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch {
+    // ignore quota / private mode
+  }
+}
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
-
-  const sidebar = (
+function SidebarNav({
+  collapsed,
+  onCloseMobile,
+}: {
+  collapsed: boolean;
+  onCloseMobile?: () => void;
+}) {
+  return (
     <div className="flex h-full flex-col">
-      <div className="flex h-12 items-center gap-2 px-3">
+      <div
+        className={cn(
+          "flex h-12 shrink-0 items-center border-b border-sidebar-border",
+          collapsed ? "justify-center px-2" : "gap-2 px-3",
+        )}
+      >
         <BrandMark />
-        <div className="min-w-0">
-          <p className="truncate text-[13px] font-medium tracking-[-0.01em] text-sidebar-foreground">
-            Sailorport
-          </p>
-          <p className="truncate text-[11px] text-muted-foreground">Harbour</p>
-        </div>
-        <button
-          type="button"
-          className="ml-auto inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent md:hidden"
-          aria-label="Close menu"
-          onClick={() => setMobileOpen(false)}
-        >
-          <X className="size-4" />
-        </button>
+        {!collapsed ? (
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <p className="truncate text-[13px] font-medium tracking-[-0.01em] text-sidebar-foreground">
+              Sailorport
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">Harbour</p>
+          </div>
+        ) : null}
+
+        {onCloseMobile ? (
+          <button
+            type="button"
+            className="ml-auto inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent md:hidden"
+            aria-label="Close menu"
+            onClick={onCloseMobile}
+          >
+            <X className="size-4" />
+          </button>
+        ) : null}
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 px-2 py-3" aria-label="Main">
+      <nav
+        className={cn(
+          "flex flex-1 flex-col gap-1 py-3",
+          collapsed ? "px-1.5" : "px-2",
+        )}
+        aria-label="Main"
+      >
         {navItems.map(({ to, label, icon: Icon, ...rest }) => (
           <NavLink
             key={to}
             to={to}
             end={"end" in rest ? rest.end : false}
-            className={navClass}
+            title={collapsed ? label : undefined}
+            aria-label={collapsed ? label : undefined}
+            className={({ isActive }) =>
+              cn(
+                "group flex items-center rounded-md text-[13px] font-medium tracking-[-0.01em] transition-colors",
+                collapsed
+                  ? "h-9 justify-center px-0"
+                  : "gap-2.5 px-2.5 py-2",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+              )
+            }
           >
             {({ isActive }) => (
               <>
@@ -109,7 +142,9 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
                       : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
                   )}
                 />
-                {label}
+                <span className={cn("truncate", collapsed && "sr-only")}>
+                  {label}
+                </span>
               </>
             )}
           </NavLink>
@@ -117,11 +152,57 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
       </nav>
     </div>
   );
+}
+
+export function AppShell({ user, onLogout, children }: AppShellProps) {
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const meta = pageMeta[location.pathname] ?? {
+    title: "Sailorport",
+    description: "",
+  };
+  const displayName = user.name || user.email;
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      writeCollapsed(next);
+      return next;
+    });
+  }
 
   return (
     <div className="flex min-h-svh bg-background text-foreground">
-      <aside className="sticky top-0 hidden h-svh w-[220px] shrink-0 border-r border-sidebar-border bg-sidebar md:block">
-        {sidebar}
+      <aside
+        className={cn(
+          "relative sticky top-0 z-40 hidden h-svh shrink-0 border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-out md:block",
+          collapsed ? "w-14" : "w-[220px]",
+        )}
+      >
+        <SidebarNav collapsed={collapsed} />
+        <button
+          type="button"
+          className={cn(
+            "absolute top-3 -right-3 z-50 inline-flex size-6 items-center justify-center rounded-full",
+            "border border-border bg-background text-muted-foreground shadow-sm",
+            "transition-colors hover:bg-muted hover:text-foreground",
+            "outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+          )}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={toggleCollapsed}
+        >
+          {collapsed ? (
+            <ChevronRight className="size-3.5" />
+          ) : (
+            <ChevronLeft className="size-3.5" />
+          )}
+        </button>
       </aside>
 
       {mobileOpen ? (
@@ -133,7 +214,10 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
             onClick={() => setMobileOpen(false)}
           />
           <aside className="absolute inset-y-0 left-0 w-[240px] border-r border-sidebar-border bg-sidebar shadow-lg">
-            {sidebar}
+            <SidebarNav
+              collapsed={false}
+              onCloseMobile={() => setMobileOpen(false)}
+            />
           </aside>
         </div>
       ) : null}

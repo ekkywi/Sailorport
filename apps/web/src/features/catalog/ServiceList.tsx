@@ -1,4 +1,4 @@
-import { Boxes, FolderGit2, Pencil, Trash2 } from "lucide-react";
+import { Boxes, FolderGit2, Pencil, Rocket, Trash2 } from "lucide-react";
 import {
   DataPanel,
   EmptyState,
@@ -14,6 +14,7 @@ type ServiceListProps = {
   onEdit: (svc: Service) => void;
   onDelete: (svc: Service) => void;
   onCreate?: () => void;
+  onDeploy: (svc: Service) => void;
 };
 
 function ServiceGlyph({ name }: { name: string }) {
@@ -29,6 +30,7 @@ export function ServiceList({
   loading,
   onEdit,
   onDelete,
+  onDeploy,
   onCreate,
 }: ServiceListProps) {
   if (loading && services.length === 0) {
@@ -77,14 +79,14 @@ export function ServiceList({
   return (
     <DataPanel>
       {/* Desktop table */}
-      <div className="hidden md:block">
-        <table className="w-full text-left text-[13px]">
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full table-fixed text-left text-[13px]">
           <thead>
             <tr className="border-b border-border text-[11px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-              <th className="px-4 py-2.5 font-medium">Service</th>
-              <th className="px-4 py-2.5 font-medium">Owner</th>
-              <th className="px-4 py-2.5 font-medium">Origin</th>
-              <th className="w-[1%] px-4 py-2.5 font-medium">
+              <th className="w-[36%] px-4 py-2.5 font-medium">Service</th>
+              <th className="w-[18%] px-4 py-2.5 font-medium">Owner</th>
+              <th className="w-[28%] px-4 py-2.5 font-medium">Origin</th>
+              <th className="w-[18%] px-4 py-2.5 font-medium">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
@@ -96,7 +98,7 @@ export function ServiceList({
                 className="group transition-colors hover:bg-muted/35"
               >
                 <td className="px-4 py-3">
-                  <div className="flex items-start gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
                     <ServiceGlyph name={svc.name} />
                     <div className="min-w-0 pt-0.5">
                       <p className="truncate font-medium tracking-[-0.01em]">
@@ -110,7 +112,7 @@ export function ServiceList({
                 </td>
                 <td className="px-4 py-3">
                   {svc.owner ? (
-                    <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-[12px] text-foreground/80">
+                    <span className="inline-block max-w-full truncate rounded-md bg-muted px-2 py-0.5 text-[12px] text-foreground/80">
                       {svc.owner}
                     </span>
                   ) : (
@@ -120,9 +122,9 @@ export function ServiceList({
                 <td className="px-4 py-3">
                   <div className="flex min-w-0 flex-col gap-0.5">
                     {svc.template_id ? (
-                      <span className="inline-flex w-fit items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                        <FolderGit2 className="size-3" />
-                        {svc.template_id}
+                      <span className="inline-flex max-w-full items-center gap-1 truncate rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                        <FolderGit2 className="size-3 shrink-0" />
+                        <span className="truncate">{svc.template_id}</span>
                       </span>
                     ) : (
                       <span className="text-[12px] text-muted-foreground">
@@ -131,7 +133,7 @@ export function ServiceList({
                     )}
                     {svc.workspace_path ? (
                       <span
-                        className="max-w-[220px] truncate font-mono text-[11px] text-muted-foreground"
+                        className="truncate font-mono text-[11px] text-muted-foreground"
                         title={svc.workspace_path}
                       >
                         {truncateMiddle(svc.workspace_path, 36)}
@@ -140,12 +142,24 @@ export function ServiceList({
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-1">
+                  <div className="flex shrink-0 items-center justify-end gap-0.5 whitespace-nowrap">
+                    {svc.workspace_path ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground hover:text-foreground"
+                        aria-label={`Deploy ${svc.name}`}
+                        onClick={() => onDeploy(svc)}
+                      >
+                        <Rocket className="size-3.5" />
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      className="text-muted-foreground/80 group-hover:text-muted-foreground"
+                      className="text-muted-foreground hover:text-foreground"
                       aria-label={`Edit ${svc.name}`}
                       onClick={() => onEdit(svc)}
                     >
@@ -155,7 +169,7 @@ export function ServiceList({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      className="text-muted-foreground/80 hover:bg-destructive/10 hover:text-destructive group-hover:text-muted-foreground"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label={`Delete ${svc.name}`}
                       onClick={() => onDelete(svc)}
                     >
@@ -187,6 +201,17 @@ export function ServiceList({
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-0.5">
+                    {svc.workspace_path ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={`Deploy ${svc.name}`}
+                        onClick={() => onDeploy(svc)}
+                      >
+                        <Rocket className="size-3.5" />
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       variant="ghost"

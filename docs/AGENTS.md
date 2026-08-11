@@ -20,7 +20,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | auth + app shell + overview/catalog/workers UI |
+| Portal | `apps/web` | auth + app shell (sidebar collapse) + overview/catalog/workers + Deploy UI |
 | API | `apps/api` | layered + scaffold/templates + workers + deployments |
 | Worker | `apps/worker` | belum (job queue / orchestrator) |
 | Agent | `apps/agent` | register + heartbeat + poll/deploy (docker build/run) |
@@ -60,7 +60,7 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 | Path | Isi |
 |------|-----|
 | `/overview` | ringkasan services + workers |
-| `/catalog` | daftar services; create via dialog (scaffold) |
+| `/catalog` | daftar services; create/edit/delete/deploy; dialog deployments |
 | `/worker` | daftar workers + status |
 
 Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
@@ -93,4 +93,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: agent deploy end-to-end jalan via API/curl; portal tombol Deploy — Step 10C.3.)
+(Saat ini: scaffold → deploy dari portal → healthz container sudah jalan. Next: Step 11 Compose full stack.)
