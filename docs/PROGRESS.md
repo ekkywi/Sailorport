@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 10C.3 (Portal Deploy UI + list deployments)
-- **Step berikutnya:** 11 (Docker Compose full stack)
-- **Terakhir dikerjakan:** 2026-08-11 — debt: workspace `data/workspaces`, agent offline on stop, delete cleans workspace
+- **Step selesai:** 11 (Docker Compose full stack)
+- **Step berikutnya:** Harden (agent token) + multi-port deploy (opsional); atau Environments
+- **Terakhir dikerjakan:** 2026-08-11 — compose api+web+postgres; docs dual-mode (dev vs self-host)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -28,17 +28,37 @@
 - [x] Step 10C.1 — Deployments API (create/list/get + agent claim/update)
 - [x] Step 10C.2 — Agent poll job + Docker build/run + PATCH status
 - [x] Step 10C.3 — Portal UI tombol Deploy + list deployments
-- [ ] Step 11 — Docker Compose full stack
+- [x] Step 11 — Docker Compose full stack
+- [ ] Harden — agent token + (opsional) multi-port deploy
+- [ ] Environments (dev/staging/prod)
 
 ## Yang sudah jalan
 
+### Mode development (disarankan sehari-hari)
+
+Hanya Postgres di Docker; API/web/agent di host untuk hot-reload:
+
 ```bash
-cd deploy/compose && docker compose up -d
+cd deploy/compose && docker compose up -d postgres
 cd apps/api && go run .
 cd apps/web && npm run dev
 
 # terminal terpisah — agent (setelah API jalan)
 cd apps/agent && go run .
+```
+
+Portal Vite: `http://localhost:5173` (proxy ke API `:8080`).
+
+### Mode self-host / pack (Step 11)
+
+Control plane penuh di Compose:
+
+```bash
+cd deploy/compose && docker compose up -d --build
+# web http://localhost:5173  api http://localhost:8080  postgres :5433
+
+# agent tetap di host (butuh Docker CLI)
+cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 go run .
 ```
 
 | Endpoint / UI | Auth | Hasil |
@@ -140,11 +160,18 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - Agent Ctrl+C mengirim heartbeat `offline`
 - Delete service menghapus folder workspace jika path di bawah workspace root
 
-## Next action (Step 11)
+### Compose full stack (Step 11)
 
-1. Docker Compose full stack (API + web + Postgres dalam satu pack self-host)
-2. Docs runbook: satu perintah / alur untuk mesin baru
-3. (Opsional menyusul) agent token, multi-port deploy
+- `deploy/compose/docker-compose.yml` — `postgres` + `api` + `web`
+- `apps/api/Dockerfile`, `apps/web/Dockerfile`, `apps/web/nginx.conf` (proxy `/api` + `/healthz`)
+- Volume: `../../templates` → `/templates`, `../../data/workspaces` → `/data/workspaces`
+- Agent **tidak** di compose (perlu Docker daemon di host untuk deploy workload)
+
+## Next action
+
+1. Harden: token untuk endpoint agent (claim/update tidak publik)
+2. Multi-port deploy (hindari collision di `18080`)
+3. Atau Environments (dev/staging/prod)
 
 ## Cara lanjut di mesin lain
 

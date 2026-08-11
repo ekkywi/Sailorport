@@ -1,0 +1,6 @@
+# Build context hygiene for apps/api image
+*.md
+.git
+api
+*.exe
+*.test

@@ -67,7 +67,6 @@ func defaultWorkspaceDir() string {
 		if err != nil {
 			continue
 		}
-		// Prefer path whose repo root (parent of data/) contains templates/
 		repoRoot := filepath.Dir(filepath.Dir(abs))
 		if info, err := os.Stat(filepath.Join(repoRoot, "templates")); err == nil && info.IsDir() {
 			return abs

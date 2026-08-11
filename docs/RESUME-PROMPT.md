@@ -15,22 +15,22 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** Step 10C.3 — portal tombol Deploy di Catalog, dialog list deployments (status + poll + link healthz), sidebar AppShell collapsible, fix template `go-api` `ListenAndServe(mux)`. Flow scaffold → deploy → `curl :18080/healthz` sudah teruji dari portal.
+**Step terakhir selesai:** Step 11 — Docker Compose full stack (`postgres` + `api` + `web`). Dual mode: **dev** = hanya Postgres di compose + `go run` / `npm run dev`; **self-host** = `docker compose up -d --build`. Agent tetap di host.
 
-**Step berikutnya:** Step 11 — Docker Compose full stack (packaging self-host).
+**Step berikutnya:** Harden (agent token untuk claim/update) dan/atau multi-port deploy; atau Environments.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
 - Register existing = metadata saja, tanpa generate folder
 - Template masih di folder `templates/`, bukan database
 - Delete catalog menghapus workspace di bawah `data/workspaces` (path legacy `/tmp` di-skip)
-- Agent claim/update masih endpoint publik (harden nanti)
+- Agent claim/update masih endpoint publik (harden berikutnya)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
 - Workspace default: `data/workspaces` (bukan `/tmp`)
 
-**Cara jalankan lokal:** lihat `docs/PROGRESS.md` (compose + api + web + agent).
+**Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan Step 11 dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan harden (agent token) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

@@ -38,18 +38,45 @@ git clone https://github.com/ekkywi/Sailorport.git
 cd Sailorport
 ```
 
-## Jalankan Postgres
+## Dua mode menjalankan
+
+| Mode | Kapan | Perintah utama |
+|------|--------|----------------|
+| **Development** | coding harian | Compose **hanya Postgres** + `go run` / `npm run dev` / agent host |
+| **Self-host / pack** | demo mesin baru, mirip produksi | `docker compose up -d --build` (postgres + api + web) + agent di host |
+
+### Mode development (disarankan)
 
 ```bash
 cd deploy/compose
-docker compose up -d
+docker compose up -d postgres
 docker compose ps
 ```
 
 Connection string default:
 `postgres://sailorport:sailorport@localhost:5433/sailorport?sslmode=disable`
 
-## Jalankan API lokal
+Lanjut API / web / agent di bagian bawah (proses lokal).
+
+### Mode self-host (Step 11)
+
+```bash
+cd deploy/compose
+docker compose up -d --build
+docker compose ps
+
+curl -s http://localhost:8080/healthz
+curl -s http://localhost:5173/healthz
+# browser: http://localhost:5173
+```
+
+- Web (nginx) di host port **5173** → container `:80`, proxy `/api` + `/healthz` ke service `api`
+- API di **8080**; mount `templates/` + `data/workspaces/`
+- Agent **tidak** masuk compose — jalankan di host dengan `SAILORPORT_API_URL=http://localhost:8080`
+
+File terkait: `apps/api/Dockerfile`, `apps/web/Dockerfile`, `apps/web/nginx.conf`.
+
+## Jalankan API lokal (development)
 
 ```bash
 cd apps/api
@@ -168,6 +195,7 @@ PORT=9090 APP_ENV=production APP_VERSION=0.2.0 go run .
 
 ```text
 apps/api/
+├── Dockerfile             # image control-plane API (Step 11)
 ├── main.go
 └── internal/
     ├── config/, db/, migrate/
@@ -187,6 +215,8 @@ apps/agent/
     └── agent/     (register + heartbeat + poll/deploy loop)
 
 apps/web/
+├── Dockerfile             # Vite build → nginx (Step 11)
+├── nginx.conf             # proxy /api + /healthz → api:8080
 ├── vite.config.ts
 ├── components.json
 └── src/
@@ -204,6 +234,9 @@ apps/web/
     │   ├── scaffold/      # CreateServiceForm
     │   └── workers/
     └── lib/               # http.ts, utils.ts, theme.ts
+
+deploy/compose/
+└── docker-compose.yml     # postgres (+ api + web untuk self-host)
 ```
 
 ## Setelah setup

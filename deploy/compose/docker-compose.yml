@@ -15,6 +15,31 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
+  api:
+    build:
+      context: ../../apps/api
+    container_name: sailorport-api
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://sailorport:sailorport@postgres:5432/sailorport?sslmode=disable
+      SAILORPORT_WORKSPACE: /data/workspaces
+      SAILORPORT_TEMPLATES: /templates
+      AUTH_JWT_SECRET: dev-only-change-me
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../data/workspaces:/data/workspaces
+      - ../../templates:/templates:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+  web:
+    build:
+      context: ../../apps/web
+    container_name: sailorport-web
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
 volumes:
   sailorport_pgdata:

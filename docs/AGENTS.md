@@ -26,7 +26,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 | Agent | `apps/agent` | register + heartbeat + poll/deploy (docker build/run) |
 | Templates | `templates/` | `go-api` (disk, bukan DB) |
 | Shared contracts | `packages/shared` | belum |
-| Compose | `deploy/compose` | Postgres (host port 5433) |
+| Compose | `deploy/compose` | Postgres + API + web (self-host); dev biasanya Postgres saja |
 
 Infra: PostgreSQL (ada), Redis (belum), auth JWT lokal (ada), OIDC (belum).
 
@@ -93,4 +93,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: scaffold → deploy dari portal → healthz container sudah jalan. Next: Step 11 Compose full stack.)
+(Saat ini: control plane bisa `docker compose up --build`; scaffold → deploy dari portal OK. Next: harden agent token / multi-port / environments.)

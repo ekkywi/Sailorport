@@ -45,7 +45,7 @@ Satu flow ini harus jalan di mesin orang lain:
 - [x] Deploy via agent (API + agent docker + portal Deploy UI)
 - [x] Worker registry + health (API + portal + agent heartbeat)
 - [ ] Audit log
-- [ ] Self-hosting pack (compose + docs)
+- [x] Self-hosting pack (compose + docs)
 
 ## Setelah MVP stabil
 
@@ -85,4 +85,5 @@ Satu flow ini harus jalan di mesin orang lain:
 | 10C.1 | Deployments API + agent claim | selesai |
 | 10C.2 | Agent docker build/run | selesai |
 | 10C.3 | Portal UI Deploy | selesai |
-| 11 | Docker Compose full stack | berikutnya |
+| 11 | Docker Compose full stack | selesai |
+| 12 | Harden (agent token) | berikutnya |
