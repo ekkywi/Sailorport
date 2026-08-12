@@ -15,11 +15,13 @@ type API struct {
 	Users       *service.Users
 	Workers     *service.Workers
 	Deployments *service.Deployments
+	AgentToken  string
 }
 
 func NewRouter(api API) http.Handler {
 	mux := http.NewServeMux()
 	secret := api.JWTSecret
+	token := api.AgentToken
 
 	health := NewHealthHandler("sailorport-api", api.Version)
 	authH := NewAuthHandler(api.Auth)
@@ -51,8 +53,8 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("GET /api/v1/templates", withRole(secret, reader, scaffold.ListTemplates))
 	mux.Handle("POST /api/v1/scaffold", withRole(secret, writer, scaffold.Create))
 
-	mux.HandleFunc("POST /api/v1/workers/register", workersH.Register)
-	mux.HandleFunc("POST /api/v1/workers/{id}/heartbeat", workersH.Heartbeat)
+	mux.Handle("POST /api/v1/workers/register", withAgentToken(token, workersH.Register))
+	mux.Handle("POST /api/v1/workers/{id}/heartbeat", withAgentToken(token, workersH.Heartbeat))
 	mux.Handle("GET /api/v1/workers", withRole(secret, reader, workersH.List))
 
 	mux.Handle("POST /api/v1/services/{id}/deployments", withRole(secret, writer, deploymentsH.Create))
@@ -61,9 +63,8 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("GET /api/v1/deployments/{id}", withRole(secret, reader, deploymentsH.Get))
 	mux.Handle("PATCH /api/v1/deployments/{id}", withRole(secret, writer, deploymentsH.Update))
 
-	// Agent poll / status — publik dulu (sama seperti register/heartbeat)
-	mux.HandleFunc("POST /api/v1/agent/jobs/next", deploymentsH.ClaimNext)
-	mux.HandleFunc("PATCH /api/v1/agent/deployments/{id}", deploymentsH.Update)
+	mux.Handle("POST /api/v1/agent/jobs/next", withAgentToken(token, deploymentsH.ClaimNext))
+	mux.Handle("PATCH /api/v1/agent/deployments/{id}", withAgentToken(token, deploymentsH.Update))
 
 	return CORS(mux)
 }

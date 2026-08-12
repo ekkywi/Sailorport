@@ -41,6 +41,7 @@ func main() {
 		log.Fatalf("Workspace setup failed: %v", err)
 	}
 	log.Printf("Workspace dir writable OK")
+	log.Printf("Agent token auth: enabled")
 
 	serviceStore := store.NewServicesStore(sqlDB)
 	catalog := service.NewCatalog(serviceStore, cfg.WorkspaceDir)
@@ -54,8 +55,6 @@ func main() {
 	deploymentsStore := store.NewDeploymentsStore(sqlDB)
 	deploymentsSvc := service.NewDeployments(deploymentsStore, catalog)
 
-
-
 	router := handler.NewRouter(handler.API{
 		Version:     cfg.Version,
 		JWTSecret:   cfg.JWTSecret,
@@ -65,6 +64,7 @@ func main() {
 		Users:       usersSvc,
 		Workers:     workersSvc,
 		Deployments: deploymentsSvc,
+		AgentToken:  cfg.AgentToken,
 	})
 
 	addr := ":" + cfg.Port

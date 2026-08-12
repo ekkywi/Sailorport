@@ -12,6 +12,7 @@ type Config struct {
 	HeartbeatInterval time.Duration
 	PollInterval      time.Duration
 	PortBase          int
+	AgentToken        string
 }
 
 func Load() Config {
@@ -47,11 +48,17 @@ func Load() Config {
 		apiURL = "http://localhost:8080"
 	}
 
+	agentToken := os.Getenv("SAILORPORT_AGENT_TOKEN")
+	if agentToken == "" {
+		agentToken = "dev-agent-token"
+	}
+
 	return Config{
 		APIURL:            apiURL,
 		WorkerName:        name,
 		HeartbeatInterval: interval,
 		PollInterval:      poll,
 		PortBase:          portBase,
+		AgentToken:        agentToken,
 	}
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
 	"strings"
 
@@ -64,4 +65,25 @@ func withAuth(secret string, h http.HandlerFunc) http.Handler {
 
 func withRole(secret string, roles []string, h http.HandlerFunc) http.Handler {
 	return RequireAuth(secret)(RequireRole(roles...)(h))
+}
+
+func withAgentToken(expected string, h http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if expected == "" {
+			writeError(w, http.StatusUnauthorized, "agent token not configured")
+			return
+		}
+		header := r.Header.Get("Authorization")
+		if header == "" || !strings.HasPrefix(header, "Bearer ") {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		got := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
+		if len(got) != len(expected) ||
+			subtle.ConstantTimeCompare([]byte(got), []byte(expected)) != 1 {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
 }

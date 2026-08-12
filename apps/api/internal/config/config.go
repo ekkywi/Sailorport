@@ -15,6 +15,7 @@ type Config struct {
 	WorkspaceDir string
 	TemplatesDir string
 	JWTSecret    string
+	AgentToken   string
 }
 
 func Load() Config {
@@ -28,6 +29,7 @@ func Load() Config {
 	workspaceDir := getenv("SAILORPORT_WORKSPACE", defaultWorkspaceDir())
 	templatesDir := getenv("SAILORPORT_TEMPLATES", defaultTemplatesDir())
 	jwtSecret := getenv("AUTH_JWT_SECRET", "dev-only-change-me")
+	agentToken := getenv("SAILORPORT_AGENT_TOKEN", "dev-agent-token")
 
 	return Config{
 		Port:         port,
@@ -37,6 +39,7 @@ func Load() Config {
 		WorkspaceDir: workspaceDir,
 		TemplatesDir: templatesDir,
 		JWTSecret:    jwtSecret,
+		AgentToken:   agentToken,
 	}
 }
 

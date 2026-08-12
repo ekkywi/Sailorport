@@ -18,6 +18,7 @@ type Worker struct {
 
 type APIClient struct {
 	baseURL string
+	token   string
 	http    *http.Client
 }
 
@@ -38,10 +39,17 @@ type UpdateDeploymentRequest struct {
 	ErrorMessage string `json:"error_message"`
 }
 
-func New(baseURL string) *APIClient {
+func New(baseURL, token string) *APIClient {
 	return &APIClient{
 		baseURL: baseURL,
+		token:   token,
 		http:    &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
+func (c *APIClient) setAuth(req *http.Request) {
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 }
 
@@ -51,7 +59,13 @@ func (c *APIClient) Register(name, hostname string, labels map[string]any) (Work
 		"hostname": hostname,
 		"labels":   labels,
 	})
-	res, err := c.http.Post(c.baseURL+"/api/v1/workers/register", "application/json", bytes.NewReader(body))
+	httpReq, err := http.NewRequest(http.MethodPost, c.baseURL+"/api/v1/workers/register", bytes.NewReader(body))
+	if err != nil {
+		return Worker{}, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	c.setAuth(httpReq)
+	res, err := c.http.Do(httpReq)
 	if err != nil {
 		return Worker{}, err
 	}
@@ -70,7 +84,13 @@ func (c *APIClient) Register(name, hostname string, labels map[string]any) (Work
 func (c *APIClient) Heartbeat(id, status string) (Worker, error) {
 	body, _ := json.Marshal(map[string]string{"status": status})
 	url := fmt.Sprintf("%s/api/v1/workers/%s/heartbeat", c.baseURL, id)
-	res, err := c.http.Post(url, "application/json", bytes.NewReader(body))
+	httpReq, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return Worker{}, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	c.setAuth(httpReq)
+	res, err := c.http.Do(httpReq)
 	if err != nil {
 		return Worker{}, err
 	}
@@ -88,7 +108,13 @@ func (c *APIClient) Heartbeat(id, status string) (Worker, error) {
 
 func (c *APIClient) ClaimNext(workerID string) (*DeploymentJob, error) {
 	body, _ := json.Marshal(map[string]string{"worker_id": workerID})
-	res, err := c.http.Post(c.baseURL+"/api/v1/agent/jobs/next", "application/json", bytes.NewReader(body))
+	httpReq, err := http.NewRequest(http.MethodPost, c.baseURL+"/api/v1/agent/jobs/next", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	c.setAuth(httpReq)
+	res, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +140,7 @@ func (c *APIClient) UpdateDeployment(id string, req UpdateDeploymentRequest) err
 		return err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	c.setAuth(httpReq)
 	res, err := c.http.Do(httpReq)
 	if err != nil {
 		return err

@@ -25,6 +25,7 @@ services:
       SAILORPORT_WORKSPACE: /data/workspaces
       SAILORPORT_TEMPLATES: /templates
       AUTH_JWT_SECRET: dev-only-change-me
+      SAILORPORT_AGENT_TOKEN: dev-agent-token
     ports:
       - "8080:8080"
     volumes:

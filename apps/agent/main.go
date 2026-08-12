@@ -20,7 +20,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	a := agent.New(cfg, client.New(cfg.APIURL))
+	a := agent.New(cfg, client.New(cfg.APIURL, cfg.AgentToken))
 	if err := a.Run(ctx); err != nil {
 		log.Fatal(err)
 	}
