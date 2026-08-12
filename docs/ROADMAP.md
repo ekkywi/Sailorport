@@ -90,3 +90,5 @@ Satu flow ini harus jalan di mesin orang lain:
 | 12a | User management API | selesai |
 | 12b | Portal users + RBAC UI | selesai |
 | R0 | Latest deploy di catalog + layout full width | selesai |
+| R1 | Agent docker stop/start/remove helpers | selesai |
+| R2 | Runtime controls (API + portal stop/start) | selesai |

@@ -67,6 +67,9 @@ func (a *Agent) Run(ctx context.Context) error {
 			if err := a.handleJob(ctx, workerID); err != nil {
 				log.Printf("job error: %v", err)
 			}
+			if err := a.handleRuntime(workerID); err != nil {
+				log.Printf("runtime error: %v", err)
+			}
 		}
 	}
 }
@@ -109,4 +112,36 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 		ContainerID: cid,
 		Port:        &port,
 	})
+}
+
+func (a *Agent) handleRuntime(workerID string) error {
+	job, err := a.client.ClaimRuntimeNext(workerID)
+	if err != nil {
+		return err
+	}
+	if job == nil {
+		return nil
+	}
+
+	containerName := docker.ContainerName(job.ServiceName)
+	log.Printf("runtime job id=%s action=%s container=%s", job.ID, job.Action, containerName)
+
+	var runErr error
+	switch job.Action {
+	case "stop":
+		runErr = docker.Stop(containerName)
+	case "start":
+		runErr = docker.Start(containerName)
+	default:
+		runErr = fmt.Errorf("unknown action %q", job.Action)
+	}
+
+	if runErr != nil {
+		_ = a.client.UpdateRuntime(job.ID, client.UpdateRuntimeRequest{
+			Status: "failed", ErrorMessage: runErr.Error(),
+		})
+		return runErr
+	}
+
+	return a.client.UpdateRuntime(job.ID, client.UpdateRuntimeRequest{Status: "done"})
 }

@@ -32,6 +32,7 @@ import { ServiceList } from "./ServiceList";
 import type { Service, ServiceFormValues } from "./types";
 import { createDeployment } from "../deployments/api";
 import { DeploymentsDialog } from "../deployments/DeploymentsDialog";
+import { startService, stopService } from "../runtime/api";
 import type { AuthUser } from "@/features/auth/types";
 import { canWriteCatalog } from "@/lib/rbac";
 
@@ -93,6 +94,34 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function openHistory(svc: Service) {
     setDeployTarget(svc);
+  }
+
+  function refreshAfterRuntime() {
+    void load({ silent: true });
+    window.setTimeout(() => void load({ silent: true }), 3000);
+    window.setTimeout(() => void load({ silent: true }), 6000);
+  }
+
+  async function handleStop(svc: Service) {
+    setListError("");
+    try {
+      await stopService(svc.id);
+      toast(`Stopping "${svc.name}"…`);
+      refreshAfterRuntime();
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : "Failed to stop service");
+    }
+  }
+
+  async function handleStart(svc: Service) {
+    setListError("");
+    try {
+      await startService(svc.id);
+      toast(`Starting "${svc.name}"…`);
+      refreshAfterRuntime();
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : "Failed to start service");
+    }
   }
 
   useEffect(() => {
@@ -249,6 +278,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         onDelete={setDeleteTarget}
         onDeploy={(svc) => void startDeploy(svc)}
         onOpenHistory={openHistory}
+        onStop={(svc) => void handleStop(svc)}
+        onStart={(svc) => void handleStart(svc)}
         onCreate={canWrite ? startCreate : undefined}
       />
 

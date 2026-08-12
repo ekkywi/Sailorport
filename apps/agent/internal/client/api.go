@@ -39,6 +39,20 @@ type UpdateDeploymentRequest struct {
 	ErrorMessage string `json:"error_message"`
 }
 
+type RuntimeJob struct {
+	ID           string `json:"id"`
+	ServiceID    string `json:"service_id"`
+	DeploymentID string `json:"deployment_id"`
+	ServiceName  string `json:"service_name"`
+	Action       string `json:"action"`
+	Status       string `json:"status"`
+}
+
+type UpdateRuntimeRequest struct {
+	Status       string `json:"status"`
+	ErrorMessage string `json:"error_message"`
+}
+
 func New(baseURL, token string) *APIClient {
 	return &APIClient{
 		baseURL: baseURL,
@@ -149,6 +163,53 @@ func (c *APIClient) UpdateDeployment(id string, req UpdateDeploymentRequest) err
 	data, _ := io.ReadAll(res.Body)
 	if res.StatusCode >= 300 {
 		return fmt.Errorf("Update deployment %d: %s", res.StatusCode, data)
+	}
+	return nil
+}
+
+func (c *APIClient) ClaimRuntimeNext(workerID string) (*RuntimeJob, error) {
+	body, _ := json.Marshal(map[string]string{"worker_id": workerID})
+	httpReq, err := http.NewRequest(http.MethodPost, c.baseURL+"/api/v1/agent/runtime/next", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	c.setAuth(httpReq)
+	res, err := c.http.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusNoContent {
+		return nil, nil
+	}
+	data, _ := io.ReadAll(res.Body)
+	if res.StatusCode >= 300 {
+		return nil, fmt.Errorf("Claim runtime %d: %s", res.StatusCode, data)
+	}
+	var job RuntimeJob
+	if err := json.Unmarshal(data, &job); err != nil {
+		return nil, err
+	}
+	return &job, nil
+}
+
+func (c *APIClient) UpdateRuntime(id string, req UpdateRuntimeRequest) error {
+	body, _ := json.Marshal(req)
+	httpReq, err := http.NewRequest(http.MethodPatch, c.baseURL+"/api/v1/agent/runtime/"+id, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	c.setAuth(httpReq)
+	res, err := c.http.Do(httpReq)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	data, _ := io.ReadAll(res.Body)
+	if res.StatusCode >= 300 {
+		return fmt.Errorf("Update runtime %d: %s", res.StatusCode, data)
 	}
 	return nil
 }

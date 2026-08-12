@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** R0 — `GET /api/v1/services` menyertakan `latest_deployment`; portal Catalog kolom Deploy (badge + waktu + healthz link), History vs Deploy terpisah, polling status; AppShell full width.
+**Step terakhir selesai:** R2 — runtime controls: `POST /services/{id}/runtime/stop|start`, agent poll runtime jobs, portal tombol Stop/Start di catalog.
 
-**Step berikutnya:** Delete service membersihkan container Docker (stop/rm); lalu runtime controls (stop/start/restart + logs). Opsional multi-port; Environments.
+**Step berikutnya:** R3 delete cleanup (container rm saat hapus service); opsional logs/restart; Environments.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -28,11 +28,11 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
-- Catalog: kolom Deploy menampilkan `latest_deployment`; rocket = deploy baru, jam = history
+- Catalog: kolom Deploy menampilkan `latest_deployment`; rocket = deploy baru, jam = history; square/play = stop/start runtime
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan cleanup delete → docker stop/rm (atau runtime controls) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan R3 delete cleanup (agent rm container saat hapus service) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

@@ -54,6 +54,8 @@ func main() {
 	workersStore := store.NewWorkersStore(sqlDB)
 	workersSvc := service.NewWorkers(workersStore)
 	deploymentsSvc := service.NewDeployments(deploymentsStore, catalog)
+	runtimeStore := store.NewRuntimeStore(sqlDB)
+	runtimeSvc := service.NewRuntime(runtimeStore, deploymentsSvc, catalog)
 
 	router := handler.NewRouter(handler.API{
 		Version:     cfg.Version,
@@ -64,6 +66,7 @@ func main() {
 		Users:       usersSvc,
 		Workers:     workersSvc,
 		Deployments: deploymentsSvc,
+		Runtime:     runtimeSvc,
 		AgentToken:  cfg.AgentToken,
 	})
 

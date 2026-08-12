@@ -1,4 +1,4 @@
-import { Boxes, FolderGit2, History, Pencil, Rocket, Trash2 } from "lucide-react";
+import { Boxes, FolderGit2, History, Pencil, Play, Rocket, Square, Trash2 } from "lucide-react";
 import {
   DataPanel,
   EmptyState,
@@ -19,6 +19,8 @@ type ServiceListProps = {
   onCreate?: () => void;
   onDeploy: (svc: Service) => void;
   onOpenHistory: (svc: Service) => void;
+  onStop: (svc: Service) => void;
+  onStart: (svc: Service) => void;
 };
 
 function deployBadgeClass(status: string) {
@@ -30,6 +32,9 @@ function deployBadgeClass(status: string) {
   }
   if (status === "building" || status === "claimed" || status === "pending") {
     return "bg-amber-500/12 text-amber-700 dark:text-amber-400";
+  }
+  if (status === "stopped") {
+    return "bg-muted text-muted-foreground";
   }
   return undefined;
 }
@@ -89,6 +94,8 @@ function RowActions({
   onEdit,
   onDelete,
   onOpenHistory,
+  onStop,
+  onStart,
 }: {
   svc: Service;
   canWrite: boolean;
@@ -96,7 +103,11 @@ function RowActions({
   onEdit: (svc: Service) => void;
   onDelete: (svc: Service) => void;
   onOpenHistory: (svc: Service) => void;
+  onStop: (svc: Service) => void;
+  onStart: (svc: Service) => void;
 }) {
+  const deployStatus = svc.latest_deployment?.status;
+
   return (
     <div className="flex shrink-0 items-center justify-end gap-0.5 whitespace-nowrap">
       <Button
@@ -111,6 +122,30 @@ function RowActions({
       </Button>
       {canWrite ? (
         <>
+          {deployStatus === "running" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
+              aria-label={`Stop ${svc.name}`}
+              onClick={() => onStop(svc)}
+            >
+              <Square className="size-3.5" />
+            </Button>
+          ) : null}
+          {deployStatus === "stopped" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
+              aria-label={`Start ${svc.name}`}
+              onClick={() => onStart(svc)}
+            >
+              <Play className="size-3.5" />
+            </Button>
+          ) : null}
           {svc.workspace_path ? (
             <Button
               type="button"
@@ -157,6 +192,8 @@ export function ServiceList({
   onDelete,
   onDeploy,
   onOpenHistory,
+  onStop,
+  onStart,
   onCreate,
 }: ServiceListProps) {
   if (loading && services.length === 0) {
@@ -282,6 +319,8 @@ export function ServiceList({
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onOpenHistory={onOpenHistory}
+                    onStop={onStop}
+                    onStart={onStart}
                   />
                 </td>
               </tr>
@@ -313,6 +352,8 @@ export function ServiceList({
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onOpenHistory={onOpenHistory}
+                    onStop={onStop}
+                    onStart={onStart}
                   />
                 </div>
                 <div className="mt-2">

@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** R0 — latest deploy di catalog (API + portal) + layout full width
-- **Step berikutnya:** Delete service → stop/rm container Docker; lalu runtime controls / Environments
-- **Terakhir dikerjakan:** 2026-08-12 — kolom Deploy di catalog, History ≠ Deploy, polling status; AppShell full width
+- **Step selesai:** R2 — runtime controls (stop/start via agent + portal)
+- **Step berikutnya:** R3 delete cleanup (stop/rm container saat hapus service); lalu Environments
+- **Terakhir dikerjakan:** 2026-08-12 — runtime jobs API, agent docker stop/start, tombol Stop/Start di catalog
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -33,7 +33,9 @@
 - [x] Step 12b — Portal users page + RBAC UI (hide actions for viewer)
 - [x] Harden — agent token (register/heartbeat/claim/update)
 - [x] R0 — latest deploy di catalog (API `latest_deployment` + kolom Deploy di portal)
-- [ ] Delete cleanup — stop/rm container saat hapus service (opsional multi-port)
+- [x] R1 — agent docker helpers (`Stop` / `Start` / `Remove`)
+- [x] R2 — runtime controls (stop/start via agent job + portal UI)
+- [ ] R3 Delete cleanup — stop/rm container saat hapus service (opsional multi-port)
 - [ ] Environments (dev/staging/prod)
 
 ## Yang sudah jalan
@@ -82,8 +84,12 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `GET /api/v1/deployments` | viewer+ | list semua |
 | `GET /api/v1/deployments/{id}` | viewer+ | detail |
 | `PATCH /api/v1/deployments/{id}` | developer+ | update status (portal/curl JWT) |
-| `POST /api/v1/agent/jobs/next` | agent token | claim 1 job pending → `claimed` (204 jika kosong) |
-| `PATCH /api/v1/agent/deployments/{id}` | agent token | agent update status |
+| `POST /api/v1/services/{id}/runtime/stop` | developer+ | enqueue stop container (deployment harus `running`) → **202** |
+| `POST /api/v1/services/{id}/runtime/start` | developer+ | enqueue start container (deployment harus `stopped`) → **202** |
+| `POST /api/v1/agent/jobs/next` | agent token | claim 1 deploy job pending → `claimed` (204 jika kosong) |
+| `PATCH /api/v1/agent/deployments/{id}` | agent token | agent update deploy status |
+| `POST /api/v1/agent/runtime/next` | agent token | claim 1 runtime job (`stop`/`start`) |
+| `PATCH /api/v1/agent/runtime/{id}` | agent token | agent selesai runtime job; API update deployment → `stopped`/`running` |
 | Portal `/login`, `/register` | — | auth gate |
 | Portal `/overview`, `/catalog`, `/worker`, `/users` | JWT | app shell; `/users` admin-only (redirect non-admin) |
 
@@ -130,7 +136,7 @@ Login ulang agar JWT berisi role baru.
 
 - Env bersama: `SAILORPORT_AGENT_TOKEN` (API + agent; default dev `dev-agent-token`)
 - Middleware `withAgentToken` — header `Authorization: Bearer <token>` (constant-time compare)
-- Dilindungi: `POST /workers/register`, `POST /workers/{id}/heartbeat`, `POST /agent/jobs/next`, `PATCH /agent/deployments/{id}`
+- Dilindungi: `POST /workers/register`, `POST /workers/{id}/heartbeat`, `POST /agent/jobs/next`, `PATCH /agent/deployments/{id}`, `POST /agent/runtime/next`, `PATCH /agent/runtime/{id}`
 - Agent client mengirim token di setiap request
 - Compose API: `SAILORPORT_AGENT_TOKEN` di service `api`
 - Tested: tanpa token → **401**; token benar (no job) → **204**
@@ -168,12 +174,22 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 - **Deploy** (icon rocket) — create deployment baru; hanya `admin`/`developer` + service punya `workspace_path`
 - Dialog deployments: refresh + poll 3s saat job aktif; `onRefreshCatalog` sinkron kolom Deploy di tabel
 - Catalog polling 5s (silent) saat ada service dengan status `pending`/`claimed`/`building`
+- **Stop / Start** (square/play): hanya jika `latest_deployment` = `running` / `stopped`; via runtime job + agent
 - **AppShell:** sidebar desktop collapse/expand (localStorage); **main content full width** (bukan `max-w-5xl`)
 - Catalog table: kolom Service / Owner / Deploy / Origin / Actions; path workspace truncate CSS
 
 ### Template fix
 
 - `templates/go-api/main.go.tmpl`: `ListenAndServe(":8080", mux)` (bukan `nil`) — tanpa ini `/healthz` di container selalu 404
+
+### Runtime controls (R1 + R2)
+
+- **R1** `apps/agent/internal/docker/container.go` — `ContainerName`, `Stop`, `Start`, `Remove` (idempotent jika container tidak ada)
+- **R2** migrasi `00006_create_runtime_jobs.sql`; lapisan `model` → `store` → `service` → `handler`
+- Portal enqueue: `POST /services/{id}/runtime/stop|start` → job `pending`
+- Agent poll `POST /agent/runtime/next` → `docker stop|start` → `PATCH /agent/runtime/{id}` status `done`
+- API saat job `done`: update deployment terkait ke `stopped` atau `running`
+- Portal: tombol Stop (■) / Start (▶) di baris catalog; refresh otomatis setelah aksi
 
 ### Latest deploy di catalog (R0)
 
@@ -187,7 +203,7 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 - **Layout:** `AppShell` — sidebar collapsible + topbar; main **full width** (`lg:px-8`, tanpa max-width container)
 - **Sidebar sections:** Workspace (Overview), Platform (Catalog, Workers), Administration (Users — admin)
 - **Routes (flat):** `/overview`, `/catalog`, `/worker`, `/users` (admin)
-- **Catalog UX:** daftar + kolom deploy terakhir; Create/Deploy/Edit/Delete hanya `admin`/`developer`; viewer read-only + History
+- **Catalog UX:** daftar + kolom deploy terakhir; Create/Deploy/Stop/Start/Edit/Delete hanya `admin`/`developer`; viewer read-only + History
 - **Users:** admin mengelola role (`admin` | `developer` | `viewer`)
 - **Workers:** tabel dengan status badge, relative last seen
 - **Overview:** metrik services/workers + panel recent
@@ -223,9 +239,9 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
 ## Next action
 
-1. Delete service → agent/API stop + `docker rm` container terkait (cleanup runtime)
-2. Runtime controls (stop / start / restart + logs) di portal
-3. Opsional: multi-port deploy; Environments (dev/staging/prod)
+1. R3 — delete service → enqueue cleanup job → agent `docker rm` container
+2. Opsional: container logs di portal; multi-port deploy
+3. Environments (dev/staging/prod)
 
 ## Cara lanjut di mesin lain
 

@@ -144,7 +144,7 @@ Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar (col
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
-Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** (status terakhir) + **History** / **Deploy** terpisah (dialog deployments; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin). Layout app shell **full width** untuk tabel dan data padat.
+Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** + **Stop/Start** runtime + **History** / **Deploy** terpisah (dialog deployments; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin). Layout app shell **full width** untuk tabel dan data padat.
 
 ## Admin user & user management (Step 12a + 12b)
 
