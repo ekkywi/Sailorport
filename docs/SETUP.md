@@ -123,13 +123,17 @@ npm install
 npm run dev
 ```
 
-Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar (bisa collapse di desktop): Overview, Catalog, Workers.
+Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar (collapse di desktop):
+
+- **Workspace:** Overview  
+- **Platform:** Catalog, Workers  
+- **Administration:** Users (hanya role `admin`)
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
-Portal mendukung: auth (JWT), catalog CRUD + scaffold + **Deploy** (dialog status), worker list, overview dashboard.
+Portal mendukung: auth (JWT), catalog CRUD + scaffold + **Deploy** (dialog status; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin).
 
-## Admin user & user management API (Step 12a)
+## Admin user & user management (Step 12a + 12b)
 
 Register tidak bisa self-assign `admin`. Promote user pertama:
 
@@ -155,11 +159,7 @@ curl -s -X PATCH "http://localhost:8080/api/v1/users/USER_ID" \
 
 Non-admin mendapat **403** pada `/api/v1/users`. Admin tidak bisa mengubah role dirinya sendiri.
 
-### Portal users UI (Step 12b — B2)
-
-Komponen `UsersPage` sudah ada di `apps/web/src/features/users/` — tabel user, dropdown role, baris sendiri read-only. Helper `apps/web/src/lib/rbac.ts`: `isAdmin()`, `canWriteCatalog()`.
-
-Route `/users` dan nav admin di sidebar **belum** di-wire (Step 12b B3). Lanjut B3 untuk buka halaman dari portal.
+Di portal: buka **Users** di sidebar (admin) untuk ubah role lewat UI. Role `viewer` melihat Catalog tanpa tombol Create / Deploy / Edit / Delete.
 
 ## Jalankan agent (Step 10B + 10C.2)
 

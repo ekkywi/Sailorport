@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 12a (User management API — admin)
-- **Step berikutnya:** 12b sisa — route `/users`, nav admin, RBAC catalog (B3–B4)
-- **Terakhir dikerjakan:** 2026-08-11 — `UsersPage` + `rbac.ts` (12b B2); API users 12a
+- **Step selesai:** 12b (Portal users UI + catalog RBAC + sidebar sections)
+- **Step berikutnya:** Harden — agent token (+ opsional multi-port deploy)
+- **Terakhir dikerjakan:** 2026-08-12 — `/users` admin-only, hide catalog write for viewer, sidebar categories
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -30,7 +30,7 @@
 - [x] Step 10C.3 — Portal UI tombol Deploy + list deployments
 - [x] Step 11 — Docker Compose full stack
 - [x] Step 12a — User management API (list users, patch role — admin only)
-- [~] Step 12b — Portal users page + RBAC UI (B2 selesai: UsersPage + rbac; B3–B4 belum)
+- [x] Step 12b — Portal users page + RBAC UI (hide actions for viewer)
 - [ ] Harden — agent token + (opsional) multi-port deploy
 - [ ] Environments (dev/staging/prod)
 
@@ -83,7 +83,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 go run .
 | `POST /api/v1/agent/jobs/next` | publik | claim 1 job pending → `claimed` (204 jika kosong) |
 | `PATCH /api/v1/agent/deployments/{id}` | publik | agent update status tanpa JWT |
 | Portal `/login`, `/register` | — | auth gate |
-| Portal `/overview`, `/catalog`, `/worker` | JWT | app shell (sidebar + topbar) |
+| Portal `/overview`, `/catalog`, `/worker`, `/users` | JWT | app shell; `/users` admin-only (redirect non-admin) |
 
 Env API: `AUTH_JWT_SECRET` (default dev-only-change-me)
 
@@ -114,12 +114,14 @@ Login ulang agar JWT berisi role baru.
 - `GET /api/v1/users` — admin only
 - `PATCH /api/v1/users/{id}` body `{"role":"..."}` — admin only; tidak bisa patch role diri sendiri
 
-### Portal users UI (12b — B2)
+### Portal users UI + catalog RBAC (12b)
 
 - Feature: `apps/web/src/features/users/` (`type`, `api`, `UsersPage`)
 - Helper RBAC: `apps/web/src/lib/rbac.ts` — `isAdmin()`, `canWriteCatalog()`
-- `UsersPage`: tabel user, dropdown ubah role (admin/developer/viewer); baris diri sendiri badge saja (API menolak self-patch)
-- **Belum:** route `/users`, nav sidebar admin-only, sembunyikan aksi write di Catalog untuk `viewer` (B3–B4)
+- Route `/users` + guard admin; non-admin → `/overview`
+- Sidebar: sections Workspace / Platform / Administration; **Users** hanya admin
+- `UsersPage`: tabel user, dropdown ubah role; baris diri sendiri badge saja
+- Catalog: `canWriteCatalog` — viewer tanpa Create / Deploy / Edit / Delete (desktop + mobile)
 
 ### Deployments (10C.1)
 
@@ -162,8 +164,10 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 ### Web UI (portal setelah login)
 
 - **Layout:** `AppShell` — sidebar collapsible + topbar (Linear-style), harbour theme + dark mode
-- **Routes (flat):** `/overview`, `/catalog`, `/worker` (bukan nested)
-- **Catalog UX:** daftar saja; **Create service** = scaffold; **Register existing** = metadata; edit/delete/deploy via actions; dialog deployments
+- **Sidebar sections:** Workspace (Overview), Platform (Catalog, Workers), Administration (Users — admin)
+- **Routes (flat):** `/overview`, `/catalog`, `/worker`, `/users` (admin)
+- **Catalog UX:** daftar; Create/Deploy/Edit/Delete hanya `admin`/`developer`; viewer read-only
+- **Users:** admin mengelola role (`admin` | `developer` | `viewer`)
 - **Workers:** tabel dengan status badge, relative last seen
 - **Overview:** metrik services/workers + panel recent
 - **Shared:** `src/components/app/` (DataPanel, Toolbar, EmptyState, …)
@@ -193,16 +197,11 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - Volume: `../../templates` → `/templates`, `../../data/workspaces` → `/data/workspaces`
 - Agent **tidak** di compose (perlu Docker daemon di host untuk deploy workload)
 
-## Next action (Step 12b — B3 & B4)
+## Next action (Harden)
 
-1. Route `/users` + `pageMeta`; nav sidebar hanya untuk admin (`isAdmin`)
-2. Pass `currentUser` ke `CatalogPage`; pakai `canWriteCatalog()` — sembunyikan Create / Deploy / Edit / Delete untuk `viewer`
-
-## Next after 12b
-
-- Agent token (harden claim/update endpoints)
-- Multi-port deploy (opsional)
-- Environments
+1. Agent token untuk claim/update endpoints (saat ini masih publik)
+2. Opsional: multi-port deploy (hindari collision `PortBase`)
+3. Environments (dev/staging/prod)
 
 ## Cara lanjut di mesin lain
 

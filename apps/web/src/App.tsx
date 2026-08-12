@@ -12,10 +12,12 @@ import { RegisterPage } from "./features/auth/RegisterPage";
 import { logout, me } from "./features/auth/api";
 import type { AuthUser } from "./features/auth/types";
 import { OverviewPage } from "./features/overview/OverviewPage";
+import { UsersPage } from "./features/users/UsersPage";
 import { WorkersPage } from "./features/workers/WorkersPage";
 import { AppShell } from "./layouts/AppShell";
 import { AuthLayout } from "./layouts/AuthLayout";
 import { getToken } from "./lib/http";
+import { isAdmin } from "./lib/rbac";
 
 function SessionGate({
   children,
@@ -121,8 +123,18 @@ function App() {
           <AppShell user={user} onLogout={signOut}>
             <Routes>
               <Route path="/overview" element={<OverviewPage />} />
-              <Route path="/catalog" element={<CatalogPage />} />
+              <Route path="/catalog" element={<CatalogPage currentUser={user} />} />
               <Route path="/worker" element={<WorkersPage />} />
+              <Route
+                path="/users"
+                element={
+                  isAdmin(user.role) ? (
+                    <UsersPage />
+                  ) : (
+                    <Navigate to="/overview" replace />
+                  )
+                }
+              />
               <Route path="/" element={<Navigate to="/overview" replace />} />
               <Route path="*" element={<Navigate to="/overview" replace />} />
             </Routes>

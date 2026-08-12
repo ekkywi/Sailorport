@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** Step 12b B2 — portal `UsersPage` (tabel + ubah role), `features/users/` + `lib/rbac.ts` (`isAdmin`, `canWriteCatalog`). API 12a sudah jalan.
+**Step terakhir selesai:** Step 12b — portal `/users` (admin), sidebar sections, Catalog hide write actions untuk `viewer` (`canWriteCatalog`). API 12a sudah jalan.
 
-**Step berikutnya:** Step 12b B3–B4 — route `/users` + nav admin-only; sembunyikan aksi write di Catalog untuk `viewer` (coding manual).
+**Step berikutnya:** Harden — agent token untuk claim/update endpoints (coding manual). Opsional: multi-port deploy, lalu Environments.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -27,10 +27,11 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Agent claim/update masih endpoint publik (harden berikutnya)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
 - Workspace default: `data/workspaces` (bukan `/tmp`)
+- Portal RBAC UI: viewer read-only di Catalog; Users page admin-only
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan Step 12b (portal users + RBAC UI) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan Harden (agent token) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

@@ -11,6 +11,7 @@ import type { Service } from "./types";
 type ServiceListProps = {
   services: Service[];
   loading: boolean;
+  canWrite: boolean;
   onEdit: (svc: Service) => void;
   onDelete: (svc: Service) => void;
   onCreate?: () => void;
@@ -28,6 +29,7 @@ function ServiceGlyph({ name }: { name: string }) {
 export function ServiceList({
   services,
   loading,
+  canWrite,
   onEdit,
   onDelete,
   onDeploy,
@@ -57,7 +59,11 @@ export function ServiceList({
         <EmptyState
           icon={Boxes}
           title="No services in catalog"
-          description="Create a service from a template to generate a workspace and register it here."
+          description={
+            canWrite
+              ? "Create a service from a template to generate a workspace and register it here."
+              : "No services yet. Ask an admin or developer to create one."
+          }
           action={
             onCreate ? (
               <Button
@@ -142,6 +148,7 @@ export function ServiceList({
                   </div>
                 </td>
                 <td className="px-4 py-3">
+                {canWrite ? (
                   <div className="flex shrink-0 items-center justify-end gap-0.5 whitespace-nowrap">
                     {svc.workspace_path ? (
                       <Button
@@ -176,6 +183,7 @@ export function ServiceList({
                       <Trash2 className="size-3.5" />
                     </Button>
                   </div>
+                   ) : null}
                 </td>
               </tr>
             ))}
@@ -200,38 +208,40 @@ export function ServiceList({
                       {svc.description ? ` · ${svc.description}` : ""}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-0.5">
-                    {svc.workspace_path ? (
+                  {canWrite ? (
+                    <div className="flex shrink-0 gap-0.5">
+                      {svc.workspace_path ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Deploy ${svc.name}`}
+                          onClick={() => onDeploy(svc)}
+                        >
+                          <Rocket className="size-3.5" />
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`Deploy ${svc.name}`}
-                        onClick={() => onDeploy(svc)}
+                        aria-label={`Edit ${svc.name}`}
+                        onClick={() => onEdit(svc)}
                       >
-                        <Rocket className="size-3.5" />
+                        <Pencil className="size-3.5" />
                       </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Edit ${svc.name}`}
-                      onClick={() => onEdit(svc)}
-                    >
-                      <Pencil className="size-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-destructive"
-                      aria-label={`Delete ${svc.name}`}
-                      onClick={() => onDelete(svc)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-destructive"
+                        aria-label={`Delete ${svc.name}`}
+                        onClick={() => onDelete(svc)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
                 {(svc.template_id || svc.workspace_path) && (
                   <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">

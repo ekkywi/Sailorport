@@ -32,6 +32,8 @@ import { ServiceList } from "./ServiceList";
 import type { Service, ServiceFormValues } from "./types";
 import { createDeployment } from "../deployments/api";
 import { DeploymentsDialog } from "../deployments/DeploymentsDialog";
+import type { AuthUser } from "@/features/auth/types";
+import { canWriteCatalog } from "@/lib/rbac";
 
 const emptyForm: ServiceFormValues = {
   name: "",
@@ -41,7 +43,8 @@ const emptyForm: ServiceFormValues = {
 
 type DialogMode = "none" | "create" | "register" | "edit";
 
-export function CatalogPage() {
+export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
+  const canWrite = canWriteCatalog(currentUser.role);
   const { toast } = useToast();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
@@ -197,15 +200,17 @@ export function CatalogPage() {
               <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
               Refresh
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 gap-1.5 text-[13px]"
-              onClick={startCreate}
-            >
-              <Plus className="size-3.5" />
-              Create service
-            </Button>
+            {canWrite ? (
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 gap-1.5 text-[13px]"
+                onClick={startCreate}
+              >
+                <Plus className="size-3.5" />
+                Create service
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -217,10 +222,11 @@ export function CatalogPage() {
       <ServiceList
         services={services}
         loading={loading}
+        canWrite={canWrite}
         onEdit={startEdit}
         onDelete={setDeleteTarget}
         onDeploy={(svc) => void startDeploy(svc)}
-        onCreate={startCreate}
+        onCreate={canWrite ? startCreate : undefined}
       />
 
       <Dialog

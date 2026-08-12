@@ -20,7 +20,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | auth + app shell (sidebar collapse) + overview/catalog/workers + Deploy UI |
+| Portal | `apps/web` | auth + app shell (sidebar sections) + overview/catalog/workers/users + Deploy UI + RBAC hide |
 | API | `apps/api` | layered + scaffold/templates + workers + deployments |
 | Worker | `apps/worker` | belum (job queue / orchestrator) |
 | Agent | `apps/agent` | register + heartbeat + poll/deploy (docker build/run) |

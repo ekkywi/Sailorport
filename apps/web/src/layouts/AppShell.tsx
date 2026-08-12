@@ -9,9 +9,11 @@ import {
   ChevronRight,
   Menu,
   Server,
+  Users,
   X,
+  type LucideIcon,
 } from "lucide-react";
-import { BrandMark, userInitials } from "@/components/app";
+import { BrandMark, SectionLabel, userInitials } from "@/components/app";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { AuthUser } from "@/features/auth/types";
+import { isAdmin } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 
 type AppShellProps = {
@@ -32,11 +35,42 @@ type AppShellProps = {
 
 const SIDEBAR_COLLAPSED_KEY = "sailorport.sidebar.collapsed";
 
-const navItems = [
-  { to: "/overview", label: "Overview", icon: LayoutDashboard, end: true },
-  { to: "/catalog", label: "Catalog", icon: Boxes },
-  { to: "/worker", label: "Workers", icon: Server },
-] as const;
+type NavItem = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+  adminOnly?: boolean;
+};
+
+type NavSection = {
+  id: string;
+  label: string;
+  items: NavItem[];
+};
+
+const navSections: NavSection[] = [
+  {
+    id: "workspace",
+    label: "Workspace",
+    items: [
+      { to: "/overview", label: "Overview", icon: LayoutDashboard, end: true },
+    ],
+  },
+  {
+    id: "platform",
+    label: "Platform",
+    items: [
+      { to: "/catalog", label: "Catalog", icon: Boxes },
+      { to: "/worker", label: "Workers", icon: Server },
+    ],
+  },
+  {
+    id: "admin",
+    label: "Administration",
+    items: [{ to: "/users", label: "Users", icon: Users, adminOnly: true }],
+  },
+];
 
 const pageMeta: Record<string, { title: string; description: string }> = {
   "/overview": {
@@ -50,6 +84,10 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   "/worker": {
     title: "Workers",
     description: "Registered agent nodes and heartbeats",
+  },
+  "/users": {
+    title: "Users",
+    description: "Manage accounts and roles",
   },
 };
 
@@ -69,35 +107,104 @@ function writeCollapsed(collapsed: boolean) {
   }
 }
 
+function SidebarNavLink({
+  to,
+  label,
+  icon: Icon,
+  end,
+  collapsed,
+}: {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+  collapsed: boolean;
+}) {
+  return (
+    <NavLink
+      to={to}
+      end={end ?? false}
+      title={collapsed ? label : undefined}
+      aria-label={collapsed ? label : undefined}
+      className={({ isActive }) =>
+        cn(
+          "group relative flex items-center rounded-md text-[13px] font-medium tracking-[-0.01em] outline-none transition-colors",
+          "focus-visible:ring-2 focus-visible:ring-sidebar-ring/50",
+          collapsed ? "h-9 justify-center px-0" : "h-8 gap-2.5 px-2.5",
+          isActive
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground/65 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {!collapsed && isActive ? (
+            <span
+              className="absolute inset-y-1.5 left-0 w-[2px] rounded-full bg-sidebar-primary"
+              aria-hidden
+            />
+          ) : null}
+          <Icon
+            className={cn(
+              "size-4 shrink-0 transition-colors",
+              isActive
+                ? "text-sidebar-primary"
+                : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
+            )}
+            strokeWidth={isActive ? 2.25 : 2}
+          />
+          <span className={cn("min-w-0 truncate", collapsed && "sr-only")}>
+            {label}
+          </span>
+        </>
+      )}
+    </NavLink>
+  );
+}
+
 function SidebarNav({
   collapsed,
+  user,
   onCloseMobile,
 }: {
   collapsed: boolean;
+  user: AuthUser;
   onCloseMobile?: () => void;
 }) {
+  const sections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) => !item.adminOnly || isAdmin(user.role),
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+
   return (
     <div className="flex h-full flex-col">
       <div
         className={cn(
           "flex h-12 shrink-0 items-center border-b border-sidebar-border",
-          collapsed ? "justify-center px-2" : "gap-2 px-3",
+          collapsed ? "justify-center px-2" : "gap-2.5 px-3",
         )}
       >
         <BrandMark />
         {!collapsed ? (
           <div className="min-w-0 flex-1 overflow-hidden">
-            <p className="truncate text-[13px] font-medium tracking-[-0.01em] text-sidebar-foreground">
+            <p className="truncate text-[13px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
               Sailorport
             </p>
-            <p className="truncate text-[11px] text-muted-foreground">Harbour</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              Control plane
+            </p>
           </div>
         ) : null}
 
         {onCloseMobile ? (
           <button
             type="button"
-            className="ml-auto inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent md:hidden"
+            className="ml-auto inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:hidden"
             aria-label="Close menu"
             onClick={onCloseMobile}
           >
@@ -108,46 +215,39 @@ function SidebarNav({
 
       <nav
         className={cn(
-          "flex flex-1 flex-col gap-1 py-3",
-          collapsed ? "px-1.5" : "px-2",
+          "flex min-h-0 flex-1 flex-col overflow-y-auto py-3",
+          collapsed ? "gap-2.5 px-1.5" : "gap-5 px-2",
         )}
         aria-label="Main"
       >
-        {navItems.map(({ to, label, icon: Icon, ...rest }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={"end" in rest ? rest.end : false}
-            title={collapsed ? label : undefined}
-            aria-label={collapsed ? label : undefined}
-            className={({ isActive }) =>
-              cn(
-                "group flex items-center rounded-md text-[13px] font-medium tracking-[-0.01em] transition-colors",
-                collapsed
-                  ? "h-9 justify-center px-0"
-                  : "gap-2.5 px-2.5 py-2",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
-              )
-            }
-          >
-            {({ isActive }) => (
+        {sections.map((section, index) => (
+          <div key={section.id} className="flex flex-col gap-0.5">
+            {collapsed ? (
               <>
-                <Icon
-                  className={cn(
-                    "size-4 shrink-0",
-                    isActive
-                      ? "text-sidebar-accent-foreground"
-                      : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
-                  )}
-                />
-                <span className={cn("truncate", collapsed && "sr-only")}>
-                  {label}
-                </span>
+                {index > 0 ? (
+                  <div
+                    className="mx-1.5 mb-1.5 h-px bg-sidebar-border"
+                    aria-hidden
+                  />
+                ) : null}
+                <span className="sr-only">{section.label}</span>
               </>
+            ) : (
+              <SectionLabel className="mb-1 px-2.5">
+                {section.label}
+              </SectionLabel>
             )}
-          </NavLink>
+            {section.items.map((item) => (
+              <SidebarNavLink
+                key={item.to}
+                to={item.to}
+                label={item.label}
+                icon={item.icon}
+                end={item.end}
+                collapsed={collapsed}
+              />
+            ))}
+          </div>
         ))}
       </nav>
     </div>
@@ -181,14 +281,14 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
       <aside
         className={cn(
           "relative sticky top-0 z-40 hidden h-svh shrink-0 border-r border-sidebar-border bg-sidebar transition-[width] duration-200 ease-out md:block",
-          collapsed ? "w-14" : "w-[220px]",
+          collapsed ? "w-14" : "w-[232px]",
         )}
       >
-        <SidebarNav collapsed={collapsed} />
+        <SidebarNav collapsed={collapsed} user={user} />
         <button
           type="button"
           className={cn(
-            "absolute top-3 -right-3 z-50 inline-flex size-6 items-center justify-center rounded-full",
+            "absolute top-3.5 -right-3 z-50 inline-flex size-6 items-center justify-center rounded-full",
             "border border-border bg-background text-muted-foreground shadow-sm",
             "transition-colors hover:bg-muted hover:text-foreground",
             "outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
@@ -213,9 +313,10 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
             aria-label="Close menu overlay"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 w-[240px] border-r border-sidebar-border bg-sidebar shadow-lg">
+          <aside className="absolute inset-y-0 left-0 w-[260px] border-r border-sidebar-border bg-sidebar shadow-lg">
             <SidebarNav
               collapsed={false}
+              user={user}
               onCloseMobile={() => setMobileOpen(false)}
             />
           </aside>
