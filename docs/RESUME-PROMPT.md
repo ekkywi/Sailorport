@@ -15,23 +15,23 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** Step 12b — portal `/users` (admin), sidebar sections, Catalog hide write actions untuk `viewer` (`canWriteCatalog`). API 12a sudah jalan.
+**Step terakhir selesai:** Harden — `SAILORPORT_AGENT_TOKEN` melindungi register/heartbeat/claim/update agent. Tested: 401 tanpa token, 204 dengan Bearer `dev-agent-token`.
 
-**Step berikutnya:** Harden — agent token untuk claim/update endpoints (coding manual). Opsional: multi-port deploy, lalu Environments.
+**Step berikutnya:** Delete service membersihkan container Docker (stop/rm); lalu runtime controls (stop/start/restart + logs). Opsional multi-port; Environments.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
 - Register existing = metadata saja, tanpa generate folder
 - Template masih di folder `templates/`, bukan database
-- Delete catalog menghapus workspace di bawah `data/workspaces` (path legacy `/tmp` di-skip)
-- Agent claim/update masih endpoint publik (harden berikutnya)
+- Delete catalog menghapus workspace di bawah `data/workspaces` (path legacy `/tmp` di-skip); **belum** stop/rm container
+- Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
-- Workspace default: `data/workspaces` (bukan `/tmp`)
+- Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog; Users page admin-only
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan Harden (agent token) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan cleanup delete → docker stop/rm (atau runtime controls) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

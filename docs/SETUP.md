@@ -181,6 +181,7 @@ Terminal terpisah, API harus sudah jalan. Agent butuh **Docker CLI** di PATH unt
 ```bash
 cd apps/agent
 SAILORPORT_API_URL=http://localhost:8080 \
+SAILORPORT_AGENT_TOKEN=dev-agent-token \
 SAILORPORT_WORKER_NAME=local-dev \
 SAILORPORT_HEARTBEAT_INTERVAL=15s \
 SAILORPORT_POLL_INTERVAL=5s \
@@ -190,7 +191,26 @@ go run .
 
 Cek portal `/worker` — worker muncul **online** dengan heartbeat berkala.
 
-Register/heartbeat/claim/update deploy **tanpa JWT** (endpoint publik untuk agent).
+Register / heartbeat / claim / update deploy memakai **agent token** (bukan JWT user):
+
+`Authorization: Bearer $SAILORPORT_AGENT_TOKEN`
+
+Default dev: `dev-agent-token` (sama di API). Tanpa header / token salah → **401**.
+
+```bash
+# tanpa token → 401
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -X POST http://localhost:8080/api/v1/agent/jobs/next \
+  -H "Content-Type: application/json" \
+  -d '{"worker_id":"00000000-0000-0000-0000-000000000000"}'
+
+# token benar, no job → 204
+curl -s -o /dev/null -w "%{http_code}\n" \
+  -X POST http://localhost:8080/api/v1/agent/jobs/next \
+  -H "Authorization: Bearer dev-agent-token" \
+  -H "Content-Type: application/json" \
+  -d '{"worker_id":"00000000-0000-0000-0000-000000000000"}'
+```
 
 **Test deploy (curl, setelah scaffold service baru):**
 
@@ -217,6 +237,7 @@ curl http://localhost:18080/healthz
 | `APP_VERSION` | `0.1.0` | versi API di response health |
 | `DATABASE_URL` | lihat di atas (port **5433**) | koneksi Postgres |
 | `AUTH_JWT_SECRET` | `dev-only-change-me` | secret JWT (ganti di production) |
+| `SAILORPORT_AGENT_TOKEN` | `dev-agent-token` | shared secret agent↔API (ganti di production) |
 | `SAILORPORT_WORKSPACE` | `<repo>/data/workspaces` (dev) / `/data/workspaces` (compose) | folder hasil scaffold; Compose pakai named volume |
 | `SAILORPORT_TEMPLATES` | `<repo>/templates` | template di disk |
 
@@ -225,6 +246,7 @@ Agent (`apps/agent`):
 | Variable | Default | Keterangan |
 |----------|---------|------------|
 | `SAILORPORT_API_URL` | `http://localhost:8080` | base URL API |
+| `SAILORPORT_AGENT_TOKEN` | `dev-agent-token` | harus sama dengan API |
 | `SAILORPORT_WORKER_NAME` | hostname | nama worker |
 | `SAILORPORT_HEARTBEAT_INTERVAL` | `15s` | interval heartbeat |
 | `SAILORPORT_POLL_INTERVAL` | `5s` | interval poll job deploy |

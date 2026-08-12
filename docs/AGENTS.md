@@ -23,7 +23,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 | Portal | `apps/web` | auth + app shell (sidebar sections) + overview/catalog/workers/users + Deploy UI + RBAC hide |
 | API | `apps/api` | layered + scaffold/templates + workers + deployments |
 | Worker | `apps/worker` | belum (job queue / orchestrator) |
-| Agent | `apps/agent` | register + heartbeat + poll/deploy (docker build/run) |
+| Agent | `apps/agent` | register + heartbeat + poll/deploy; Bearer agent token |
 | Templates | `templates/` | `go-api` (disk, bukan DB) |
 | Shared contracts | `packages/shared` | belum |
 | Compose | `deploy/compose` | Postgres + API + web; workspaces = named volume (no host chown) |
@@ -93,4 +93,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: control plane bisa `docker compose up --build`; scaffold → deploy dari portal OK. Next: harden agent token / multi-port / environments.)
+(Saat ini: control plane `compose up --build`; agent token harden OK. Next: delete cleanup container / runtime controls / environments.)

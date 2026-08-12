@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 12b (Portal users UI + catalog RBAC + sidebar sections)
-- **Step berikutnya:** Harden — agent token (+ opsional multi-port deploy)
-- **Terakhir dikerjakan:** 2026-08-12 — `/users` admin-only, hide catalog write for viewer, sidebar categories
+- **Step selesai:** Harden — agent token (`SAILORPORT_AGENT_TOKEN`)
+- **Step berikutnya:** Delete service → stop/rm container Docker; lalu runtime controls / Environments
+- **Terakhir dikerjakan:** 2026-08-12 — agent Bearer token; tested 401 tanpa token, 204 dengan token
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -31,7 +31,8 @@
 - [x] Step 11 — Docker Compose full stack
 - [x] Step 12a — User management API (list users, patch role — admin only)
 - [x] Step 12b — Portal users page + RBAC UI (hide actions for viewer)
-- [ ] Harden — agent token + (opsional) multi-port deploy
+- [x] Harden — agent token (register/heartbeat/claim/update)
+- [ ] Delete cleanup — stop/rm container saat hapus service (opsional multi-port)
 - [ ] Environments (dev/staging/prod)
 
 ## Yang sudah jalan
@@ -46,7 +47,7 @@ cd apps/api && go run .
 cd apps/web && npm run dev
 
 # terminal terpisah — agent (setelah API jalan)
-cd apps/agent && go run .
+cd apps/agent && SAILORPORT_AGENT_TOKEN=dev-agent-token go run .
 ```
 
 Portal Vite: `http://localhost:5173` (proxy ke API `:8080`).
@@ -60,7 +61,7 @@ cd deploy/compose && docker compose up -d --build
 # web http://localhost:5173  api http://localhost:8080  postgres :5433
 
 # agent tetap di host (butuh Docker CLI)
-cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 go run .
+cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN=dev-agent-token go run .
 ```
 
 | Endpoint / UI | Auth | Hasil |
@@ -72,26 +73,27 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 go run .
 | `PATCH /api/v1/users/{id}` | admin | ubah role (`admin`/`developer`/`viewer`; tidak boleh ubah role sendiri) |
 | `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD |
 | `GET /api/v1/templates`, `POST /api/v1/scaffold` | viewer+ / developer+ | golden path |
-| `POST /api/v1/workers/register` | publik | agent register |
-| `POST /api/v1/workers/{id}/heartbeat` | publik | agent heartbeat |
+| `POST /api/v1/workers/register` | agent token | agent register |
+| `POST /api/v1/workers/{id}/heartbeat` | agent token | agent heartbeat |
 | `GET /api/v1/workers` | viewer+ | list workers (portal) |
 | `POST /api/v1/services/{id}/deployments` | developer+ | buat deploy (`pending`); service harus punya `workspace_path` |
 | `GET /api/v1/services/{id}/deployments` | viewer+ | list per service |
 | `GET /api/v1/deployments` | viewer+ | list semua |
 | `GET /api/v1/deployments/{id}` | viewer+ | detail |
 | `PATCH /api/v1/deployments/{id}` | developer+ | update status (portal/curl JWT) |
-| `POST /api/v1/agent/jobs/next` | publik | claim 1 job pending → `claimed` (204 jika kosong) |
-| `PATCH /api/v1/agent/deployments/{id}` | publik | agent update status tanpa JWT |
+| `POST /api/v1/agent/jobs/next` | agent token | claim 1 job pending → `claimed` (204 jika kosong) |
+| `PATCH /api/v1/agent/deployments/{id}` | agent token | agent update status |
 | Portal `/login`, `/register` | — | auth gate |
 | Portal `/overview`, `/catalog`, `/worker`, `/users` | JWT | app shell; `/users` admin-only (redirect non-admin) |
 
-Env API: `AUTH_JWT_SECRET` (default dev-only-change-me)
+Env API: `AUTH_JWT_SECRET` (default `dev-only-change-me`), `SAILORPORT_AGENT_TOKEN` (default `dev-agent-token` — ganti di production)
 
 Env agent:
 
 | Variable | Default | Keterangan |
 |----------|---------|------------|
 | `SAILORPORT_API_URL` | `http://localhost:8080` | base URL API |
+| `SAILORPORT_AGENT_TOKEN` | `dev-agent-token` | harus sama dengan API |
 | `SAILORPORT_WORKER_NAME` | hostname mesin | nama worker di registry |
 | `SAILORPORT_HEARTBEAT_INTERVAL` | `15s` | interval heartbeat |
 | `SAILORPORT_POLL_INTERVAL` | `5s` | interval poll job deploy |
@@ -122,6 +124,15 @@ Login ulang agar JWT berisi role baru.
 - Sidebar: sections Workspace / Platform / Administration; **Users** hanya admin
 - `UsersPage`: tabel user, dropdown ubah role; baris diri sendiri badge saja
 - Catalog: `canWriteCatalog` — viewer tanpa Create / Deploy / Edit / Delete (desktop + mobile)
+
+### Agent token (Harden)
+
+- Env bersama: `SAILORPORT_AGENT_TOKEN` (API + agent; default dev `dev-agent-token`)
+- Middleware `withAgentToken` — header `Authorization: Bearer <token>` (constant-time compare)
+- Dilindungi: `POST /workers/register`, `POST /workers/{id}/heartbeat`, `POST /agent/jobs/next`, `PATCH /agent/deployments/{id}`
+- Agent client mengirim token di setiap request
+- Compose API: `SAILORPORT_AGENT_TOKEN` di service `api`
+- Tested: tanpa token → **401**; token benar (no job) → **204**
 
 ### Deployments (10C.1)
 
@@ -180,9 +191,9 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 ## Known debt (sengaja ditunda)
 
 - **Template management** belum CRUD di DB/portal
-- **Agent endpoints publik** (claim/update) — token agent menyusul saat harden
 - **Deploy port** MVP pakai satu `PortBase` (18080); multi-service collision belum di-handle
 - **Workspace lama** (path `/tmp/...`) tidak ikut terhapus saat delete (di luar root baru); scaffold ulang ke `data/workspaces`
+- **Delete service** belum stop/rm container Docker di node
 - **Self-host API + agent host:** path workspace di DB adalah path container; agent host perlu API lokal untuk E2E deploy (atau solusi path-mapping nanti)
 
 ### Debt yang sudah diperbaiki (2026-08-11)
@@ -200,11 +211,11 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - Agent **tidak** di compose (perlu Docker daemon di host untuk deploy workload)
 - Deploy E2E agent: lebih cocok API host (`go run`) agar path workspace di DB = path host
 
-## Next action (Harden)
+## Next action
 
-1. Agent token untuk claim/update endpoints (saat ini masih publik)
-2. Opsional: multi-port deploy (hindari collision `PortBase`)
-3. Environments (dev/staging/prod)
+1. Delete service → agent/API stop + `docker rm` container terkait (cleanup runtime)
+2. Runtime controls (stop / start / restart + logs) di portal
+3. Opsional: multi-port deploy; Environments (dev/staging/prod)
 
 ## Cara lanjut di mesin lain
 
