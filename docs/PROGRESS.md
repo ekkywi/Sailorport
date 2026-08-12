@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** R2 — runtime controls (stop/start via agent + portal)
-- **Step berikutnya:** R3 delete cleanup (stop/rm container saat hapus service); lalu Environments
-- **Terakhir dikerjakan:** 2026-08-12 — runtime jobs API, agent docker stop/start, tombol Stop/Start di catalog
+- **Step selesai:** R3 — delete cleanup (enqueue `remove` → agent `docker rm -f`)
+- **Step berikutnya:** Environments (dev/staging/prod); opsional logs/restart / multi-port
+- **Terakhir dikerjakan:** 2026-08-12 — R3 container cleanup on service delete
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -35,7 +35,7 @@
 - [x] R0 — latest deploy di catalog (API `latest_deployment` + kolom Deploy di portal)
 - [x] R1 — agent docker helpers (`Stop` / `Start` / `Remove`)
 - [x] R2 — runtime controls (stop/start via agent job + portal UI)
-- [ ] R3 Delete cleanup — stop/rm container saat hapus service (opsional multi-port)
+- [x] R3 Delete cleanup — stop/rm container saat hapus service
 - [ ] Environments (dev/staging/prod)
 
 ## Yang sudah jalan
@@ -191,6 +191,15 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 - API saat job `done`: update deployment terkait ke `stopped` atau `running`
 - Portal: tombol Stop (■) / Start (▶) di baris catalog; refresh otomatis setelah aksi
 
+### Delete container cleanup (R3)
+
+- Migrasi `00007_runtime_remove_action.sql` — `runtime_jobs.action` boleh `remove`
+- `Catalog.Delete`: enqueue job `remove` (jika ada deployment) **sebelum** hapus row; lalu workspace cleanup
+- Wiring: `catalog.SetCleanupEnqueuer(runtimeSvc)` di `main.go` (hindari circular dependency)
+- Agent: `handleRuntime` case `remove` → `docker.Remove` (`rm -f`, idempotent)
+- API `UpdateFromAgent` untuk `remove`: **tidak** update deployment (sudah CASCADE saat delete service)
+- Portal: dialog delete menjelaskan cleanup container + workspace
+
 ### Latest deploy di catalog (R0)
 
 - API: field `latest_deployment` di `model.Service` (omitempty)
@@ -219,14 +228,14 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - **Template management** belum CRUD di DB/portal
 - **Deploy port** MVP pakai satu `PortBase` (18080); multi-service collision belum di-handle
 - **Workspace lama** (path `/tmp/...`) tidak ikut terhapus saat delete (di luar root baru); scaffold ulang ke `data/workspaces`
-- **Delete service** belum stop/rm container Docker di node
 - **Self-host API + agent host:** path workspace di DB adalah path container; agent host perlu API lokal untuk E2E deploy (atau solusi path-mapping nanti)
 
-### Debt yang sudah diperbaiki (2026-08-11)
+### Debt yang sudah diperbaiki
 
 - Workspace default → `data/workspaces` (bukan `/tmp`), override `SAILORPORT_WORKSPACE`
 - Agent Ctrl+C mengirim heartbeat `offline`
 - Delete service menghapus folder workspace jika path di bawah workspace root
+- **R3:** Delete service enqueue job `remove` → agent `docker rm -f sailorport-{name}`
 
 ### Compose full stack (Step 11)
 
@@ -239,9 +248,8 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
 ## Next action
 
-1. R3 — delete service → enqueue cleanup job → agent `docker rm` container
+1. Environments (dev/staging/prod)
 2. Opsional: container logs di portal; multi-port deploy
-3. Environments (dev/staging/prod)
 
 ## Cara lanjut di mesin lain
 

@@ -15,15 +15,15 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** R2 — runtime controls: `POST /services/{id}/runtime/stop|start`, agent poll runtime jobs, portal tombol Stop/Start di catalog.
+**Step terakhir selesai:** R3 — delete cleanup: enqueue runtime job `remove` sebelum hapus service; agent `docker rm -f`; dialog delete di portal.
 
-**Step berikutnya:** R3 delete cleanup (container rm saat hapus service); opsional logs/restart; Environments.
+**Step berikutnya:** Environments (dev/staging/prod); opsional logs/restart / multi-port.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
 - Register existing = metadata saja, tanpa generate folder
 - Template masih di folder `templates/`, bukan database
-- Delete catalog menghapus workspace di bawah `data/workspaces` (path legacy `/tmp` di-skip); **belum** stop/rm container
+- Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue container cleanup (`remove`) jika pernah deploy
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
@@ -32,7 +32,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan R3 delete cleanup (agent rm container saat hapus service) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan Environments (dev/staging/prod) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

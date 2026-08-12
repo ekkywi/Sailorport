@@ -393,8 +393,18 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               <span className="font-medium text-foreground">
                 {deleteTarget?.name}
               </span>{" "}
-              from the catalog and deletes its workspace folder on disk (if it
-              lives under the configured workspace directory).
+              from the catalog and deletes its workspace folder (when under the configured
+              workspace directory).
+              {deleteTarget?.latest_deployment ? (
+                <>
+                  {" "}
+                  A cleanup job will also remove the Docker container{" "}
+                  <span className="font-mono text-[12px]">
+                    sailorport-{deleteTarget.name}
+                  </span>{" "}
+                  on the agent node.
+                </>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

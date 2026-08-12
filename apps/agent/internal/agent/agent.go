@@ -132,6 +132,8 @@ func (a *Agent) handleRuntime(workerID string) error {
 		runErr = docker.Stop(containerName)
 	case "start":
 		runErr = docker.Start(containerName)
+	case "remove":
+		runErr = docker.Remove(containerName)
 	default:
 		runErr = fmt.Errorf("unknown action %q", job.Action)
 	}

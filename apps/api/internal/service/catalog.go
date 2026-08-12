@@ -13,6 +13,10 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
+type CleanupEnqueue interface {
+	EnqueueRemove(ctx context.Context, svc model.Service) error
+}
+
 var (
 	ErrInvalid      = errors.New("invalid input")
 	ErrNotFound     = errors.New("service not found")
@@ -37,6 +41,11 @@ type Catalog struct {
 	repo         Repository
 	deployments  DeploymentReader
 	workspaceDir string
+	cleanup      CleanupEnqueue
+}
+
+func (c *Catalog) SetCleanupEnqueue(e CleanupEnqueue) {
+	c.cleanup = e
 }
 
 func NewCatalog(repo Repository, deployments DeploymentReader, workspaceDir string) *Catalog {
@@ -117,6 +126,12 @@ func (c *Catalog) Delete(ctx context.Context, id string) error {
 	svc, err := c.repo.Get(ctx, id)
 	if err != nil {
 		return mapRepoErr(err)
+	}
+
+	if c.cleanup != nil {
+		if err := c.cleanup.EnqueueRemove(ctx, svc); err != nil {
+			log.Printf("Catalog delete: enqueue container cleanup failed for %s: %v", svc.Name, err)
+		}
 	}
 
 	if err := c.repo.Delete(ctx, id); err != nil {

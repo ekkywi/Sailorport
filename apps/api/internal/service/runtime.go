@@ -104,6 +104,7 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 			deployStatus = "stopped"
 		case "start":
 			deployStatus = "running"
+		case "remove":
 		}
 		if deployStatus != "" {
 			_, err := r.deployments.Update(ctx, existing.DeploymentID, model.UpdateDeploymentRequest{
@@ -116,4 +117,21 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 	}
 
 	return existing, nil
+}
+
+func (r *Runtime) EnqueueRemove(ctx context.Context, svc model.Service) error {
+	deps, err := r.deployments.ListByService(ctx, svc.ID)
+	if err != nil {
+		return err
+	}
+	if len(deps) == 0 {
+		return nil
+	}
+
+	latest := deps[0]
+	_, err = r.store.Create(ctx, svc.ID, latest.ID, svc.Name, "remove")
+	if err != nil {
+		return fmt.Errorf("Enqueue remove job: %w", err)
+	}
+	return nil
 }

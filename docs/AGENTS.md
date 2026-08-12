@@ -23,7 +23,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 | Portal | `apps/web` | auth + app shell (full width) + catalog deploy/history/stop/start + workers/users + RBAC |
 | API | `apps/api` | layered + scaffold/templates + workers + deployments |
 | Worker | `apps/worker` | belum (job queue / orchestrator) |
-| Agent | `apps/agent` | register + heartbeat + poll/deploy; Bearer agent token |
+| Agent | `apps/agent` | register + heartbeat + poll deploy/runtime (stop/start/remove); Bearer agent token |
 | Templates | `templates/` | `go-api` (disk, bukan DB) |
 | Shared contracts | `packages/shared` | belum |
 | Compose | `deploy/compose` | Postgres + API + web; workspaces = named volume (no host chown) |
@@ -69,7 +69,7 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 - **Create service** (default) = pilih template → generate workspace → daftar ke catalog
 - **Register existing** = metadata saja di catalog, tanpa folder
-- **Delete service** = hapus row DB + folder workspace jika path di bawah `SAILORPORT_WORKSPACE`
+- **Delete service** = enqueue job `remove` (jika pernah deploy) → hapus row DB + folder workspace jika path di bawah `SAILORPORT_WORKSPACE` → agent `docker rm -f`
 
 ## Coding conventions
 
@@ -93,4 +93,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: control plane `compose up --build`; agent token harden OK. Next: delete cleanup container / runtime controls / environments.)
+(Saat ini: deploy + stop/start + delete container cleanup OK. Next: Environments.)

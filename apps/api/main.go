@@ -56,6 +56,7 @@ func main() {
 	deploymentsSvc := service.NewDeployments(deploymentsStore, catalog)
 	runtimeStore := store.NewRuntimeStore(sqlDB)
 	runtimeSvc := service.NewRuntime(runtimeStore, deploymentsSvc, catalog)
+	catalog.SetCleanupEnqueue(runtimeSvc)
 
 	router := handler.NewRouter(handler.API{
 		Version:     cfg.Version,
