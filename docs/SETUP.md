@@ -164,6 +164,11 @@ TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
 
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/users | jq
 
+curl -s -X POST http://localhost:8080/api/v1/users \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"dev@example.com","name":"Dev","password":"password123","role":"developer"}' | jq
+
 curl -s -X PATCH "http://localhost:8080/api/v1/users/USER_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -172,7 +177,7 @@ curl -s -X PATCH "http://localhost:8080/api/v1/users/USER_ID" \
 
 Non-admin mendapat **403** pada `/api/v1/users`. Admin tidak bisa mengubah role dirinya sendiri.
 
-Di portal: buka **Users** di sidebar (admin) untuk ubah role lewat UI. Role `viewer` melihat Catalog tanpa tombol Create / Deploy / Edit / Delete.
+Di portal: buka **Users** di sidebar (admin) untuk **Create user** atau ubah role lewat UI. Role `viewer` melihat Catalog tanpa tombol Create / Deploy / Edit / Delete.
 
 ## Jalankan agent (Step 10B + 10C.2)
 

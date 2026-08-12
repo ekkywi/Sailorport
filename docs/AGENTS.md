@@ -20,7 +20,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | auth + app shell (full width) + catalog deploy/history/stop/start + workers/users + RBAC |
+| Portal | `apps/web` | auth + app shell + catalog deploy/runtime + workers + users (create/role) + RBAC |
 | API | `apps/api` | layered + scaffold/templates + workers + deployments |
 | Worker | `apps/worker` | belum (job queue / orchestrator) |
 | Agent | `apps/agent` | register + heartbeat + poll deploy/runtime (stop/start/remove); Bearer agent token |
@@ -93,4 +93,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: deploy + stop/start + delete container cleanup OK. Next: Environments.)
+(Saat ini: deploy + stop/start + delete cleanup + admin create user OK. Next: Environments.)

@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** R3 — delete cleanup (enqueue `remove` → agent `docker rm -f`)
+- **Step selesai:** 12c — admin create user (invite-style temporary password)
 - **Step berikutnya:** Environments (dev/staging/prod); opsional logs/restart / multi-port
-- **Terakhir dikerjakan:** 2026-08-12 — R3 container cleanup on service delete
+- **Terakhir dikerjakan:** 2026-08-13 — POST /users + Create user dialog
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -31,6 +31,7 @@
 - [x] Step 11 — Docker Compose full stack
 - [x] Step 12a — User management API (list users, patch role — admin only)
 - [x] Step 12b — Portal users page + RBAC UI (hide actions for viewer)
+- [x] Step 12c — Admin create user (temporary password / invite-style MVP)
 - [x] Harden — agent token (register/heartbeat/claim/update)
 - [x] R0 — latest deploy di catalog (API `latest_deployment` + kolom Deploy di portal)
 - [x] R1 — agent docker helpers (`Stop` / `Start` / `Remove`)
@@ -73,6 +74,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `POST /api/v1/auth/login` | publik | JWT token |
 | `GET /api/v1/auth/me` | Bearer | profil user |
 | `GET /api/v1/users` | admin | list semua user |
+| `POST /api/v1/users` | admin | create user (email, name, password, role) |
 | `PATCH /api/v1/users/{id}` | admin | ubah role (`admin`/`developer`/`viewer`; tidak boleh ubah role sendiri) |
 | `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD; `GET` list menyertakan `latest_deployment` per service |
 | `GET /api/v1/templates`, `POST /api/v1/scaffold` | viewer+ / developer+ | golden path |
@@ -117,19 +119,21 @@ docker exec -it sailorport-postgres psql -U sailorport -d sailorport \
 
 Login ulang agar JWT berisi role baru.
 
-### User management API (12a)
+### User management API (12a + 12c)
 
 - Lapisan: `store/user` → `service/users` → `handler/user`
 - `GET /api/v1/users` — admin only
+- `POST /api/v1/users` body `{email,name,password,role}` — admin only; role boleh `admin`/`developer`/`viewer`; email unik → **409**
 - `PATCH /api/v1/users/{id}` body `{"role":"..."}` — admin only; tidak bisa patch role diri sendiri
+- Invite-style MVP: admin set temporary password, bagikan manual (belum email SMTP)
 
-### Portal users UI + catalog RBAC (12b)
+### Portal users UI + catalog RBAC (12b + 12c)
 
 - Feature: `apps/web/src/features/users/` (`type`, `api`, `UsersPage`)
 - Helper RBAC: `apps/web/src/lib/rbac.ts` — `isAdmin()`, `canWriteCatalog()`
 - Route `/users` + guard admin; non-admin → `/overview`
 - Sidebar: sections Workspace / Platform / Administration; **Users** hanya admin
-- `UsersPage`: tabel user, dropdown ubah role; baris diri sendiri badge saja
+- `UsersPage`: tabel user, dropdown ubah role; baris diri sendiri badge saja; **Create user** dialog
 - Catalog: `canWriteCatalog` — viewer tanpa Create / Deploy / Edit / Delete (desktop + mobile)
 
 ### Agent token (Harden)

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { RefreshCw, Users as UsersIcon } from "lucide-react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Plus, RefreshCw, Users as UsersIcon } from "lucide-react";
 import {
   DataPanel,
   EmptyState,
@@ -10,13 +10,29 @@ import {
   useToast,
 } from "@/components/app";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { me } from "@/features/auth/api";
 import type { AuthUser } from "@/features/auth/types";
-import { listUsers, updateUserRole } from "./api";
+import { createUser, listUsers, updateUserRole } from "./api";
 import type { User, UserRole } from "./type";
 
 const ROLES: UserRole[] = ["admin", "developer", "viewer"];
+
+const emptyForm = {
+  email: "",
+  name: "",
+  password: "",
+  role: "developer" as UserRole,
+};
 
 export function UsersPage() {
   const { toast } = useToast();
@@ -25,6 +41,10 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [creating, setCreating] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -43,6 +63,35 @@ export function UsersPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  function closeCreate() {
+    if (creating) return;
+    setCreateOpen(false);
+    setForm(emptyForm);
+    setFormError("");
+  }
+
+  async function onCreateSubmit(e: FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    setFormError("");
+    try {
+      const created = await createUser({
+        email: form.email.trim(),
+        name: form.name.trim(),
+        password: form.password,
+        role: form.role,
+      });
+      toast(`Created ${created.email} — share the temporary password securely`);
+      setCreateOpen(false);
+      setForm(emptyForm);
+      await load();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Failed to create user");
+    } finally {
+      setCreating(false);
+    }
+  }
 
   async function onRoleChange(userId: string, role: UserRole) {
     setSavingId(userId);
@@ -68,17 +117,31 @@ export function UsersPage() {
       <Toolbar
         meta={meta}
         actions={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-[13px]"
-            onClick={() => void load()}
-            disabled={loading}
-          >
-            <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
-            Refresh
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-[13px]"
+              onClick={() => void load()}
+              disabled={loading}
+            >
+              <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+              Refresh
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 gap-1.5 text-[13px]"
+              onClick={() => {
+                setFormError("");
+                setCreateOpen(true);
+              }}
+            >
+              <Plus className="size-3.5" />
+              Create user
+            </Button>
+          </>
         }
       />
       {error ? <ErrorBanner message={error} onRetry={() => void load()} /> : null}
@@ -87,7 +150,17 @@ export function UsersPage() {
           <EmptyState
             icon={UsersIcon}
             title="No users"
-            description="Register accounts via /register."
+            description="Create a user here, or they can self-register at /register."
+            action={
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 text-[13px]"
+                onClick={() => setCreateOpen(true)}
+              >
+                Create user
+              </Button>
+            }
             className="py-16"
           />
         </DataPanel>
@@ -143,6 +216,119 @@ export function UsersPage() {
           </div>
         </DataPanel>
       ) : null}
+
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          if (!open) closeCreate();
+          else setCreateOpen(true);
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!creating}>
+          <DialogHeader>
+            <DialogTitle>Create user</DialogTitle>
+            <DialogDescription>
+              Create an account and share the temporary password with the
+              teammate. They can sign in at /login.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={onCreateSubmit} className="space-y-4">
+            {formError ? (
+              <p className="text-[13px] text-destructive">{formError}</p>
+            ) : null}
+            <div className="space-y-1.5">
+              <Label htmlFor="create-email" className="text-[12px] text-muted-foreground">
+                Email
+              </Label>
+              <Input
+                id="create-email"
+                type="email"
+                required
+                autoFocus
+                autoComplete="off"
+                disabled={creating}
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                className="h-8 text-[13px]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-name" className="text-[12px] text-muted-foreground">
+                Name
+              </Label>
+              <Input
+                id="create-name"
+                autoComplete="off"
+                disabled={creating}
+                placeholder="Optional"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                className="h-8 text-[13px]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="create-password"
+                className="text-[12px] text-muted-foreground"
+              >
+                Temporary password
+              </Label>
+              <Input
+                id="create-password"
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                disabled={creating}
+                value={form.password}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                className="h-8 text-[13px]"
+              />
+              <p className="text-[11px] text-muted-foreground">At least 8 characters.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="create-role" className="text-[12px] text-muted-foreground">
+                Role
+              </Label>
+              <select
+                id="create-role"
+                className="h-8 w-full rounded-md border border-border bg-background px-2 text-[13px] capitalize"
+                disabled={creating}
+                value={form.role}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, role: e.target.value as UserRole }))
+                }
+              >
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-[13px]"
+                disabled={creating}
+                onClick={closeCreate}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-8 text-[13px]"
+                disabled={creating}
+              >
+                {creating ? "Creating…" : "Create user"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

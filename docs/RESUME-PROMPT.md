@@ -15,15 +15,16 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** R3 — delete cleanup: enqueue runtime job `remove` sebelum hapus service; agent `docker rm -f`; dialog delete di portal.
+**Step terakhir selesai:** 12c — admin create user (`POST /api/v1/users` + dialog Create user di `/users`, temporary password).
 
-**Step berikutnya:** Environments (dev/staging/prod); opsional logs/restart / multi-port.
+**Step berikutnya:** Environments (dev/staging/prod); opsional logs/restart / multi-port; atau polish users (disable/delete).
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
 - Register existing = metadata saja, tanpa generate folder
 - Template masih di folder `templates/`, bukan database
 - Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue container cleanup (`remove`) jika pernah deploy
+- Admin Users: list, change role, **create user** (invite-style temp password); belum email SMTP
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume

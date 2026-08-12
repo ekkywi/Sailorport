@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
+	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
 type fakeUserAdminRepo struct {
@@ -23,6 +24,23 @@ func (f *fakeUserAdminRepo) GetByID(ctx context.Context, id string) (model.User,
 		}
 	}
 	return model.User{}, ErrNotFound
+}
+
+func (f *fakeUserAdminRepo) Create(ctx context.Context, email, name, passwordHash, role string) (model.User, error) {
+	for _, u := range f.users {
+		if u.Email == email {
+			return model.User{}, store.ErrConflict
+		}
+	}
+	u := model.User{
+		ID:    "new",
+		Email: email,
+		Name:  name,
+		Role:  role,
+	}
+	f.users = append(f.users, u)
+	_ = passwordHash
+	return u, nil
 }
 
 func (f *fakeUserAdminRepo) UpdateRole(ctx context.Context, id, role string) (model.User, error) {

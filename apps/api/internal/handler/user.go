@@ -29,6 +29,22 @@ func (h *UsersHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
+func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var req model.CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	defer r.Body.Close()
+
+	out, err := h.users.Create(r.Context(), req)
+	if err != nil {
+		writeUserError(w, "create user", err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, out)
+}
+
 func (h *UsersHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	claims := UserFromContext(r.Context())
 	if claims == nil {
@@ -61,6 +77,8 @@ func writeUserError(w http.ResponseWriter, op string, err error) {
 		writeError(w, http.StatusBadRequest, msg)
 	case errors.Is(err, service.ErrNotFound):
 		writeError(w, http.StatusNotFound, "user not found")
+	case errors.Is(err, service.ErrConflict):
+		writeError(w, http.StatusConflict, "email already registered")
 	case errors.Is(err, service.ErrForbidden):
 		writeError(w, http.StatusForbidden, "forbidden")
 	default:
