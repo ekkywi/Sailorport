@@ -28,7 +28,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ../../data/workspaces:/data/workspaces
+      - sailorport_workspaces:/data/workspaces
       - ../../templates:/templates:ro
     depends_on:
       postgres:
@@ -43,3 +43,4 @@ services:
       - api
 volumes:
   sailorport_pgdata:
+  sailorport_workspaces:

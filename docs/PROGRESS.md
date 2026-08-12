@@ -183,6 +183,7 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - **Agent endpoints publik** (claim/update) — token agent menyusul saat harden
 - **Deploy port** MVP pakai satu `PortBase` (18080); multi-service collision belum di-handle
 - **Workspace lama** (path `/tmp/...`) tidak ikut terhapus saat delete (di luar root baru); scaffold ulang ke `data/workspaces`
+- **Self-host API + agent host:** path workspace di DB adalah path container; agent host perlu API lokal untuk E2E deploy (atau solusi path-mapping nanti)
 
 ### Debt yang sudah diperbaiki (2026-08-11)
 
@@ -194,8 +195,10 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
 - `deploy/compose/docker-compose.yml` — `postgres` + `api` + `web`
 - `apps/api/Dockerfile`, `apps/web/Dockerfile`, `apps/web/nginx.conf` (proxy `/api` + `/healthz`)
-- Volume: `../../templates` → `/templates`, `../../data/workspaces` → `/data/workspaces`
+- Volume: `../../templates` → `/templates` (bind); **workspaces** → named volume `sailorport_workspaces` (prod tanpa `chown` host)
+- API startup: `EnsureWorkspaceDir` — gagal cepat jika folder tidak writable
 - Agent **tidak** di compose (perlu Docker daemon di host untuk deploy workload)
+- Deploy E2E agent: lebih cocok API host (`go run`) agar path workspace di DB = path host
 
 ## Next action (Harden)
 

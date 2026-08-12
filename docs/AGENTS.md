@@ -26,7 +26,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 | Agent | `apps/agent` | register + heartbeat + poll/deploy (docker build/run) |
 | Templates | `templates/` | `go-api` (disk, bukan DB) |
 | Shared contracts | `packages/shared` | belum |
-| Compose | `deploy/compose` | Postgres + API + web (self-host); dev biasanya Postgres saja |
+| Compose | `deploy/compose` | Postgres + API + web; workspaces = named volume (no host chown) |
 
 Infra: PostgreSQL (ada), Redis (belum), auth JWT lokal (ada), OIDC (belum).
 

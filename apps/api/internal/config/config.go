@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -84,6 +85,30 @@ func getenv(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+// EnsureWorkspaceDir creates the workspace root and verifies it is writable.
+// Call at process start so scaffold fails fast with a clear message.
+func EnsureWorkspaceDir(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf(
+			"cannot create workspace dir %q: %w\n"+
+				"hint (dev): sudo chown -R \"$USER\" <repo>/data && mkdir -p <repo>/data/workspaces\n"+
+				"hint (compose): use named volume sailorport_workspaces (no manual chown)",
+			dir, err,
+		)
+	}
+	probe := filepath.Join(dir, ".sailorport-write-test")
+	if err := os.WriteFile(probe, []byte("ok"), 0o600); err != nil {
+		return fmt.Errorf(
+			"workspace dir %q is not writable: %w\n"+
+				"hint (dev): sudo chown -R \"$USER\" <repo>/data\n"+
+				"hint (compose): workspaces should be the named volume sailorport_workspaces",
+			dir, err,
+		)
+	}
+	_ = os.Remove(probe)
+	return nil
 }
 
 func (c Config) PortInt() (int, error) {

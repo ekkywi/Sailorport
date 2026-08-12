@@ -62,7 +62,10 @@ func (s *Scaffold) Run(ctx context.Context, req ScaffoldRequest) (ScaffoldResult
 	}
 
 	if err := os.MkdirAll(s.workspaceDir, 0o755); err != nil {
-		return ScaffoldResult{}, fmt.Errorf("create workspace dir: %w", err)
+		return ScaffoldResult{}, fmt.Errorf(
+			"create workspace dir: %w (dir not writable — see startup logs / chown data/ or use Compose named volume)",
+			err,
+		)
 	}
 
 	target := filepath.Join(s.workspaceDir, req.Name)

@@ -37,6 +37,10 @@ func main() {
 	log.Printf("Database migrations OK")
 	log.Printf("Templates dir: %s", cfg.TemplatesDir)
 	log.Printf("Workspace dir: %s", cfg.WorkspaceDir)
+	if err := config.EnsureWorkspaceDir(cfg.WorkspaceDir); err != nil {
+		log.Fatalf("Workspace setup failed: %v", err)
+	}
+	log.Printf("Workspace dir writable OK")
 
 	serviceStore := store.NewServicesStore(sqlDB)
 	catalog := service.NewCatalog(serviceStore, cfg.WorkspaceDir)

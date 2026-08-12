@@ -71,10 +71,20 @@ curl -s http://localhost:5173/healthz
 ```
 
 - Web (nginx) di host port **5173** → container `:80`, proxy `/api` + `/healthz` ke service `api`
-- API di **8080**; mount `templates/` + `data/workspaces/`
+- API di **8080**; templates bind-mount `../../templates`; **workspaces = named volume** `sailorport_workspaces` (tidak perlu `chown` di host)
 - Agent **tidak** masuk compose — jalankan di host dengan `SAILORPORT_API_URL=http://localhost:8080`
+- **Deploy via agent:** untuk E2E scaffold+deploy, pakai **mode development** (API `go run` di host) supaya `workspace_path` di DB adalah path host yang bisa dibaca agent. Self-host API menyimpan path container (`/data/workspaces/...`).
 
 File terkait: `apps/api/Dockerfile`, `apps/web/Dockerfile`, `apps/web/nginx.conf`.
+
+## Workspace permissions
+
+| Mode | Di mana folder | `chown` manual? |
+|------|----------------|-----------------|
+| Development (`go run`) | `<repo>/data/workspaces` | Tidak, jika folder dibuat user kamu. Jika pernah bind-mount Docker dan dapat `permission denied`: `sudo chown -R "$USER:$USER" data` |
+| Self-host Compose | volume `sailorport_workspaces` | **Tidak** — Docker mengelola volume |
+
+Lihat juga `data/README.md`. API saat startup mengecek folder writable; gagal → pesan error + hint.
 
 ## Jalankan API lokal (development)
 
@@ -88,6 +98,9 @@ Startup yang diharapkan:
 ```text
 Database OK (SELECT 1)
 Database migrations OK
+Templates dir: ...
+Workspace dir: .../data/workspaces
+Workspace dir writable OK
 Sailorport API (development) running on http://localhost:8080
 ```
 
@@ -204,7 +217,7 @@ curl http://localhost:18080/healthz
 | `APP_VERSION` | `0.1.0` | versi API di response health |
 | `DATABASE_URL` | lihat di atas (port **5433**) | koneksi Postgres |
 | `AUTH_JWT_SECRET` | `dev-only-change-me` | secret JWT (ganti di production) |
-| `SAILORPORT_WORKSPACE` | `<repo>/data/workspaces` | folder hasil scaffold |
+| `SAILORPORT_WORKSPACE` | `<repo>/data/workspaces` (dev) / `/data/workspaces` (compose) | folder hasil scaffold; Compose pakai named volume |
 | `SAILORPORT_TEMPLATES` | `<repo>/templates` | template di disk |
 
 Agent (`apps/agent`):
