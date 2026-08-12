@@ -85,7 +85,7 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 	_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{Status: "building"})
 
 	imageTag := fmt.Sprintf("sailorport/%s:%s", job.ServiceName, job.ID[:8])
-	containerName := "sailorport-" + job.ServiceName
+	containerName := docker.ContainerName(job.ServiceName)
 	port := a.cfg.PortBase
 
 	if err := docker.Build(job.WorkspacePath, imageTag); err != nil {

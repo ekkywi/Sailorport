@@ -17,14 +17,19 @@ func Build(workspace, imageTag string) error {
 }
 
 func Run(containerName, imageTag string, hostPort int) (containerID string, err error) {
-	_ = exec.Command("docker", "rm", "-f", containerName).Run()
+	if err := Remove(containerName); err != nil {
+		return "", err
+	}
 
-	cmd := exec.Command(
-		"docker", "run", "-d", "--name", containerName, "-p", fmt.Sprintf("%d:8080", hostPort), imageTag,
+	out, err := runDocker(
+		"run",
+		"-d",
+		"--name", containerName,
+		"-p", fmt.Sprintf("%d:8080", hostPort),
+		imageTag,
 	)
-	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("docker run: %w\n%s", err, out)
+		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
 }
