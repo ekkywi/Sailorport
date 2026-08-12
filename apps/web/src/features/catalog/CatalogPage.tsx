@@ -60,15 +60,19 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [deployTarget, setDeployTarget] = useState<Service | null>(null);
   const [, setDeploying] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  async function load(options?: { silent?: boolean }) {
+    if (!options?.silent) {
+      setLoading(true);
+    }
     setListError("");
     try {
       setServices(await listServices());
     } catch (err) {
       setListError(err instanceof Error ? err.message : "Failed to load catalog");
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }
 
@@ -79,6 +83,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
       await createDeployment(svc.id);
       toast(`Deploy started for "${svc.name}"`);
       setDeployTarget(svc);
+      await load();
     } catch (err) {
       setListError(err instanceof Error ? err.message : "Failed to deploy");
     } finally {
@@ -86,9 +91,26 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     }
   }
 
+  function openHistory(svc: Service) {
+    setDeployTarget(svc);
+  }
+
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    const hasActive = services.some((svc) => {
+      const status = svc.latest_deployment?.status;
+      return status === "pending" || status === "claimed" || status === "building";
+    });
+    if (!hasActive) return;
+
+    const id = window.setInterval(() => {
+      void load({ silent: true });
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [services]);
 
   function closeDialog() {
     setValues(emptyForm);
@@ -226,6 +248,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         onEdit={startEdit}
         onDelete={setDeleteTarget}
         onDeploy={(svc) => void startDeploy(svc)}
+        onOpenHistory={openHistory}
         onCreate={canWrite ? startCreate : undefined}
       />
 
@@ -377,6 +400,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         onOpenChange={(open) => {
           if (!open) setDeployTarget(null);
         }}
+        onRefreshCatalog={() => void load({ silent: true })}
       />
     </div>
   );

@@ -15,7 +15,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** Harden — `SAILORPORT_AGENT_TOKEN` melindungi register/heartbeat/claim/update agent. Tested: 401 tanpa token, 204 dengan Bearer `dev-agent-token`.
+**Step terakhir selesai:** R0 — `GET /api/v1/services` menyertakan `latest_deployment`; portal Catalog kolom Deploy (badge + waktu + healthz link), History vs Deploy terpisah, polling status; AppShell full width.
 
 **Step berikutnya:** Delete service membersihkan container Docker (stop/rm); lalu runtime controls (stop/start/restart + logs). Opsional multi-port; Environments.
 
@@ -27,7 +27,8 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
-- Portal RBAC UI: viewer read-only di Catalog; Users page admin-only
+- Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
+- Catalog: kolom Deploy menampilkan `latest_deployment`; rocket = deploy baru, jam = history
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 

@@ -44,7 +44,8 @@ func main() {
 	log.Printf("Agent token auth: enabled")
 
 	serviceStore := store.NewServicesStore(sqlDB)
-	catalog := service.NewCatalog(serviceStore, cfg.WorkspaceDir)
+	deploymentsStore := store.NewDeploymentsStore(sqlDB)
+	catalog := service.NewCatalog(serviceStore, deploymentsStore, cfg.WorkspaceDir)
 	templates := template.NewRegistry(cfg.TemplatesDir)
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
 	usersStore := store.NewUsersStore(sqlDB)
@@ -52,7 +53,6 @@ func main() {
 	usersSvc := service.NewUsers(usersStore)
 	workersStore := store.NewWorkersStore(sqlDB)
 	workersSvc := service.NewWorkers(workersStore)
-	deploymentsStore := store.NewDeploymentsStore(sqlDB)
 	deploymentsSvc := service.NewDeployments(deploymentsStore, catalog)
 
 	router := handler.NewRouter(handler.API{

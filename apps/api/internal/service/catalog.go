@@ -29,19 +29,41 @@ type Repository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+type DeploymentReader interface {
+	LatestByServices(ctx context.Context) (map[string]model.Deployment, error)
+}
+
 type Catalog struct {
 	repo         Repository
+	deployments  DeploymentReader
 	workspaceDir string
 }
 
-func NewCatalog(repo Repository, workspaceDir string) *Catalog {
-	return &Catalog{repo: repo, workspaceDir: workspaceDir}
+func NewCatalog(repo Repository, deployments DeploymentReader, workspaceDir string) *Catalog {
+	return &Catalog{
+		repo:         repo,
+		deployments:  deployments,
+		workspaceDir: workspaceDir,
+	}
 }
 
 func (c *Catalog) List(ctx context.Context) ([]model.Service, error) {
 	services, err := c.repo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list services: %w", err)
+	}
+	if c.deployments == nil || len(services) == 0 {
+		return services, nil
+	}
+	latest, err := c.deployments.LatestByServices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("List services latest deployments: %w", err)
+	}
+	for i := range services {
+		if d, ok := latest[services[i].ID]; ok {
+			cp := d
+			services[i].LatestDeployment = &cp
+		}
 	}
 	return services, nil
 }

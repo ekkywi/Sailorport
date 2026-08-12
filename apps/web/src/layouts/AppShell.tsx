@@ -324,7 +324,7 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6 lg:px-8">
           <button
             type="button"
             className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
@@ -391,8 +391,8 @@ export function AppShell({ user, onLogout, children }: AppShellProps) {
           </div>
         </header>
 
-        <main className="app-harbour flex-1 px-4 py-5 sm:px-6 sm:py-6">
-          <div className="mx-auto w-full max-w-5xl">{children}</div>
+        <main className="app-harbour flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+          <div className="w-full min-w-0">{children}</div>
         </main>
       </div>
     </div>

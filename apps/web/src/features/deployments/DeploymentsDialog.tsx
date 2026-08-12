@@ -23,6 +23,7 @@ type DeploymentsDialogProps = {
   serviceName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onRefreshCatalog?: () => void;
 };
 
 function isActiveStatus(status: string) {
@@ -47,6 +48,7 @@ export function DeploymentsDialog({
   serviceName,
   open,
   onOpenChange,
+  onRefreshCatalog,
 }: DeploymentsDialogProps) {
   const [items, setItems] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,12 +60,13 @@ export function DeploymentsDialog({
     setError("");
     try {
       setItems(await listDeploymentsByService(serviceId));
+      onRefreshCatalog?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load deployments");
     } finally {
       setLoading(false);
     }
-  }, [serviceId]);
+  }, [serviceId, onRefreshCatalog]);
 
   useEffect(() => {
     if (open && serviceId) {

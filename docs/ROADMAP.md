@@ -89,3 +89,4 @@ Satu flow ini harus jalan di mesin orang lain:
 | 12 | Harden (agent token) | selesai |
 | 12a | User management API | selesai |
 | 12b | Portal users + RBAC UI | selesai |
+| R0 | Latest deploy di catalog + layout full width | selesai |

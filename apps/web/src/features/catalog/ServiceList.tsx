@@ -1,7 +1,9 @@
-import { Boxes, FolderGit2, Pencil, Rocket, Trash2 } from "lucide-react";
+import { Boxes, FolderGit2, History, Pencil, Rocket, Trash2 } from "lucide-react";
 import {
   DataPanel,
   EmptyState,
+  StatusBadge,
+  formatRelativeTime,
   truncateMiddle,
   userInitials,
 } from "@/components/app";
@@ -16,13 +18,134 @@ type ServiceListProps = {
   onDelete: (svc: Service) => void;
   onCreate?: () => void;
   onDeploy: (svc: Service) => void;
+  onOpenHistory: (svc: Service) => void;
 };
+
+function deployBadgeClass(status: string) {
+  if (status === "running") {
+    return "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400";
+  }
+  if (status === "failed") {
+    return "bg-red-500/12 text-red-700 dark:text-red-400";
+  }
+  if (status === "building" || status === "claimed" || status === "pending") {
+    return "bg-amber-500/12 text-amber-700 dark:text-amber-400";
+  }
+  return undefined;
+}
 
 function ServiceGlyph({ name }: { name: string }) {
   return (
     <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-[11px] font-semibold tracking-tight text-muted-foreground">
       {userInitials(name)}
     </span>
+  );
+}
+
+function LatestDeployCell({
+  svc,
+  onOpenHistory,
+}: {
+  svc: Service;
+  onOpenHistory: (svc: Service) => void;
+}) {
+  const d = svc.latest_deployment;
+  if (!d) {
+    return <span className="text-[12px] text-muted-foreground">Not deployed</span>;
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      <button
+        type="button"
+        className="rounded-md text-left outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring/40"
+        onClick={() => onOpenHistory(svc)}
+        title="View deployment history"
+      >
+        <StatusBadge status={d.status} className={deployBadgeClass(d.status)} />
+      </button>
+      <span className="text-[11px] text-muted-foreground">
+        {formatRelativeTime(d.updated_at)}
+      </span>
+      {d.status === "running" && d.port != null ? (
+        <a
+          href={`http://localhost:${d.port}/healthz`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          :{d.port}/healthz
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function RowActions({
+  svc,
+  canWrite,
+  onDeploy,
+  onEdit,
+  onDelete,
+  onOpenHistory,
+}: {
+  svc: Service;
+  canWrite: boolean;
+  onDeploy: (svc: Service) => void;
+  onEdit: (svc: Service) => void;
+  onDelete: (svc: Service) => void;
+  onOpenHistory: (svc: Service) => void;
+}) {
+  return (
+    <div className="flex shrink-0 items-center justify-end gap-0.5 whitespace-nowrap">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="text-muted-foreground hover:text-foreground"
+        aria-label={`History ${svc.name}`}
+        onClick={() => onOpenHistory(svc)}
+      >
+        <History className="size-3.5" />
+      </Button>
+      {canWrite ? (
+        <>
+          {svc.workspace_path ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
+              aria-label={`Deploy ${svc.name}`}
+              onClick={() => onDeploy(svc)}
+            >
+              <Rocket className="size-3.5" />
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground hover:text-foreground"
+            aria-label={`Edit ${svc.name}`}
+            onClick={() => onEdit(svc)}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Delete ${svc.name}`}
+            onClick={() => onDelete(svc)}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -33,6 +156,7 @@ export function ServiceList({
   onEdit,
   onDelete,
   onDeploy,
+  onOpenHistory,
   onCreate,
 }: ServiceListProps) {
   if (loading && services.length === 0) {
@@ -84,15 +208,15 @@ export function ServiceList({
 
   return (
     <DataPanel>
-      {/* Desktop table */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full table-fixed text-left text-[13px]">
+        <table className="w-full text-left text-[13px]">
           <thead>
             <tr className="border-b border-border text-[11px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
-              <th className="w-[36%] px-4 py-2.5 font-medium">Service</th>
-              <th className="w-[18%] px-4 py-2.5 font-medium">Owner</th>
-              <th className="w-[28%] px-4 py-2.5 font-medium">Origin</th>
-              <th className="w-[18%] px-4 py-2.5 font-medium">
+              <th className="min-w-[220px] px-4 py-2.5 font-medium">Service</th>
+              <th className="w-[12%] px-4 py-2.5 font-medium">Owner</th>
+              <th className="w-[14%] px-4 py-2.5 font-medium">Deploy</th>
+              <th className="min-w-[240px] px-4 py-2.5 font-medium">Origin</th>
+              <th className="w-[120px] px-4 py-2.5 font-medium">
                 <span className="sr-only">Actions</span>
               </th>
             </tr>
@@ -126,6 +250,9 @@ export function ServiceList({
                   )}
                 </td>
                 <td className="px-4 py-3">
+                  <LatestDeployCell svc={svc} onOpenHistory={onOpenHistory} />
+                </td>
+                <td className="px-4 py-3">
                   <div className="flex min-w-0 flex-col gap-0.5">
                     {svc.template_id ? (
                       <span className="inline-flex max-w-full items-center gap-1 truncate rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
@@ -139,51 +266,23 @@ export function ServiceList({
                     )}
                     {svc.workspace_path ? (
                       <span
-                        className="truncate font-mono text-[11px] text-muted-foreground"
+                        className="block truncate font-mono text-[11px] text-muted-foreground"
                         title={svc.workspace_path}
                       >
-                        {truncateMiddle(svc.workspace_path, 36)}
+                        {svc.workspace_path}
                       </span>
                     ) : null}
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                {canWrite ? (
-                  <div className="flex shrink-0 items-center justify-end gap-0.5 whitespace-nowrap">
-                    {svc.workspace_path ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-muted-foreground hover:text-foreground"
-                        aria-label={`Deploy ${svc.name}`}
-                        onClick={() => onDeploy(svc)}
-                      >
-                        <Rocket className="size-3.5" />
-                      </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground hover:text-foreground"
-                      aria-label={`Edit ${svc.name}`}
-                      onClick={() => onEdit(svc)}
-                    >
-                      <Pencil className="size-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      aria-label={`Delete ${svc.name}`}
-                      onClick={() => onDelete(svc)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                   ) : null}
+                  <RowActions
+                    svc={svc}
+                    canWrite={canWrite}
+                    onDeploy={onDeploy}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onOpenHistory={onOpenHistory}
+                  />
                 </td>
               </tr>
             ))}
@@ -191,7 +290,6 @@ export function ServiceList({
         </table>
       </div>
 
-      {/* Mobile cards */}
       <ul className="divide-y divide-border md:hidden">
         {services.map((svc) => (
           <li key={svc.id} className="px-4 py-3.5">
@@ -208,40 +306,17 @@ export function ServiceList({
                       {svc.description ? ` · ${svc.description}` : ""}
                     </p>
                   </div>
-                  {canWrite ? (
-                    <div className="flex shrink-0 gap-0.5">
-                      {svc.workspace_path ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Deploy ${svc.name}`}
-                          onClick={() => onDeploy(svc)}
-                        >
-                          <Rocket className="size-3.5" />
-                        </Button>
-                      ) : null}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Edit ${svc.name}`}
-                        onClick={() => onEdit(svc)}
-                      >
-                        <Pencil className="size-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="text-destructive"
-                        aria-label={`Delete ${svc.name}`}
-                        onClick={() => onDelete(svc)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  ) : null}
+                  <RowActions
+                    svc={svc}
+                    canWrite={canWrite}
+                    onDeploy={onDeploy}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onOpenHistory={onOpenHistory}
+                  />
+                </div>
+                <div className="mt-2">
+                  <LatestDeployCell svc={svc} onOpenHistory={onOpenHistory} />
                 </div>
                 {(svc.template_id || svc.workspace_path) && (
                   <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">

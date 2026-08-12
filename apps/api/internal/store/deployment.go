@@ -197,3 +197,28 @@ func scanDeploymentJob(row rowScanner) (model.DeploymentJob, error) {
 	}
 	return job, nil
 }
+
+func (s *DeploymentsStore) LatestByServices(ctx context.Context) (map[string]model.Deployment, error) {
+	const q = `
+		SELECT DISTINCT ON (service_id)
+			id, service_id, worker_id, status, image_tag, container_id, port, error_message, created_at, updated_at
+		FROM deployments
+		ORDER BY service_id, created_at DESC
+	`
+
+	rows, err := s.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("LatestByServices: %w", err)
+	}
+	defer rows.Close()
+
+	out := make(map[string]model.Deployment)
+	for rows.Next() {
+		d, err := scanDeployment(rows)
+		if err != nil {
+			return nil, err
+		}
+		out[d.ServiceID] = d
+	}
+	return out, rows.Err()
+}

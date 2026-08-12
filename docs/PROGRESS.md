@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** Harden — agent token (`SAILORPORT_AGENT_TOKEN`)
+- **Step selesai:** R0 — latest deploy di catalog (API + portal) + layout full width
 - **Step berikutnya:** Delete service → stop/rm container Docker; lalu runtime controls / Environments
-- **Terakhir dikerjakan:** 2026-08-12 — agent Bearer token; tested 401 tanpa token, 204 dengan token
+- **Terakhir dikerjakan:** 2026-08-12 — kolom Deploy di catalog, History ≠ Deploy, polling status; AppShell full width
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -32,6 +32,7 @@
 - [x] Step 12a — User management API (list users, patch role — admin only)
 - [x] Step 12b — Portal users page + RBAC UI (hide actions for viewer)
 - [x] Harden — agent token (register/heartbeat/claim/update)
+- [x] R0 — latest deploy di catalog (API `latest_deployment` + kolom Deploy di portal)
 - [ ] Delete cleanup — stop/rm container saat hapus service (opsional multi-port)
 - [ ] Environments (dev/staging/prod)
 
@@ -71,7 +72,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `GET /api/v1/auth/me` | Bearer | profil user |
 | `GET /api/v1/users` | admin | list semua user |
 | `PATCH /api/v1/users/{id}` | admin | ubah role (`admin`/`developer`/`viewer`; tidak boleh ubah role sendiri) |
-| `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD |
+| `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD; `GET` list menyertakan `latest_deployment` per service |
 | `GET /api/v1/templates`, `POST /api/v1/scaffold` | viewer+ / developer+ | golden path |
 | `POST /api/v1/workers/register` | agent token | agent register |
 | `POST /api/v1/workers/{id}/heartbeat` | agent token | agent heartbeat |
@@ -159,25 +160,34 @@ Login ulang agar JWT berisi role baru.
 curl http://localhost:18080/healthz   # service yang di-deploy
 ```
 
-### Portal Deploy UI (10C.3)
+### Portal Deploy UI (10C.3 + R0)
 
 - Feature: `apps/web/src/features/deployments/` (`types`, `api`, `DeploymentsDialog`)
-- Catalog: tombol **Deploy** (rocket) hanya jika service punya `workspace_path`
-- Setelah create → dialog list deployments (status badge, refresh, poll 3s saat job aktif)
-- Link `http://localhost:{port}/healthz` saat status `running`
-- **AppShell:** sidebar desktop bisa collapse/expand (persisted di `localStorage`)
-- Catalog table: layout actions lebih rapi (`table-fixed`, overflow)
+- Catalog kolom **Deploy**: badge status deploy terakhir (`latest_deployment`), waktu relatif, link `:port/healthz` jika `running`
+- **History** (icon jam) — buka dialog deployments tanpa membuat job baru (semua role)
+- **Deploy** (icon rocket) — create deployment baru; hanya `admin`/`developer` + service punya `workspace_path`
+- Dialog deployments: refresh + poll 3s saat job aktif; `onRefreshCatalog` sinkron kolom Deploy di tabel
+- Catalog polling 5s (silent) saat ada service dengan status `pending`/`claimed`/`building`
+- **AppShell:** sidebar desktop collapse/expand (localStorage); **main content full width** (bukan `max-w-5xl`)
+- Catalog table: kolom Service / Owner / Deploy / Origin / Actions; path workspace truncate CSS
 
 ### Template fix
 
 - `templates/go-api/main.go.tmpl`: `ListenAndServe(":8080", mux)` (bukan `nil`) — tanpa ini `/healthz` di container selalu 404
 
+### Latest deploy di catalog (R0)
+
+- API: field `latest_deployment` di `model.Service` (omitempty)
+- Store: `DeploymentsStore.LatestByServices()` — `DISTINCT ON (service_id)` order `created_at DESC`
+- Service: `Catalog.List()` enrich via `DeploymentReader`; `NewCatalog(repo, deployments, workspaceDir)`
+- Wiring: `deploymentsStore` dibuat **sebelum** `NewCatalog` di `main.go`
+
 ### Web UI (portal setelah login)
 
-- **Layout:** `AppShell` — sidebar collapsible + topbar (Linear-style), harbour theme + dark mode
+- **Layout:** `AppShell` — sidebar collapsible + topbar; main **full width** (`lg:px-8`, tanpa max-width container)
 - **Sidebar sections:** Workspace (Overview), Platform (Catalog, Workers), Administration (Users — admin)
 - **Routes (flat):** `/overview`, `/catalog`, `/worker`, `/users` (admin)
-- **Catalog UX:** daftar; Create/Deploy/Edit/Delete hanya `admin`/`developer`; viewer read-only
+- **Catalog UX:** daftar + kolom deploy terakhir; Create/Deploy/Edit/Delete hanya `admin`/`developer`; viewer read-only + History
 - **Users:** admin mengelola role (`admin` | `developer` | `viewer`)
 - **Workers:** tabel dengan status badge, relative last seen
 - **Overview:** metrik services/workers + panel recent

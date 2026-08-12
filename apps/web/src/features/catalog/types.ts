@@ -1,3 +1,13 @@
+export type LatestDeployment = {
+  id: string;
+  service_id: string;
+  status: string;
+  port: number | null;
+  error_message: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Service = {
   id: string;
   name: string;
@@ -7,6 +17,7 @@ export type Service = {
   workspace_path: string;
   created_at: string;
   updated_at: string;
+  latest_deployment?: LatestDeployment | null;
 };
 
 export type CreateServiceInput = {
