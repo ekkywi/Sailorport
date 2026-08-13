@@ -48,3 +48,7 @@ type CreateUserRequest struct {
 	Password string `json:"password"`
 	Role     string `json:"role"`
 }
+
+type ResetUserPasswordRequest struct {
+	Password string `json:"password"`
+}

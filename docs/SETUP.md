@@ -144,7 +144,7 @@ Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar (col
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
-Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** + **Stop/Start** runtime + **History** / **Deploy** terpisah (dialog deployments; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin: create, role, disable/enable). Layout app shell **full width** untuk tabel dan data padat.
+Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** + **Stop/Start** runtime + **History** / **Deploy** terpisah (dialog deployments; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin: create, role, disable/enable, reset password). Layout app shell **full width** untuk tabel dan data padat.
 
 ## Admin user & user management (Step 12a + 12b)
 
@@ -177,7 +177,7 @@ curl -s -X PATCH "http://localhost:8080/api/v1/users/USER_ID" \
 
 Non-admin mendapat **403** pada `/api/v1/users`. Admin tidak bisa mengubah role dirinya sendiri.
 
-Di portal: buka **Users** (admin) untuk **Create user**, ubah role, atau **Disable / Enable** akun. Akun disabled tidak bisa login. Role `viewer` melihat Catalog tanpa tombol Create / Deploy / Edit / Delete.
+Di portal: buka **Users** (admin) untuk **Create user**, ubah role, **Reset password**, atau **Disable / Enable** akun. Akun disabled tidak bisa login. Role `viewer` melihat Catalog tanpa tombol Create / Deploy / Edit / Delete.
 
 ## Jalankan agent (Step 10B + 10C.2)
 

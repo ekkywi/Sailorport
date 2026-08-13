@@ -34,6 +34,7 @@ import type { AuthUser } from "@/features/auth/types";
 import {
   createUser,
   listUsers,
+  resetUserPassword,
   setUserDisabled,
   updateUserRole,
 } from "./api";
@@ -61,6 +62,10 @@ export function UsersPage() {
   const [formError, setFormError] = useState("");
   const [disableTarget, setDisableTarget] = useState<User | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [passwordTarget, setPasswordTarget] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -152,6 +157,33 @@ export function UsersPage() {
       setError(err instanceof Error ? err.message : "Failed to enable user");
     } finally {
       setTogglingId(null);
+    }
+  }
+
+  function closePasswordDialog() {
+    if (resetting) return;
+    setPasswordTarget(null);
+    setNewPassword("");
+    setPasswordError("");
+  }
+
+  async function onResetPasswordSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!passwordTarget) return;
+    setResetting(true);
+    setPasswordError("");
+    try {
+      await resetUserPassword(passwordTarget.id, newPassword);
+      toast(`Password reset for ${passwordTarget.email} — share it securely`);
+      setPasswordTarget(null);
+      setNewPassword("");
+      setPasswordError("");
+    } catch (err) {
+      setPasswordError(
+        err instanceof Error ? err.message : "Failed to reset password",
+      );
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -278,28 +310,46 @@ export function UsersPage() {
                           <span className="text-[12px] text-muted-foreground">
                             You
                           </span>
-                        ) : u.disabled ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-[13px]"
-                            disabled={togglingId === u.id}
-                            onClick={() => void onEnable(u)}
-                          >
-                            {togglingId === u.id ? "Enabling…" : "Enable"}
-                          </Button>
                         ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-[13px]"
-                            disabled={togglingId === u.id}
-                            onClick={() => setDisableTarget(u)}
-                          >
-                            Disable
-                          </Button>
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-[13px]"
+                              disabled={resetting}
+                              onClick={() => {
+                                setPasswordError("");
+                                setNewPassword("");
+                                setPasswordTarget(u);
+                              }}
+                            >
+                              Reset password
+                            </Button>
+                            {u.disabled ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-[13px]"
+                                disabled={togglingId === u.id}
+                                onClick={() => void onEnable(u)}
+                              >
+                                {togglingId === u.id ? "Enabling…" : "Enable"}
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-[13px]"
+                                disabled={togglingId === u.id}
+                                onClick={() => setDisableTarget(u)}
+                              >
+                                Disable
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -418,6 +468,74 @@ export function UsersPage() {
                 disabled={creating}
               >
                 {creating ? "Creating…" : "Create user"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={passwordTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) closePasswordDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!resetting}>
+          <DialogHeader>
+            <DialogTitle>Reset password</DialogTitle>
+            <DialogDescription>
+              Set a temporary password for{" "}
+              <span className="font-medium text-foreground">
+                {passwordTarget?.email}
+              </span>
+              . Share it securely — they sign in at /login.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={onResetPasswordSubmit} className="space-y-4">
+            {passwordError ? (
+              <p className="text-[13px] text-destructive">{passwordError}</p>
+            ) : null}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="reset-password"
+                className="text-[12px] text-muted-foreground"
+              >
+                New temporary password
+              </Label>
+              <Input
+                id="reset-password"
+                type="password"
+                required
+                minLength={8}
+                autoFocus
+                autoComplete="new-password"
+                disabled={resetting}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="h-8 text-[13px]"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                At least 8 characters.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-[13px]"
+                disabled={resetting}
+                onClick={closePasswordDialog}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-8 text-[13px]"
+                disabled={resetting}
+              >
+                {resetting ? "Saving…" : "Reset password"}
               </Button>
             </div>
           </form>

@@ -93,6 +93,33 @@ func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *UsersHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req model.ResetUserPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	defer r.Body.Close()
+
+	err := h.users.ResetPassword(
+		r.Context(),
+		claims.UserID,
+		r.PathValue("id"),
+		req.Password,
+	)
+	if err != nil {
+		writeUserError(w, "reset user password", err)
+		return
+	}
+	writeNoContent(w)
+}
+
 func writeUserError(w http.ResponseWriter, op string, err error) {
 	switch {
 	case errors.Is(err, service.ErrInvalid):

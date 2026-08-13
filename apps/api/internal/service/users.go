@@ -24,6 +24,7 @@ type UserAdminRepository interface {
 	Create(ctx context.Context, email, name, passwordHash, role string) (model.User, error)
 	UpdateRole(ctx context.Context, id, role string) (model.User, error)
 	UpdateDisabled(ctx context.Context, id string, disabled bool) (model.User, error)
+	UpdatePasswordHash(ctx context.Context, id, passwordHash string) error
 }
 
 type Users struct {
@@ -123,6 +124,35 @@ func (u *Users) SetDisabled(ctx context.Context, actorID, targetID string, disab
 		return model.User{}, mapUserAdminErr(err)
 	}
 	return out, nil
+}
+
+func (u *Users) ResetPassword(ctx context.Context, actorID, targetID, password string) error {
+	actorID = strings.TrimSpace(actorID)
+	targetID = strings.TrimSpace(targetID)
+	password = strings.TrimSpace(password)
+
+	if actorID == "" || targetID == "" {
+		return fmt.Errorf("%w: user id is required", ErrInvalid)
+	}
+	if !isUserID(targetID) {
+		return fmt.Errorf("%w: invalid user id", ErrInvalid)
+	}
+	if actorID == targetID {
+		return fmt.Errorf("%w: cannot reset your own password here", ErrForbidden)
+	}
+	if len(password) < 8 {
+		return fmt.Errorf("%w: password must be at least 8 characters", ErrInvalid)
+	}
+
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+
+	if err := u.repo.UpdatePasswordHash(ctx, targetID, hash); err != nil {
+		return mapUserAdminErr(err)
+	}
+	return nil
 }
 
 // isUserID checks for a UUID-shaped id (8-4-4-4-12 hex) before hitting Postgres.

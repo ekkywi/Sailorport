@@ -68,6 +68,16 @@ func (f *fakeUserAdminRepo) UpdateDisabled(ctx context.Context, id string, disab
 	return model.User{}, store.ErrNotFound
 }
 
+func (f *fakeUserAdminRepo) UpdatePasswordHash(ctx context.Context, id, passwordHash string) error {
+	for _, u := range f.users {
+		if u.ID == id {
+			_ = passwordHash
+			return nil
+		}
+	}
+	return store.ErrNotFound
+}
+
 func TestUsers_UpdateRole_forbiddenSelfChange(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Email: "a@x.com", Role: "admin"}},
@@ -122,6 +132,42 @@ func TestUsers_SetDisabled_invalidID(t *testing.T) {
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
 	_, err := svc.SetDisabled(context.Background(), testAdminID, "TARGET_USER_ID", true)
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}
+
+func TestUsers_ResetPassword_forbiddenSelf(t *testing.T) {
+	svc := NewUsers(&fakeUserAdminRepo{
+		users: []model.User{{ID: testAdminID, Role: "admin"}},
+	})
+	err := svc.ResetPassword(context.Background(), testAdminID, testAdminID, "newpassword")
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestUsers_ResetPassword_ok(t *testing.T) {
+	svc := NewUsers(&fakeUserAdminRepo{
+		users: []model.User{
+			{ID: testAdminID, Role: "admin"},
+			{ID: testDevID, Role: "developer"},
+		},
+	})
+	err := svc.ResetPassword(context.Background(), testAdminID, testDevID, "newpassword")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUsers_ResetPassword_tooShort(t *testing.T) {
+	svc := NewUsers(&fakeUserAdminRepo{
+		users: []model.User{
+			{ID: testAdminID, Role: "admin"},
+			{ID: testDevID, Role: "developer"},
+		},
+	})
+	err := svc.ResetPassword(context.Background(), testAdminID, testDevID, "short")
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}

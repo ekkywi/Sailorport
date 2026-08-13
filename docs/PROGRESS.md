@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 12d — admin disable / enable user
-- **Step berikutnya:** Environments (dev/staging/prod); opsional reset password / delete user / logs / multi-port
-- **Terakhir dikerjakan:** 2026-08-13 — kolom `users.disabled`, login diblokir, PATCH + UI Disable/Enable
+- **Step selesai:** 12e — admin reset password
+- **Step berikutnya:** Environments (dev/staging/prod); opsional soft-delete user / logs / multi-port
+- **Terakhir dikerjakan:** 2026-08-13 — POST /users/{id}/password + dialog Reset password di portal
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -33,6 +33,7 @@
 - [x] Step 12b — Portal users page + RBAC UI (hide actions for viewer)
 - [x] Step 12c — Admin create user (temporary password / invite-style MVP)
 - [x] Step 12d — Admin disable / enable user (blokir login)
+- [x] Step 12e — Admin reset password (temporary password)
 - [x] Harden — agent token (register/heartbeat/claim/update)
 - [x] R0 — latest deploy di catalog (API `latest_deployment` + kolom Deploy di portal)
 - [x] R1 — agent docker helpers (`Stop` / `Start` / `Remove`)
@@ -77,6 +78,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `GET /api/v1/users` | admin | list semua user |
 | `POST /api/v1/users` | admin | create user (email, name, password, role) |
 | `PATCH /api/v1/users/{id}` | admin | ubah `role` **atau** `disabled` (bukan keduanya sekaligus); tidak boleh ubah role/disable diri sendiri; id harus UUID |
+| `POST /api/v1/users/{id}/password` | admin | set temporary password baru; tidak boleh reset password diri sendiri → **204** |
 | `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD; `GET` list menyertakan `latest_deployment` per service |
 | `GET /api/v1/templates`, `POST /api/v1/scaffold` | viewer+ / developer+ | golden path |
 | `POST /api/v1/workers/register` | agent token | agent register |
@@ -120,23 +122,24 @@ docker exec -it sailorport-postgres psql -U sailorport -d sailorport \
 
 Login ulang agar JWT berisi role baru.
 
-### User management API (12a + 12c + 12d)
+### User management API (12a + 12c + 12d + 12e)
 
 - Lapisan: `store/user` → `service/users` → `handler/user`
 - Migrasi `00008_add_users_disabled.sql` — kolom `users.disabled BOOLEAN NOT NULL DEFAULT false`
 - `GET /api/v1/users` — admin only (response termasuk `disabled`)
 - `POST /api/v1/users` body `{email,name,password,role}` — admin only; role boleh `admin`/`developer`/`viewer`; email unik → **409**
 - `PATCH /api/v1/users/{id}` — admin only; body `{"role":"..."}` **atau** `{"disabled":true|false}` (bukan keduanya); self-change → **403**; id non-UUID → **400**
+- `POST /api/v1/users/{id}/password` body `{"password":"..."}` — admin only; min 8 chars; self-reset → **403**; sukses → **204**
 - Login / `me`: akun `disabled` → **401**
-- Invite-style MVP: admin set temporary password, bagikan manual (belum email SMTP)
+- Invite-style MVP: admin set / reset temporary password, bagikan manual (belum email SMTP)
 
-### Portal users UI + catalog RBAC (12b + 12c + 12d)
+### Portal users UI + catalog RBAC (12b + 12c + 12d + 12e)
 
 - Feature: `apps/web/src/features/users/` (`type`, `api`, `UsersPage`)
 - Helper RBAC: `apps/web/src/lib/rbac.ts` — `isAdmin()`, `canWriteCatalog()`
 - Route `/users` + guard admin; non-admin → `/overview`
 - Sidebar: sections Workspace / Platform / Administration; **Users** hanya admin
-- `UsersPage`: tabel user, dropdown role, status active/disabled, **Create user**, **Disable** (konfirmasi) / **Enable**; baris diri sendiri = badge + “You”
+- `UsersPage`: tabel user, dropdown role, status active/disabled, **Create user**, **Reset password**, **Disable** (konfirmasi) / **Enable**; baris diri sendiri = badge + “You”
 - Catalog: `canWriteCatalog` — viewer tanpa Create / Deploy / Edit / Delete (desktop + mobile)
 
 ### Agent token (Harden)
@@ -220,7 +223,7 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 - **Sidebar sections:** Workspace (Overview), Platform (Catalog, Workers), Administration (Users — admin)
 - **Routes (flat):** `/overview`, `/catalog`, `/worker`, `/users` (admin)
 - **Catalog UX:** daftar + kolom deploy terakhir; Create/Deploy/Stop/Start/Edit/Delete hanya `admin`/`developer`; viewer read-only + History
-- **Users:** admin create, ubah role, disable/enable (`admin` | `developer` | `viewer`)
+- **Users:** admin create, ubah role, disable/enable, reset password (`admin` | `developer` | `viewer`)
 - **Workers:** tabel dengan status badge, relative last seen
 - **Overview:** metrik services/workers + panel recent
 - **Shared:** `src/components/app/` (DataPanel, Toolbar, EmptyState, …)
@@ -256,7 +259,7 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 ## Next action
 
 1. Environments (dev/staging/prod)
-2. Opsional: admin reset password / delete user; container logs; multi-port deploy
+2. Opsional: soft-delete user (rename email); container logs; multi-port deploy
 
 ## Cara lanjut di mesin lain
 

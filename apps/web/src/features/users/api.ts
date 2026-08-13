@@ -46,3 +46,18 @@ export async function setUserDisabled(
   }
   return res.json();
 }
+
+export async function resetUserPassword(
+  id: string,
+  password: string,
+): Promise<void> {
+  const res = await apiFetch(`/api/v1/users/${id}/password`, {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    throw new Error(
+      await readErrorMessage(res, `Failed to reset password: ${res.status}`),
+    );
+  }
+}

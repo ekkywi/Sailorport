@@ -20,7 +20,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | auth + app shell + catalog deploy/runtime + workers + users (create/role/disable) + RBAC |
+| Portal | `apps/web` | auth + app shell + catalog deploy/runtime + workers + users (create/role/disable/reset password) + RBAC |
 | API | `apps/api` | layered + scaffold/templates + workers + deployments |
 | Worker | `apps/worker` | belum (job queue / orchestrator) |
 | Agent | `apps/agent` | register + heartbeat + poll deploy/runtime (stop/start/remove); Bearer agent token |
@@ -62,7 +62,7 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 | `/overview` | ringkasan services + workers |
 | `/catalog` | daftar services + deploy terakhir; History; Deploy; **Stop/Start** (runtime); create/edit/delete |
 | `/worker` | daftar workers + status |
-| `/users` | admin: list, create, role, disable/enable |
+| `/users` | admin: list, create, role, disable/enable, reset password |
 
 Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 

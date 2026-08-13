@@ -138,6 +138,27 @@ func (s *UsersStore) UpdateDisabled(ctx context.Context, id string, disabled boo
 	return u, nil
 }
 
+func (s *UsersStore) UpdatePasswordHash(ctx context.Context, id, passwordHash string) error {
+	const q = `
+		UPDATE users
+		SET password_hash = $2, updated_at = NOW()
+		WHERE id = $1
+	`
+
+	res, err := s.db.ExecContext(ctx, q, id, passwordHash)
+	if err != nil {
+		return fmt.Errorf("Update password hash: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func scanUser(row interface {
 	Scan(dest ...any) error
 }) (model.User, error) {

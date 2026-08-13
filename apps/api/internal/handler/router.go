@@ -46,6 +46,7 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("GET /api/v1/users", withRole(secret, admin, usersH.List))
 	mux.Handle("POST /api/v1/users", withRole(secret, admin, usersH.Create))
 	mux.Handle("PATCH /api/v1/users/{id}", withRole(secret, admin, usersH.Update))
+	mux.Handle("POST /api/v1/users/{id}/password", withRole(secret, admin, usersH.ResetPassword))
 
 	mux.Handle("GET /api/v1/services", withRole(secret, reader, services.List))
 	mux.Handle("POST /api/v1/services", withRole(secret, writer, services.Create))
