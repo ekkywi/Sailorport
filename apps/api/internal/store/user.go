@@ -21,7 +21,7 @@ func (s *UsersStore) Create(ctx context.Context, email, name, passwordHash, role
 	const q = `
 		INSERT INTO users (email, name, password_hash, role)
 		VALUES ($1, $2, $3, $4)
-		RETURNING id, email, name, role, disabled, created_at, updated_at`
+		RETURNING id, email, name, role, disabled, deleted_at, created_at, updated_at`
 
 	u, err := scanUser(s.db.QueryRowContext(ctx, q, email, name, passwordHash, role))
 	if err != nil {
@@ -35,17 +35,20 @@ func (s *UsersStore) Create(ctx context.Context, email, name, passwordHash, role
 
 func (s *UsersStore) GetByEmail(ctx context.Context, email string) (model.UserRecord, error) {
 	const q = `
-		SELECT id, email, name, role, disabled, password_hash, created_at, updated_at
+		SELECT id, email, name, role, disabled, deleted_at, password_hash, created_at, updated_at
 		FROM users
-		WHERE email = $1`
-
-	var rec model.UserRecord
+		WHERE email = $1 AND deleted_at IS NULL`
+	var (
+		rec       model.UserRecord
+		deletedAt sql.NullTime
+	)
 	err := s.db.QueryRowContext(ctx, q, email).Scan(
 		&rec.ID,
 		&rec.Email,
 		&rec.Name,
 		&rec.Role,
 		&rec.Disabled,
+		&deletedAt,
 		&rec.PasswordHash,
 		&rec.CreatedAt,
 		&rec.UpdatedAt,
@@ -56,14 +59,18 @@ func (s *UsersStore) GetByEmail(ctx context.Context, email string) (model.UserRe
 	if err != nil {
 		return model.UserRecord{}, fmt.Errorf("Get user by email: %w", err)
 	}
+	if deletedAt.Valid {
+		t := deletedAt.Time
+		rec.DeletedAt = &t
+	}
 	return rec, nil
 }
 
 func (s *UsersStore) GetByID(ctx context.Context, id string) (model.User, error) {
 	const q = `
-		SELECT id, email, name, role, disabled, created_at, updated_at
+		SELECT id, email, name, role, disabled, deleted_at, created_at, updated_at
 		FROM users
-		WHERE id = $1`
+		WHERE id = $1 AND deleted_at IS NULL`
 
 	u, err := scanUser(s.db.QueryRowContext(ctx, q, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -77,8 +84,9 @@ func (s *UsersStore) GetByID(ctx context.Context, id string) (model.User, error)
 
 func (s *UsersStore) List(ctx context.Context) ([]model.User, error) {
 	const q = `
-		SELECT id, email, name, role, disabled, created_at, updated_at
+		SELECT id, email, name, role, disabled, deleted_at, created_at, updated_at
 		FROM users
+		WHERE deleted_at IS NULL
 		ORDER BY created_at DESC`
 
 	rows, err := s.db.QueryContext(ctx, q)
@@ -108,8 +116,8 @@ func (s *UsersStore) UpdateRole(ctx context.Context, id, role string) (model.Use
 	const q = `
 		UPDATE users
 		SET role = $2, updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, email, name, role, disabled, created_at, updated_at`
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING id, email, name, role, disabled, deleted_at, created_at, updated_at`
 
 	u, err := scanUser(s.db.QueryRowContext(ctx, q, id, role))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -125,8 +133,8 @@ func (s *UsersStore) UpdateDisabled(ctx context.Context, id string, disabled boo
 	const q = `
 		UPDATE users
 		SET disabled = $2, updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, email, name, role, disabled, created_at, updated_at`
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING id, email, name, role, disabled, deleted_at, created_at, updated_at`
 
 	u, err := scanUser(s.db.QueryRowContext(ctx, q, id, disabled))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -142,7 +150,7 @@ func (s *UsersStore) UpdatePasswordHash(ctx context.Context, id, passwordHash st
 	const q = `
 		UPDATE users
 		SET password_hash = $2, updated_at = NOW()
-		WHERE id = $1
+		WHERE id = $1 AND deleted_at IS NULL
 	`
 
 	res, err := s.db.ExecContext(ctx, q, id, passwordHash)
@@ -159,18 +167,53 @@ func (s *UsersStore) UpdatePasswordHash(ctx context.Context, id, passwordHash st
 	return nil
 }
 
+func (s *UsersStore) SoftDelete(ctx context.Context, id string) error {
+	const q = `
+		UPDATE users
+		SET
+			email = email || '__deleted__' || id::text,
+			disabled = true,
+			deleted_at = NOW(),
+			updated_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL`
+	
+	res, err := s.db.ExecContext(ctx, q, id)
+	if err != nil {
+		return fmt.Errorf("SoftDelete user: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func scanUser(row interface {
 	Scan(dest ...any) error
 }) (model.User, error) {
-	var u model.User
+	var (
+		u         model.User
+		deletedAt sql.NullTime
+	)
 	err := row.Scan(
 		&u.ID,
 		&u.Email,
 		&u.Name,
 		&u.Role,
 		&u.Disabled,
+		&deletedAt,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
-	return u, err
+	if err != nil {
+		return model.User{}, err
+	}
+	if deletedAt.Valid {
+		t := deletedAt.Time
+		u.DeletedAt = &t
+	}
+	return u, nil
 }

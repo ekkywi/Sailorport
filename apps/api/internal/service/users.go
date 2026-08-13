@@ -25,6 +25,7 @@ type UserAdminRepository interface {
 	UpdateRole(ctx context.Context, id, role string) (model.User, error)
 	UpdateDisabled(ctx context.Context, id string, disabled bool) (model.User, error)
 	UpdatePasswordHash(ctx context.Context, id, passwordHash string) error
+	SoftDelete(ctx context.Context, id string) error
 }
 
 type Users struct {
@@ -150,6 +151,26 @@ func (u *Users) ResetPassword(ctx context.Context, actorID, targetID, password s
 	}
 
 	if err := u.repo.UpdatePasswordHash(ctx, targetID, hash); err != nil {
+		return mapUserAdminErr(err)
+	}
+	return nil
+}
+
+func (u *Users) SoftDelete(ctx context.Context, actorID, targetID string) error {
+	actorID = strings.TrimSpace(actorID)
+	targetID = strings.TrimSpace(targetID)
+
+	if actorID == "" || targetID == "" {
+		return fmt.Errorf("%w: user id is required", ErrInvalid)
+	}
+	if !isUserID(targetID) {
+		return fmt.Errorf("%w: invalid user id", ErrInvalid)
+	}
+	if actorID == targetID {
+		return fmt.Errorf("%w: cannot delete yourself", ErrForbidden)
+	}
+
+	if err := u.repo.SoftDelete(ctx, targetID); err != nil {
 		return mapUserAdminErr(err)
 	}
 	return nil

@@ -5,9 +5,10 @@
 ## Status saat ini
 
 - **Step selesai:** 12e — admin reset password
-- **Step berikutnya:** Environments (dev/staging/prod); opsional soft-delete user / logs / multi-port
-- **Terakhir dikerjakan:** 2026-08-13 — POST /users/{id}/password + dialog Reset password di portal
-- **Mesin terakhir:** rumah / lokal
+- **Step berikutnya:** **12f lanjut Step 5** — HTTP `DELETE /api/v1/users/{id}` + router; lalu Step 6 portal Delete UI
+- **Sedang dikerjakan:** 12f — soft-delete user (Steps 1–4 selesai; handler + UI belum)
+- **Terakhir dikerjakan:** 2026-08-13 — soft-delete store + service; fix flicker DeploymentsDialog
+- **Mesin terakhir:** kantor / lokal
 
 ## Checklist step belajar
 
@@ -34,6 +35,7 @@
 - [x] Step 12c — Admin create user (temporary password / invite-style MVP)
 - [x] Step 12d — Admin disable / enable user (blokir login)
 - [x] Step 12e — Admin reset password (temporary password)
+- [ ] Step 12f — Soft-delete user (rename email + `deleted_at`) — **WIP: store + service selesai**
 - [x] Harden — agent token (register/heartbeat/claim/update)
 - [x] R0 — latest deploy di catalog (API `latest_deployment` + kolom Deploy di portal)
 - [x] R1 — agent docker helpers (`Stop` / `Start` / `Remove`)
@@ -121,6 +123,31 @@ docker exec -it sailorport-postgres psql -U sailorport -d sailorport \
 ```
 
 Login ulang agar JWT berisi role baru.
+
+### Soft-delete user (12f — WIP)
+
+Desain: soft delete (bukan `DELETE FROM`); rename email agar UNIQUE bebas; filter `deleted_at IS NULL`; no self-delete.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 1 Migrasi | ✅ | `00009_add_users_deleted_at.sql` — kolom `deleted_at TIMESTAMPTZ` + index |
+| 2 Model | ✅ | `User.DeletedAt *time.Time` |
+| 3 Store | ✅ | `scanUser` + `deleted_at`; filter aktif di Get/List/Update*; `GetByEmail` filter; `SoftDelete` rename `email \|\| '__deleted__' \|\| id` + `disabled=true` |
+| 4 Service | ✅ | `Users.SoftDelete(actor, target)` — validasi UUID, no self-delete → `ErrForbidden` |
+| 4c Auth | skip | Login/me sudah aman via store filter (`GetByEmail` / `GetByID` + `deleted_at IS NULL`) |
+| 5 Handler | ⏳ | `DELETE /api/v1/users/{id}` → 204; admin only; pola mirip `ResetPassword` |
+| 6 Portal | ⏳ | Tombol Delete + konfirmasi di `/users` |
+
+**Belum ada route HTTP** — service sudah bisa dipanggil dari handler.
+
+Test manual setelah Step 5:
+
+```bash
+# admin token
+curl -X DELETE http://localhost:8080/api/v1/users/{id} \
+  -H "Authorization: Bearer $TOKEN" -w '\n%{http_code}\n'
+# sukses → 204; self-delete → 403; id tidak ada → 404
+```
 
 ### User management API (12a + 12c + 12d + 12e)
 
@@ -258,8 +285,9 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
 ## Next action
 
-1. Environments (dev/staging/prod)
-2. Opsional: soft-delete user (rename email); container logs; multi-port deploy
+1. **12f Step 5** — `UsersHandler.Delete` + route `DELETE /api/v1/users/{id}` (admin) di `handler/router.go`
+2. **12f Step 6** — portal: tombol Delete + konfirmasi di `UsersPage`
+3. Setelah 12f selesai: Environments (dev/staging/prod); opsional logs / multi-port deploy
 
 ## Cara lanjut di mesin lain
 

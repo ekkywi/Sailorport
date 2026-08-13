@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, RefreshCw } from "lucide-react";
 import {
   EmptyState,
@@ -53,25 +53,43 @@ export function DeploymentsDialog({
   const [items, setItems] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loadedOnce, setLoadedOnce] = useState(false);
 
-  const load = useCallback(async () => {
+  // Avoid putting parent inline callbacks in load deps (causes refresh loops / flicker).
+  const onRefreshCatalogRef = useRef(onRefreshCatalog);
+  onRefreshCatalogRef.current = onRefreshCatalog;
+
+  const load = useCallback(async (options?: { silent?: boolean }) => {
     if (!serviceId) return;
-    setLoading(true);
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setLoading(true);
+    }
     setError("");
     try {
-      setItems(await listDeploymentsByService(serviceId));
-      onRefreshCatalog?.();
+      const next = await listDeploymentsByService(serviceId);
+      setItems(next);
+      setLoadedOnce(true);
+      if (next.some((d) => isActiveStatus(d.status))) {
+        onRefreshCatalogRef.current?.();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load deployments");
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
-  }, [serviceId, onRefreshCatalog]);
+  }, [serviceId]);
 
   useEffect(() => {
-    if (open && serviceId) {
-      void load();
+    if (!open || !serviceId) {
+      return;
     }
+    setItems([]);
+    setLoadedOnce(false);
+    setError("");
+    void load({ silent: false });
   }, [open, serviceId, load]);
 
   useEffect(() => {
@@ -80,10 +98,13 @@ export function DeploymentsDialog({
     if (!hasActive) return;
 
     const id = window.setInterval(() => {
-      void load();
+      void load({ silent: true });
     }, 3000);
     return () => window.clearInterval(id);
   }, [open, serviceId, items, load]);
+
+  const showEmpty = !error && loadedOnce && !loading && items.length === 0;
+  const showList = items.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,7 +123,7 @@ export function DeploymentsDialog({
             variant="outline"
             size="sm"
             className="h-8 gap-1.5 text-[13px]"
-            onClick={() => void load()}
+            onClick={() => void load({ silent: false })}
             disabled={loading}
           >
             <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
@@ -111,10 +132,24 @@ export function DeploymentsDialog({
         </div>
 
         {error ? (
-          <ErrorBanner message={error} onRetry={() => void load()} />
+          <ErrorBanner
+            message={error}
+            onRetry={() => void load({ silent: false })}
+          />
         ) : null}
 
-        {!error && items.length === 0 && !loading ? (
+        {loading && !loadedOnce ? (
+          <div className="space-y-0 divide-y divide-border rounded-lg border border-border py-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="space-y-2 px-3 py-3">
+                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-40 animate-pulse rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {showEmpty ? (
           <EmptyState
             title="No deployments yet"
             description="Click Deploy on this service to create the first one."
@@ -122,7 +157,7 @@ export function DeploymentsDialog({
           />
         ) : null}
 
-        {items.length > 0 ? (
+        {showList ? (
           <ul className="max-h-[360px] space-y-0 divide-y divide-border overflow-y-auto rounded-lg border border-border">
             {items.map((d) => (
               <li key={d.id} className="px-3 py-3">

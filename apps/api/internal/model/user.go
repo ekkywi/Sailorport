@@ -3,13 +3,14 @@ package model
 import "time"
 
 type User struct {
-	ID        string    `json:"id"`
-	Email     string    `json:"email"`
-	Name      string    `json:"name"`
-	Role      string    `json:"role"`
-	Disabled  bool      `json:"disabled"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        string     `json:"id"`
+	Email     string     `json:"email"`
+	Name      string     `json:"name"`
+	Role      string     `json:"role"`
+	Disabled  bool       `json:"disabled"`
+	DeletedAt *time.Time `json:"deleted_at"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 }
 
 type UserRecord struct {
