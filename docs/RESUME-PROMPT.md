@@ -15,16 +15,16 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 12c — admin create user (`POST /api/v1/users` + dialog Create user di `/users`, temporary password).
+**Step terakhir selesai:** 12d — admin disable/enable user (`users.disabled`, PATCH `{disabled}`, login diblokir, UI Status + Disable/Enable di `/users`).
 
-**Step berikutnya:** Environments (dev/staging/prod); opsional logs/restart / multi-port; atau polish users (disable/delete).
+**Step berikutnya:** Environments (dev/staging/prod); opsional reset password / delete user / logs / multi-port.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
 - Register existing = metadata saja, tanpa generate folder
 - Template masih di folder `templates/`, bukan database
 - Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue container cleanup (`remove`) jika pernah deploy
-- Admin Users: list, change role, **create user** (invite-style temp password); belum email SMTP
+- Admin Users: list, change role, create user, **disable/enable**; belum email SMTP / edit name / reset password
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
 - Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume

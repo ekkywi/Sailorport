@@ -89,6 +89,8 @@ Satu flow ini harus jalan di mesin orang lain:
 | 12 | Harden (agent token) | selesai |
 | 12a | User management API | selesai |
 | 12b | Portal users + RBAC UI | selesai |
+| 12c | Admin create user | selesai |
+| 12d | Admin disable / enable user | selesai |
 | R0 | Latest deploy di catalog + layout full width | selesai |
 | R1 | Agent docker stop/start/remove helpers | selesai |
 | R2 | Runtime controls (API + portal stop/start) | selesai |

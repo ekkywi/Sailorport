@@ -23,6 +23,7 @@ type UserAdminRepository interface {
 	GetByID(ctx context.Context, id string) (model.User, error)
 	Create(ctx context.Context, email, name, passwordHash, role string) (model.User, error)
 	UpdateRole(ctx context.Context, id, role string) (model.User, error)
+	UpdateDisabled(ctx context.Context, id string, disabled bool) (model.User, error)
 }
 
 type Users struct {
@@ -86,6 +87,9 @@ func (u *Users) UpdateRole(ctx context.Context, actorID, targetID string, role s
 	if actorID == "" || targetID == "" {
 		return model.User{}, fmt.Errorf("%w: user id is required", ErrInvalid)
 	}
+	if !isUserID(targetID) {
+		return model.User{}, fmt.Errorf("%w: invalid user id", ErrInvalid)
+	}
 	if actorID == targetID {
 		return model.User{}, fmt.Errorf("%w: cannot change your own role", ErrForbidden)
 	}
@@ -98,6 +102,47 @@ func (u *Users) UpdateRole(ctx context.Context, actorID, targetID string, role s
 		return model.User{}, mapUserAdminErr(err)
 	}
 	return out, nil
+}
+
+func (u *Users) SetDisabled(ctx context.Context, actorID, targetID string, disabled bool) (model.User, error) {
+	actorID = strings.TrimSpace(actorID)
+	targetID = strings.TrimSpace(targetID)
+
+	if actorID == "" || targetID == "" {
+		return model.User{}, fmt.Errorf("%w: user id is required", ErrInvalid)
+	}
+	if !isUserID(targetID) {
+		return model.User{}, fmt.Errorf("%w: invalid user id", ErrInvalid)
+	}
+	if actorID == targetID {
+		return model.User{}, fmt.Errorf("%w: cannot disable or enable yourself", ErrForbidden)
+	}
+
+	out, err := u.repo.UpdateDisabled(ctx, targetID, disabled)
+	if err != nil {
+		return model.User{}, mapUserAdminErr(err)
+	}
+	return out, nil
+}
+
+// isUserID checks for a UUID-shaped id (8-4-4-4-12 hex) before hitting Postgres.
+func isUserID(id string) bool {
+	if len(id) != 36 {
+		return false
+	}
+	for i, c := range id {
+		switch i {
+		case 8, 13, 18, 23:
+			if c != '-' {
+				return false
+			}
+		default:
+			if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func mapUserAdminErr(err error) error {

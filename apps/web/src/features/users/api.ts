@@ -30,3 +30,19 @@ export async function updateUserRole(id: string, role: UserRole): Promise<User> 
   }
   return res.json();
 }
+
+export async function setUserDisabled(
+  id: string,
+  disabled: boolean,
+): Promise<User> {
+  const res = await apiFetch(`/api/v1/users/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ disabled }),
+  });
+  if (!res.ok) {
+    throw new Error(
+      await readErrorMessage(res, `Failed to update user: ${res.status}`),
+    );
+  }
+  return res.json();
+}

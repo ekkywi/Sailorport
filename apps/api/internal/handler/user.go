@@ -45,26 +45,52 @@ func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, out)
 }
 
-func (h *UsersHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
+func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
 	claims := UserFromContext(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	var req model.UpdateUserRoleRequest
+	var req struct {
+		Role     *string `json:"role"`
+		Disabled *bool   `json:"disabled"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	defer r.Body.Close()
 
-	out, err := h.users.UpdateRole(r.Context(), claims.UserID, r.PathValue("id"), req.Role)
-	if err != nil {
-		writeUserError(w, "update user role", err)
+	targetID := r.PathValue("id")
+
+	switch {
+	case req.Disabled != nil && req.Role != nil:
+		writeError(w, http.StatusBadRequest, "send either role or disabled, not both")
+		return
+
+	case req.Disabled != nil:
+		out, err := h.users.SetDisabled(r.Context(), claims.UserID, targetID, *req.Disabled)
+		if err != nil {
+			writeUserError(w, "update user disabled", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, out)
+		return
+
+	case req.Role != nil:
+		out, err := h.users.UpdateRole(r.Context(), claims.UserID, targetID, *req.Role)
+		if err != nil {
+			writeUserError(w, "update user role", err)
+			return
+		}
+		writeJSON(w, http.StatusOK, out)
+		return
+
+	default:
+		writeError(w, http.StatusBadRequest, "role or disabled is required")
 		return
 	}
-	writeJSON(w, http.StatusOK, out)
 }
 
 func writeUserError(w http.ResponseWriter, op string, err error) {

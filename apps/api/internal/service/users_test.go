@@ -9,6 +9,11 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
+const (
+	testAdminID = "00000000-0000-0000-0000-000000000001"
+	testDevID   = "00000000-0000-0000-0000-000000000002"
+)
+
 type fakeUserAdminRepo struct {
 	users []model.User
 }
@@ -50,14 +55,24 @@ func (f *fakeUserAdminRepo) UpdateRole(ctx context.Context, id, role string) (mo
 			return f.users[i], nil
 		}
 	}
-	return model.User{}, ErrNotFound
+	return model.User{}, store.ErrNotFound
+}
+
+func (f *fakeUserAdminRepo) UpdateDisabled(ctx context.Context, id string, disabled bool) (model.User, error) {
+	for i, u := range f.users {
+		if u.ID == id {
+			f.users[i].Disabled = disabled
+			return f.users[i], nil
+		}
+	}
+	return model.User{}, store.ErrNotFound
 }
 
 func TestUsers_UpdateRole_forbiddenSelfChange(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
-		users: []model.User{{ID: "u1", Email: "a@x.com", Role: "admin"}},
+		users: []model.User{{ID: testAdminID, Email: "a@x.com", Role: "admin"}},
 	})
-	_, err := svc.UpdateRole(context.Background(), "u1", "u1", "viewer")
+	_, err := svc.UpdateRole(context.Background(), testAdminID, testAdminID, "viewer")
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -65,9 +80,48 @@ func TestUsers_UpdateRole_forbiddenSelfChange(t *testing.T) {
 
 func TestUsers_UpdateRole_invalidRole(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
-		users: []model.User{{ID: "u1", Role: "admin"}, {ID: "u2", Role: "developer"}},
+		users: []model.User{
+			{ID: testAdminID, Role: "admin"},
+			{ID: testDevID, Role: "developer"},
+		},
 	})
-	_, err := svc.UpdateRole(context.Background(), "u1", "u2", "qa")
+	_, err := svc.UpdateRole(context.Background(), testAdminID, testDevID, "qa")
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}
+
+func TestUsers_SetDisabled_forbiddenSelf(t *testing.T) {
+	svc := NewUsers(&fakeUserAdminRepo{
+		users: []model.User{{ID: testAdminID, Email: "a@x.com", Role: "admin"}},
+	})
+	_, err := svc.SetDisabled(context.Background(), testAdminID, testAdminID, true)
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestUsers_SetDisabled_ok(t *testing.T) {
+	svc := NewUsers(&fakeUserAdminRepo{
+		users: []model.User{
+			{ID: testAdminID, Role: "admin"},
+			{ID: testDevID, Role: "developer", Disabled: false},
+		},
+	})
+	out, err := svc.SetDisabled(context.Background(), testAdminID, testDevID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !out.Disabled {
+		t.Fatalf("expected disabled=true")
+	}
+}
+
+func TestUsers_SetDisabled_invalidID(t *testing.T) {
+	svc := NewUsers(&fakeUserAdminRepo{
+		users: []model.User{{ID: testAdminID, Role: "admin"}},
+	})
+	_, err := svc.SetDisabled(context.Background(), testAdminID, "TARGET_USER_ID", true)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}

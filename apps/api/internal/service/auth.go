@@ -94,6 +94,10 @@ func (a *Auth) Login(ctx context.Context, req model.LoginRequest) (model.LoginRe
 		return model.LoginResponse{}, fmt.Errorf("%w: invalid email or password", ErrUnauthorized)
 	}
 
+	if rec.Disabled {
+		return model.LoginResponse{}, fmt.Errorf("%w: account is disabled", ErrUnauthorized)
+	}
+
 	token, err := auth.IssueToken(rec.ID, rec.Email, rec.Role, a.jwtSecret, a.tokenTTL)
 	if err != nil {
 		return model.LoginResponse{}, fmt.Errorf("issue token: %w", err)
@@ -101,14 +105,7 @@ func (a *Auth) Login(ctx context.Context, req model.LoginRequest) (model.LoginRe
 
 	return model.LoginResponse{
 		Token: token,
-		User: model.User{
-			ID:        rec.ID,
-			Email:     rec.Email,
-			Name:      rec.Name,
-			Role:      rec.Role,
-			CreatedAt: rec.CreatedAt,
-			UpdatedAt: rec.UpdatedAt,
-		},
+		User:  rec.User,
 	}, nil
 }
 
@@ -120,6 +117,9 @@ func (a *Auth) Me(ctx context.Context, userID string) (model.User, error) {
 	user, err := a.users.GetByID(ctx, userID)
 	if err != nil {
 		return model.User{}, mapUserErr(err)
+	}
+	if user.Disabled {
+		return model.User{}, fmt.Errorf("%w: account is disabled", ErrUnauthorized)
 	}
 	return user, nil
 }

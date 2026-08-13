@@ -14,8 +14,14 @@ export function StatusDot({
       className={cn(
         "inline-block size-1.5 shrink-0 rounded-full",
         status === "online" && "bg-emerald-500",
+        status === "active" && "bg-emerald-500",
         status === "draining" && "bg-amber-500",
-        status !== "online" && status !== "draining" && "bg-muted-foreground/40",
+        status === "disabled" && "bg-muted-foreground/40",
+        status !== "online" &&
+          status !== "active" &&
+          status !== "draining" &&
+          status !== "disabled" &&
+          "bg-muted-foreground/40",
         className,
       )}
       aria-hidden
@@ -36,10 +42,14 @@ export function StatusBadge({
         "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
         status === "online" &&
           "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
+        status === "active" &&
+          "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400",
         status === "draining" &&
           "bg-amber-500/12 text-amber-700 dark:text-amber-400",
-        status !== "online" &&
-          status !== "draining" &&
+        (status === "disabled" ||
+          (status !== "online" &&
+            status !== "active" &&
+            status !== "draining")) &&
           "bg-muted text-muted-foreground",
         className,
       )}

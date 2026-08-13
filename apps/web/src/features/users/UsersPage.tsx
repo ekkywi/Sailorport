@@ -9,6 +9,15 @@ import {
   formatRelativeTime,
   useToast,
 } from "@/components/app";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +31,12 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { me } from "@/features/auth/api";
 import type { AuthUser } from "@/features/auth/types";
-import { createUser, listUsers, updateUserRole } from "./api";
+import {
+  createUser,
+  listUsers,
+  setUserDisabled,
+  updateUserRole,
+} from "./api";
 import type { User, UserRole } from "./type";
 
 const ROLES: UserRole[] = ["admin", "developer", "viewer"];
@@ -45,6 +59,8 @@ export function UsersPage() {
   const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
+  const [disableTarget, setDisableTarget] = useState<User | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,6 +120,38 @@ export function UsersPage() {
       setError(err instanceof Error ? err.message : "Failed to update role");
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function confirmDisable() {
+    if (!disableTarget) return;
+    const target = disableTarget;
+    setTogglingId(target.id);
+    setError("");
+    try {
+      const updated = await setUserDisabled(target.id, true);
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      toast(`Disabled ${updated.email}`);
+      setDisableTarget(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to disable user");
+      setDisableTarget(null);
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  async function onEnable(user: User) {
+    setTogglingId(user.id);
+    setError("");
+    try {
+      const updated = await setUserDisabled(user.id, false);
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      toast(`Enabled ${updated.email}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to enable user");
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -173,17 +221,29 @@ export function UsersPage() {
                 <tr className="border-b border-border text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   <th className="px-4 py-2.5">User</th>
                   <th className="px-4 py-2.5">Role</th>
+                  <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Joined</th>
+                  <th className="px-4 py-2.5">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {users.map((u) => {
                   const isSelf = currentUser?.id === u.id;
                   return (
-                    <tr key={u.id} className="hover:bg-muted/35">
+                    <tr
+                      key={u.id}
+                      className={cn(
+                        "hover:bg-muted/35",
+                        u.disabled && "opacity-60",
+                      )}
+                    >
                       <td className="px-4 py-3">
                         <p className="font-medium">{u.name || u.email}</p>
-                        <p className="text-[12px] text-muted-foreground">{u.email}</p>
+                        <p className="text-[12px] text-muted-foreground">
+                          {u.email}
+                        </p>
                       </td>
                       <td className="px-4 py-3">
                         {isSelf ? (
@@ -192,7 +252,7 @@ export function UsersPage() {
                           <select
                             className="h-8 rounded-md border border-border bg-background px-2 text-[12px] capitalize"
                             value={u.role}
-                            disabled={savingId === u.id}
+                            disabled={savingId === u.id || u.disabled}
                             onChange={(e) =>
                               void onRoleChange(u.id, e.target.value as UserRole)
                             }
@@ -205,8 +265,42 @@ export function UsersPage() {
                           </select>
                         )}
                       </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge
+                          status={u.disabled ? "disabled" : "active"}
+                        />
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {formatRelativeTime(u.created_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {isSelf ? (
+                          <span className="text-[12px] text-muted-foreground">
+                            You
+                          </span>
+                        ) : u.disabled ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-[13px]"
+                            disabled={togglingId === u.id}
+                            onClick={() => void onEnable(u)}
+                          >
+                            {togglingId === u.id ? "Enabling…" : "Enable"}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-[13px]"
+                            disabled={togglingId === u.id}
+                            onClick={() => setDisableTarget(u)}
+                          >
+                            Disable
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -329,6 +423,50 @@ export function UsersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={disableTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && togglingId === null) setDisableTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disable user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-foreground">
+                {disableTarget?.email}
+              </span>{" "}
+              will not be able to sign in until enabled again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[13px]"
+                  disabled={togglingId !== null}
+                />
+              }
+            >
+              Cancel
+            </AlertDialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="h-8 text-[13px]"
+              disabled={togglingId !== null}
+              onClick={() => void confirmDisable()}
+            >
+              {togglingId ? "Disabling…" : "Disable"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

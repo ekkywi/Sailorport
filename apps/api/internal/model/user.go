@@ -7,6 +7,7 @@ type User struct {
 	Email     string    `json:"email"`
 	Name      string    `json:"name"`
 	Role      string    `json:"role"`
+	Disabled  bool      `json:"disabled"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -35,6 +36,10 @@ type LoginResponse struct {
 
 type UpdateUserRoleRequest struct {
 	Role string `json:"role"`
+}
+
+type UpdateUserDisabledRequest struct {
+	Disabled bool `json:"disabled"`
 }
 
 type CreateUserRequest struct {
