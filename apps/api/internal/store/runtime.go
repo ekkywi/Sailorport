@@ -17,6 +17,19 @@ func NewRuntimeStore(db *sql.DB) *RuntimeStore {
 	return &RuntimeStore{db: db}
 }
 
+func (s *RuntimeStore) HasActiveJob(ctx context.Context, deploymentID string) (bool, error) {
+	const q = `
+		SELECT EXISTS (
+			SELECT 1 FROM runtime_jobs
+			WHERE deployment_id = $1 AND status IN ('pending', 'claimed')
+		)`
+	var exists bool
+	if err := s.db.QueryRowContext(ctx, q, deploymentID).Scan(&exists); err != nil {
+		return false, fmt.Errorf("HasActiveJob: %w", err)
+	}
+	return exists, nil
+}
+
 func (s *RuntimeStore) Create(ctx context.Context, serviceID, deploymentID, serviceName, action string) (model.RuntimeJob, error) {
 	const q = `
 		WITH inserted AS (
@@ -36,20 +49,21 @@ func (s *RuntimeStore) Create(ctx context.Context, serviceID, deploymentID, serv
 func (s *RuntimeStore) ClaimNext(ctx context.Context, workerID string) (model.RuntimeJob, error) {
 	const q = `
 		WITH next_job AS (
-			SELECT id FROM runtime_jobs
-			WHERE status = 'pending'
-			ORDER BY created_at ASC
+			SELECT r.id, e.slug AS environment_slug
+			FROM runtime_jobs r
+			INNER JOIN deployments d ON d.id = r.deployment_id
+			INNER JOIN environments e ON e.id = d.environment_id
+			WHERE r.status = 'pending'
+			ORDER BY r.created_at ASC
 			LIMIT 1
-			FOR UPDATE SKIP LOCKED
+			FOR UPDATE OF r SKIP LOCKED
 		)
 		UPDATE runtime_jobs r
 		SET status = 'claimed', worker_id = $1::uuid, updated_at = NOW()
-		FROM next_job, deployments d, environments e
-		WHERE r.id = next_job.id
-			AND d.id = r.deployment_id
-			AND e.id = d.environment_id
+		FROM next_job nj
+		WHERE r.id = nj.id
 		RETURNING
-			r.id, r.service_id, r.deployment_id, r.service_name, e.slug, r.action, r.status,
+			r.id, r.service_id, r.deployment_id, r.service_name, nj.environment_slug, r.action, r.status,
 			r.worker_id, r.error_message, r.created_at, r.updated_at`
 
 	job, err := scanRuntimeJob(s.db.QueryRowContext(ctx, q, workerID))

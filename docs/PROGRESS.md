@@ -212,7 +212,7 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 - **Deploy** (icon rocket) — dialog pilih environment (dev/staging/prod) lalu create deployment; hanya `admin`/`developer` + service punya `workspace_path`
 - Dialog deployments: badge environment + status; refresh + poll 3s saat job aktif; `onRefreshCatalog` sinkron kolom Deploy di tabel
 - Catalog polling 5s (silent) saat ada service dengan status `pending`/`claimed`/`building`
-- **Stop / Start** (square/play): hanya jika `latest_deployment` = `running` / `stopped`; via runtime job + agent
+- **Stop / Start** (square/play): hanya jika `latest_deployment` = `running` / `stopped`; konfirmasi dialog; via runtime job + agent
 - **AppShell:** sidebar desktop collapse/expand (localStorage); **main content full width** (bukan `max-w-5xl`)
 - Catalog table: kolom Service / Owner / Deploy / Origin / Actions; path workspace truncate CSS
 
@@ -227,7 +227,7 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 - Portal enqueue: `POST /services/{id}/runtime/stop|start` → job `pending`
 - Agent poll `POST /agent/runtime/next` → `docker stop|start` → `PATCH /agent/runtime/{id}` status `done`
 - API saat job `done`: update deployment terkait ke `stopped` atau `running`
-- Portal: tombol Stop (■) / Start (▶) di baris catalog; refresh otomatis setelah aksi
+- Portal: tombol Stop (■) / Start (▶) di baris catalog; **konfirmasi** sebelum enqueue; refresh otomatis setelah aksi
 
 ### Delete container cleanup (R3)
 
@@ -250,7 +250,7 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 - **Layout:** `AppShell` — sidebar collapsible + topbar; main **full width** (`lg:px-8`, tanpa max-width container)
 - **Sidebar sections:** Workspace (Overview), Platform (Catalog, Workers), Administration (Users — admin)
 - **Routes (flat):** `/overview`, `/catalog`, `/worker`, `/users` (admin)
-- **Catalog UX:** daftar + kolom deploy terakhir; Create/Deploy/Stop/Start/Edit/Delete hanya `admin`/`developer`; viewer read-only + History
+- **Catalog UX:** daftar + kolom deploy terakhir; Create/Deploy/Stop/Start (konfirmasi)/Edit/Delete hanya `admin`/`developer`; viewer read-only + History
 - **Users:** admin create, ubah role, disable/enable (konfirmasi), reset password, soft-delete
 - **Workers:** tabel dengan status badge, relative last seen
 - **Overview:** metrik services/workers + panel recent
@@ -310,7 +310,12 @@ docker ps | grep sailorport-
 
 **Known limitation:** `latest_deployment` di catalog masih satu per service (bukan per env); stop/start runtime mengikuti deploy terbaru global — perbaikan opsional berikutnya.
 
-**Debt runtime store:** perbaikan typo SQL di `store/runtime.go` (`deployments`, `COALESCE`, alias CTE).
+### Runtime queue hardening (post-13d)
+
+- `ClaimNext` hanya ambil job dengan deployment masih ada (skip orphan)
+- Migrasi `00012_runtime_jobs_deployment_fk.sql` — bersihkan job orphan + FK `deployment_id` CASCADE
+- `HasActiveJob` — tolak stop/start ganda saat job masih `pending`/`claimed`
+- Portal: konfirmasi AlertDialog sebelum Stop / Start
 
 ### Compose full stack (Step 11)
 

@@ -60,6 +60,11 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [createdPath, setCreatedPath] = useState("");
   const [historyTarget, setHistoryTarget] = useState<Service | null>(null);
   const [deployDialogTarget, setDeployDialogTarget] = useState<Service | null>(null);
+  const [runtimeTarget, setRuntimeTarget] = useState<{
+    service: Service;
+    action: "stop" | "start";
+  } | null>(null);
+  const [runtimePending, setRuntimePending] = useState(false);
 
   async function load(options?: { silent?: boolean }) {
     if (!options?.silent) {
@@ -93,25 +98,32 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     window.setTimeout(() => void load({ silent: true }), 6000);
   }
 
-  async function handleStop(svc: Service) {
+  async function confirmRuntime() {
+    if (!runtimeTarget) return;
+    const { service: svc, action } = runtimeTarget;
+    setRuntimePending(true);
     setListError("");
     try {
-      await stopService(svc.id);
-      toast(`Stopping "${svc.name}"…`);
+      if (action === "stop") {
+        await stopService(svc.id);
+        toast(`Stopping "${svc.name}"…`);
+      } else {
+        await startService(svc.id);
+        toast(`Starting "${svc.name}"…`);
+      }
+      setRuntimeTarget(null);
       refreshAfterRuntime();
     } catch (err) {
-      setListError(err instanceof Error ? err.message : "Failed to stop service");
-    }
-  }
-
-  async function handleStart(svc: Service) {
-    setListError("");
-    try {
-      await startService(svc.id);
-      toast(`Starting "${svc.name}"…`);
-      refreshAfterRuntime();
-    } catch (err) {
-      setListError(err instanceof Error ? err.message : "Failed to start service");
+      setListError(
+        err instanceof Error
+          ? err.message
+          : action === "stop"
+            ? "Failed to stop service"
+            : "Failed to start service",
+      );
+      setRuntimeTarget(null);
+    } finally {
+      setRuntimePending(false);
     }
   }
 
@@ -269,8 +281,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         onDelete={setDeleteTarget}
         onDeploy={setDeployDialogTarget}
         onOpenHistory={openHistory}
-        onStop={(svc) => void handleStop(svc)}
-        onStart={(svc) => void handleStart(svc)}
+        onStop={(svc) => setRuntimeTarget({ service: svc, action: "stop" })}
+        onStart={(svc) => setRuntimeTarget({ service: svc, action: "start" })}
         onCreate={canWrite ? startCreate : undefined}
       />
 
@@ -424,6 +436,87 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               onClick={() => void confirmDelete()}
             >
               {deleting ? "Deleting…" : "Delete"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={runtimeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !runtimePending) setRuntimeTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {runtimeTarget?.action === "stop" ? "Stop service?" : "Start service?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {runtimeTarget?.action === "stop" ? (
+                <>
+                  This stops the running container for{" "}
+                  <span className="font-medium text-foreground">
+                    {runtimeTarget.service.name}
+                  </span>
+                  {runtimeTarget.service.latest_deployment?.environment_slug ? (
+                    <>
+                      {" "}
+                      in{" "}
+                      <span className="font-mono text-[12px]">
+                        {runtimeTarget.service.latest_deployment.environment_slug}
+                      </span>
+                    </>
+                  ) : null}
+                  . The deployment stays registered; use Start to bring it back.
+                </>
+              ) : (
+                <>
+                  This starts the container for{" "}
+                  <span className="font-medium text-foreground">
+                    {runtimeTarget?.service.name}
+                  </span>
+                  {runtimeTarget?.service.latest_deployment?.environment_slug ? (
+                    <>
+                      {" "}
+                      in{" "}
+                      <span className="font-mono text-[12px]">
+                        {runtimeTarget.service.latest_deployment.environment_slug}
+                      </span>
+                    </>
+                  ) : null}
+                  .
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[13px]"
+                  disabled={runtimePending}
+                />
+              }
+            >
+              Cancel
+            </AlertDialogClose>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 text-[13px]"
+              disabled={runtimePending}
+              onClick={() => void confirmRuntime()}
+            >
+              {runtimePending
+                ? runtimeTarget?.action === "stop"
+                  ? "Stopping…"
+                  : "Starting…"
+                : runtimeTarget?.action === "stop"
+                  ? "Stop"
+                  : "Start"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

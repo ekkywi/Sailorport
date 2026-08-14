@@ -83,7 +83,7 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 		return nil
 	}
 
-	log.Printf("claimed job id=%s service=%s path=%s", job.ID, job.ServiceName, job.EnvironmentSlug, job.WorkspacePath)
+	log.Printf("claimed job id=%s service=%s env=%s path=%s", job.ID, job.ServiceName, job.EnvironmentSlug, job.WorkspacePath)
 
 	_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{Status: "building"})
 

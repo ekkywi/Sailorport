@@ -52,6 +52,14 @@ func (r *Runtime) enqueue(ctx context.Context, serviceID, action, requiredStatus
 		return model.RuntimeJob{}, fmt.Errorf("%w: deployment must be %s (current: %s)", ErrInvalid, requiredStatus, latest.Status)
 	}
 
+	busy, err := r.store.HasActiveJob(ctx, latest.ID)
+	if err != nil {
+		return model.RuntimeJob{}, err
+	}
+	if busy {
+		return model.RuntimeJob{}, fmt.Errorf("%w: runtime job already in progress for this deployment", ErrInvalid)
+	}
+
 	job, err := r.store.Create(ctx, serviceID, latest.ID, svc.Name, action)
 	if err != nil {
 		return model.RuntimeJob{}, fmt.Errorf("enqueue runtime job: %w", err)

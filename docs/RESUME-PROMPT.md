@@ -30,7 +30,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Environments: `GET /api/v1/environments`; portal Deploy dialog pilih dev/staging/prod; history + catalog tampilkan `environment_slug`
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
-- Catalog: kolom Deploy menampilkan `latest_deployment` + badge environment; rocket = dialog deploy (pilih env), jam = history; square/play = stop/start runtime
+- Catalog: kolom Deploy menampilkan `latest_deployment` + badge environment; rocket = dialog deploy (pilih env), jam = history; square/play = stop/start runtime (**konfirmasi**)
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
