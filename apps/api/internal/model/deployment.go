@@ -3,19 +3,22 @@ package model
 import "time"
 
 type Deployment struct {
-	ID           string    `json:"id"`
-	ServiceID    string    `json:"service_id"`
-	WorkerID     *string   `json:"worker_id"`
-	Status       string    `json:"status"`
-	ImageTag     string    `json:"image_tag"`
-	ContainerID  string    `json:"container_id"`
-	Port         *int      `json:"port"`
-	ErrorMessage string    `json:"error_message"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID              string    `json:"id"`
+	ServiceID       string    `json:"service_id"`
+	EnvironmentID   string    `json:"environment_id"`
+	EnvironmentSlug string    `json:"environment_slug"`
+	WorkerID        *string   `json:"worker_id"`
+	Status          string    `json:"status"`
+	ImageTag        string    `json:"image_tag"`
+	ContainerID     string    `json:"container_id"`
+	Port            *int      `json:"port"`
+	ErrorMessage    string    `json:"error_message"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
-
-type CreateDeploymentRequest struct{}
+type CreateDeploymentRequest struct {
+	Environment string `json:"environment"`
+}
 
 type UpdateDeploymentRequest struct {
 	Status       string `json:"status"`

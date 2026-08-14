@@ -1,6 +1,8 @@
 export type Deployment = {
     id: string;
     service_id: string;
+    environment_id: string;
+    environment_slug: string;
     worker_id: string;
     status: string;
     image_tag: string;

@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -21,7 +22,15 @@ func NewDeploymentsHandler(d *service.Deployments) *DeploymentsHandler {
 
 func (h *DeploymentsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	serviceID := r.PathValue("id")
-	out, err := h.deployments.Create(r.Context(), serviceID)
+
+	var req model.CreateDeploymentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	defer r.Body.Close()
+
+	out, err := h.deployments.Create(r.Context(), serviceID, req)
 	if err != nil {
 		writeDeploymentError(w, "Create deployment", err)
 		return

@@ -1,6 +1,8 @@
 export type LatestDeployment = {
   id: string;
   service_id: string;
+  environment_id?: string;
+  environment_slug?: string;
   status: string;
   port: number | null;
   error_message: string;

@@ -3,6 +3,7 @@ import { ExternalLink, RefreshCw } from "lucide-react";
 import {
   EmptyState,
   ErrorBanner,
+  EnvironmentBadge,
   StatusBadge,
   formatRelativeTime,
 } from "@/components/app";
@@ -164,6 +165,7 @@ export function DeploymentsDialog({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
+                      <EnvironmentBadge slug={d.environment_slug} />
                       <StatusBadge
                         status={d.status}
                         className={deployBadgeClass(d.status)}

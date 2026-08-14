@@ -23,12 +23,14 @@ type APIClient struct {
 }
 
 type DeploymentJob struct {
-	ID            string  `json:"id"`
-	ServiceID     string  `json:"service_id"`
-	WorkerID      *string `json:"worker_id"`
-	Status        string  `json:"status"`
-	ServiceName   string  `json:"service_name"`
-	WorkspacePath string  `json:"workspace_path"`
+	ID              string  `json:"id"`
+	ServiceID       string  `json:"service_id"`
+	EnvironmentID   string  `json:"environment_id"`
+	EnvironmentSlug string  `json:"environment_slug"`
+	WorkerID        *string `json:"worker_id"`
+	Status          string  `json:"status"`
+	ServiceName     string  `json:"service_name"`
+	WorkspacePath   string  `json:"workspace_path"`
 }
 
 type UpdateDeploymentRequest struct {
@@ -40,12 +42,13 @@ type UpdateDeploymentRequest struct {
 }
 
 type RuntimeJob struct {
-	ID           string `json:"id"`
-	ServiceID    string `json:"service_id"`
-	DeploymentID string `json:"deployment_id"`
-	ServiceName  string `json:"service_name"`
-	Action       string `json:"action"`
-	Status       string `json:"status"`
+	ID              string `json:"id"`
+	ServiceID       string `json:"service_id"`
+	DeploymentID    string `json:"deployment_id"`
+	ServiceName     string `json:"service_name"`
+	EnvironmentSlug string `json:"environment_slug"`
+	Action          string `json:"action"`
+	Status          string `json:"status"`
 }
 
 type UpdateRuntimeRequest struct {

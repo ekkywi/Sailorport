@@ -30,7 +30,7 @@ import {
 import { ServiceForm } from "./ServiceForm";
 import { ServiceList } from "./ServiceList";
 import type { Service, ServiceFormValues } from "./types";
-import { createDeployment } from "../deployments/api";
+import { DeployDialog } from "../deployments/DeployDialog";
 import { DeploymentsDialog } from "../deployments/DeploymentsDialog";
 import { startService, stopService } from "../runtime/api";
 import type { AuthUser } from "@/features/auth/types";
@@ -58,8 +58,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [dialog, setDialog] = useState<DialogMode>("none");
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
   const [createdPath, setCreatedPath] = useState("");
-  const [deployTarget, setDeployTarget] = useState<Service | null>(null);
-  const [, setDeploying] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<Service | null>(null);
+  const [deployDialogTarget, setDeployDialogTarget] = useState<Service | null>(null);
 
   async function load(options?: { silent?: boolean }) {
     if (!options?.silent) {
@@ -77,23 +77,14 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     }
   }
 
-  async function startDeploy(svc: Service) {
-    setDeploying(true);
-    setListError("");
-    try {
-      await createDeployment(svc.id);
-      toast(`Deploy started for "${svc.name}"`);
-      setDeployTarget(svc);
-      await load();
-    } catch (err) {
-      setListError(err instanceof Error ? err.message : "Failed to deploy");
-    } finally {
-      setDeploying(false);
-    }
+  function openHistory(svc: Service) {
+    setHistoryTarget(svc);
   }
 
-  function openHistory(svc: Service) {
-    setDeployTarget(svc);
+  function handleDeployed(svc: Service, environment: string) {
+    toast(`Deploy to ${environment} started for "${svc.name}"`);
+    setHistoryTarget(svc);
+    void load();
   }
 
   function refreshAfterRuntime() {
@@ -276,7 +267,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         canWrite={canWrite}
         onEdit={startEdit}
         onDelete={setDeleteTarget}
-        onDeploy={(svc) => void startDeploy(svc)}
+        onDeploy={setDeployDialogTarget}
         onOpenHistory={openHistory}
         onStop={(svc) => void handleStop(svc)}
         onStart={(svc) => void handleStart(svc)}
@@ -401,6 +392,9 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                   A cleanup job will also remove the Docker container{" "}
                   <span className="font-mono text-[12px]">
                     sailorport-{deleteTarget.name}
+                    {deleteTarget.latest_deployment.environment_slug
+                      ? `-${deleteTarget.latest_deployment.environment_slug}`
+                      : ""}
                   </span>{" "}
                   on the agent node.
                 </>
@@ -434,12 +428,20 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <DeploymentsDialog
-        open={deployTarget !== null}
-        serviceId={deployTarget?.id ?? null}
-        serviceName={deployTarget?.name ?? ""}
+      <DeployDialog
+        service={deployDialogTarget}
+        open={deployDialogTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setDeployTarget(null);
+          if (!open) setDeployDialogTarget(null);
+        }}
+        onDeployed={handleDeployed}
+      />
+      <DeploymentsDialog
+        open={historyTarget !== null}
+        serviceId={historyTarget?.id ?? null}
+        serviceName={historyTarget?.name ?? ""}
+        onOpenChange={(open) => {
+          if (!open) setHistoryTarget(null);
         }}
         onRefreshCatalog={() => void load({ silent: true })}
       />

@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** R4 — multi-port deploy (agent alokasi host port unik)
-- **Step berikutnya:** Environments (dev/staging/prod); opsional logs
-- **Terakhir dikerjakan:** 2026-08-14 — agent pilih port bebas di rentang PortBase; reuse jika container service sudah ada
+- **Step selesai:** 13d — Environments portal UI (dropdown deploy + tampil slug)
+- **Step berikutnya:** Opsional — runtime/stop-start per environment; logs; multi-agent targeting
+- **Terakhir dikerjakan:** 2026-08-14 — deploy ke dev/staging/prod dari portal; container name `sailorport-{service}-{env}`
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -41,7 +41,7 @@
 - [x] R2 — runtime controls (stop/start via agent job + portal UI)
 - [x] R3 Delete cleanup — stop/rm container saat hapus service
 - [x] R4 — multi-port deploy (port unik per container di host agent)
-- [ ] Environments (dev/staging/prod)
+- [x] Environments (dev/staging/prod) — 13a–13d
 
 ## Yang sudah jalan
 
@@ -87,7 +87,8 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `POST /api/v1/workers/register` | agent token | agent register |
 | `POST /api/v1/workers/{id}/heartbeat` | agent token | agent heartbeat |
 | `GET /api/v1/workers` | viewer+ | list workers (portal) |
-| `POST /api/v1/services/{id}/deployments` | developer+ | buat deploy (`pending`); service harus punya `workspace_path` |
+| `GET /api/v1/environments` | viewer+ | list environment (dev/staging/prod) |
+| `POST /api/v1/services/{id}/deployments` | developer+ | buat deploy (`pending`); body `{"environment":"staging"}` (default `dev`); service harus punya `workspace_path` |
 | `GET /api/v1/services/{id}/deployments` | viewer+ | list per service |
 | `GET /api/v1/deployments` | viewer+ | list semua |
 | `GET /api/v1/deployments/{id}` | viewer+ | detail |
@@ -205,11 +206,11 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 
 ### Portal Deploy UI (10C.3 + R0)
 
-- Feature: `apps/web/src/features/deployments/` (`types`, `api`, `DeploymentsDialog`)
-- Catalog kolom **Deploy**: badge status deploy terakhir (`latest_deployment`), waktu relatif, link `:port/healthz` jika `running`
+- Feature: `apps/web/src/features/deployments/` (`types`, `api`, `DeployDialog`, `DeploymentsDialog`); `features/environments/` untuk list env
+- Catalog kolom **Deploy**: badge environment + status deploy terakhir (`latest_deployment`), waktu relatif, link `:port/healthz` jika `running`
 - **History** (icon jam) — buka dialog deployments tanpa membuat job baru (semua role)
-- **Deploy** (icon rocket) — create deployment baru; hanya `admin`/`developer` + service punya `workspace_path`
-- Dialog deployments: refresh + poll 3s saat job aktif; `onRefreshCatalog` sinkron kolom Deploy di tabel
+- **Deploy** (icon rocket) — dialog pilih environment (dev/staging/prod) lalu create deployment; hanya `admin`/`developer` + service punya `workspace_path`
+- Dialog deployments: badge environment + status; refresh + poll 3s saat job aktif; `onRefreshCatalog` sinkron kolom Deploy di tabel
 - Catalog polling 5s (silent) saat ada service dengan status `pending`/`claimed`/`building`
 - **Stop / Start** (square/play): hanya jika `latest_deployment` = `running` / `stopped`; via runtime job + agent
 - **AppShell:** sidebar desktop collapse/expand (localStorage); **main content full width** (bukan `max-w-5xl`)
@@ -277,10 +278,39 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 ### Multi-port deploy (R4)
 
 - Port unik **per Docker host** (bukan global fleet) — agent yang memilih
-- Redeploy service yang sama: reuse port container `sailorport-{name}` jika masih ada
-- Service baru: port berikutnya yang tidak dipakai mapping `sailorport-*` dan tidak listen di host
+- Redeploy service **environment yang sama**: reuse port container `sailorport-{name}-{env}` jika masih ada
+- Service/environment baru: port berikutnya yang tidak dipakai mapping `sailorport-*` dan tidak listen di host
 - Pool habis → job `failed` dengan pesan rentang port
 - Catalog sudah menampilkan `latest_deployment.port`
+
+### Environments (13a–13d)
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 13a Migrasi + API | ✅ | `00010_create_environments.sql` seed dev/staging/prod; `GET /api/v1/environments` |
+| 13b Deploy bound | ✅ | `00011_deployments_environment.sql`; create deploy dengan `environment` slug (default dev) |
+| 13c Agent container | ✅ | `ContainerName(service, env)` → `sailorport-{service}-{env}`; runtime job bawa `environment_slug` |
+| 13d Portal UI | ✅ | dialog Deploy pilih environment; badge slug di catalog + history deployments |
+
+**Test deploy multi-env:**
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@sailorport.com","password":"changeme"}' | jq -r .token)
+
+curl -s -X POST "http://localhost:8080/api/v1/services/SERVICE_ID/deployments" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"environment":"staging"}' | jq .
+
+docker ps | grep sailorport-
+# expect sailorport-{name}-dev and sailorport-{name}-staging on different ports
+```
+
+**Known limitation:** `latest_deployment` di catalog masih satu per service (bukan per env); stop/start runtime mengikuti deploy terbaru global — perbaikan opsional berikutnya.
+
+**Debt runtime store:** perbaikan typo SQL di `store/runtime.go` (`deployments`, `COALESCE`, alias CTE).
 
 ### Compose full stack (Step 11)
 
@@ -293,7 +323,7 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
 ## Next action
 
-1. Environments (dev/staging/prod)
+1. Opsional: runtime stop/start per environment (bukan latest global)
 2. Opsional: container logs; multi-agent targeting (job prod → worker prod)
 
 ## Cara lanjut di mesin lain

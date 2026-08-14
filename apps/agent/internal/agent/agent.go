@@ -83,12 +83,12 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 		return nil
 	}
 
-	log.Printf("claimed job id=%s service=%s path=%s", job.ID, job.ServiceName, job.WorkspacePath)
+	log.Printf("claimed job id=%s service=%s path=%s", job.ID, job.ServiceName, job.EnvironmentSlug, job.WorkspacePath)
 
 	_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{Status: "building"})
 
 	imageTag := fmt.Sprintf("sailorport/%s:%s", job.ServiceName, job.ID[:8])
-	containerName := docker.ContainerName(job.ServiceName)
+	containerName := docker.ContainerName(job.ServiceName, job.EnvironmentSlug)
 	port, err := docker.AllocateHostPort(containerName, a.cfg.PortBase, a.cfg.PortCount)
 	if err != nil {
 		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
@@ -130,8 +130,8 @@ func (a *Agent) handleRuntime(workerID string) error {
 		return nil
 	}
 
-	containerName := docker.ContainerName(job.ServiceName)
-	log.Printf("runtime job id=%s action=%s container=%s", job.ID, job.Action, containerName)
+	containerName := docker.ContainerName(job.ServiceName, job.EnvironmentSlug)
+	log.Printf("runtime job id=%s action=%s env=%s container=%s", job.ID, job.Action, job.EnvironmentSlug, containerName)
 
 	var runErr error
 	switch job.Action {

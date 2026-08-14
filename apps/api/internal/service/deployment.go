@@ -13,14 +13,15 @@ import (
 
 type Deployments struct {
 	store   *store.DeploymentsStore
+	envs    *store.EnvironmentsStore
 	catalog *Catalog
 }
 
-func NewDeployments(s *store.DeploymentsStore, catalog *Catalog) *Deployments {
-	return &Deployments{store: s, catalog: catalog}
+func NewDeployments(s *store.DeploymentsStore, envs *store.EnvironmentsStore, catalog *Catalog) *Deployments {
+	return &Deployments{store: s, envs: envs, catalog: catalog}
 }
 
-func (d *Deployments) Create(ctx context.Context, serviceID string) (model.Deployment, error) {
+func (d *Deployments) Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest) (model.Deployment, error) {
 	serviceID = strings.TrimSpace(serviceID)
 	if serviceID == "" {
 		return model.Deployment{}, fmt.Errorf("%w: service_id is required", ErrInvalid)
@@ -34,7 +35,20 @@ func (d *Deployments) Create(ctx context.Context, serviceID string) (model.Deplo
 		return model.Deployment{}, fmt.Errorf("%w: service has no workspace (scaffold first)", ErrInvalid)
 	}
 
-	out, err := d.store.Create(ctx, serviceID)
+	slug := strings.ToLower(strings.TrimSpace(req.Environment))
+	if slug == "" {
+		slug = "dev"
+	}
+
+	env, err := d.envs.GetBySlug(ctx, slug)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return model.Deployment{}, fmt.Errorf("%w: unknown environment %q", ErrInvalid, slug)
+		}
+		return model.Deployment{}, err
+	}
+
+	out, err := d.store.Create(ctx, serviceID, env.ID)
 	if err != nil {
 		return model.Deployment{}, fmt.Errorf("Create deployment: %w", err)
 	}

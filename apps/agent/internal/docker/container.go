@@ -6,8 +6,11 @@ import (
 	"strings"
 )
 
-func ContainerName(serviceName string) string {
-	return "sailorport-" + serviceName
+func ContainerName(serviceName, envSlug string) string {
+	if envSlug == "" {
+		envSlug = "dev"
+	}
+	return "sailorport-" + serviceName + "-" + envSlug
 }
 
 func runDocker(args ...string) ([]byte, error) {

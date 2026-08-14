@@ -2,11 +2,12 @@ import { apiFetch, readErrorMessage } from "../../lib/http";
 import type { Deployment } from "./types";
 
 export async function createDeployment(
-    serviceId: string
+    serviceId: string,
+    environment = "dev",
 ): Promise<Deployment> {
     const res = await apiFetch(`/api/v1/services/${serviceId}/deployments`, {
         method: "POST",
-        body: "{}",
+        body: JSON.stringify({ environment }),
     });
     if (!res.ok) {
         throw new Error (

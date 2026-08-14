@@ -7,16 +7,17 @@ import (
 )
 
 type API struct {
-	Version     string
-	JWTSecret   string
-	Catalog     *service.Catalog
-	Scaffold    *service.Scaffold
-	Auth        *service.Auth
-	Users       *service.Users
-	Workers     *service.Workers
-	Deployments *service.Deployments
-	Runtime     *service.Runtime
-	AgentToken  string
+	Version      string
+	JWTSecret    string
+	Catalog      *service.Catalog
+	Scaffold     *service.Scaffold
+	Auth         *service.Auth
+	Users        *service.Users
+	Workers      *service.Workers
+	Deployments  *service.Deployments
+	Runtime      *service.Runtime
+	AgentToken   string
+	Environments *service.Environments
 }
 
 func NewRouter(api API) http.Handler {
@@ -31,6 +32,7 @@ func NewRouter(api API) http.Handler {
 	workersH := NewWorkersHandler(api.Workers)
 	deploymentsH := NewDeploymentsHandler(api.Deployments)
 	runtimeH := NewRuntimeHandler(api.Runtime)
+	envsH := NewEnvironmentsHandler(api.Environments)
 
 	writer := []string{"developer", "admin"}
 	reader := []string{"viewer", "developer", "admin"}
@@ -61,6 +63,8 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("POST /api/v1/workers/register", withAgentToken(token, workersH.Register))
 	mux.Handle("POST /api/v1/workers/{id}/heartbeat", withAgentToken(token, workersH.Heartbeat))
 	mux.Handle("GET /api/v1/workers", withRole(secret, reader, workersH.List))
+
+	mux.Handle("GET /api/v1/environments", withRole(secret, reader, envsH.List))
 
 	mux.Handle("POST /api/v1/services/{id}/deployments", withRole(secret, writer, deploymentsH.Create))
 	mux.Handle("GET /api/v1/services/{id}/deployments", withRole(secret, reader, deploymentsH.ListByService))

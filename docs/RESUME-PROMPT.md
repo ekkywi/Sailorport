@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** R4 — multi-port deploy (agent alokasi host port unik di rentang `SAILORPORT_DEPLOY_PORT_BASE` + count; reuse saat redeploy).
+**Step terakhir selesai:** 13d — Environments (API + deploy bound + agent container per env + portal UI).
 
-**Step berikutnya:** Environments (dev/staging/prod); opsional logs / multi-agent targeting.
+**Step berikutnya:** Opsional — runtime per environment; logs; multi-agent targeting.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -26,14 +26,15 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue container cleanup (`remove`) jika pernah deploy
 - Admin Users: list, change role, create, disable/enable (konfirmasi), reset password, **soft-delete** (rename email + `deleted_at`); belum email SMTP
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
-- Deploy: host port unik per container di mesin agent (`SAILORPORT_DEPLOY_PORT_BASE` + `SAILORPORT_DEPLOY_PORT_COUNT`); hasil di `deployments.port`
+- Deploy: host port unik per container di mesin agent; container name `sailorport-{service}-{env}`; body deploy `{"environment":"staging"}` (default dev)
+- Environments: `GET /api/v1/environments`; portal Deploy dialog pilih dev/staging/prod; history + catalog tampilkan `environment_slug`
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
-- Catalog: kolom Deploy menampilkan `latest_deployment`; rocket = deploy baru, jam = history; square/play = stop/start runtime
+- Catalog: kolom Deploy menampilkan `latest_deployment` + badge environment; rocket = dialog deploy (pilih env), jam = history; square/play = stop/start runtime
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan Environments (dev/staging/prod) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan step opsional berikutnya (runtime per env, logs, atau multi-agent targeting) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

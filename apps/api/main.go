@@ -53,7 +53,9 @@ func main() {
 	usersSvc := service.NewUsers(usersStore)
 	workersStore := store.NewWorkersStore(sqlDB)
 	workersSvc := service.NewWorkers(workersStore)
-	deploymentsSvc := service.NewDeployments(deploymentsStore, catalog)
+	envsStore := store.NewEnvironmentsStore(sqlDB)
+	envsSvc := service.NewEnvironments(envsStore)
+	deploymentsSvc := service.NewDeployments(deploymentsStore, envsStore, catalog)
 	runtimeStore := store.NewRuntimeStore(sqlDB)
 	runtimeSvc := service.NewRuntime(runtimeStore, deploymentsSvc, catalog)
 	catalog.SetCleanupEnqueue(runtimeSvc)
@@ -68,6 +70,7 @@ func main() {
 		Workers:     workersSvc,
 		Deployments: deploymentsSvc,
 		Runtime:     runtimeSvc,
+		Environments: envsSvc,
 		AgentToken:  cfg.AgentToken,
 	})
 

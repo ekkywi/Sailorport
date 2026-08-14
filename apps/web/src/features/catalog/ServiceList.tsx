@@ -2,6 +2,7 @@ import { Boxes, FolderGit2, History, Pencil, Play, Rocket, Square, Trash2 } from
 import {
   DataPanel,
   EmptyState,
+  EnvironmentBadge,
   StatusBadge,
   formatRelativeTime,
   truncateMiddle,
@@ -67,7 +68,12 @@ function LatestDeployCell({
         onClick={() => onOpenHistory(svc)}
         title="View deployment history"
       >
-        <StatusBadge status={d.status} className={deployBadgeClass(d.status)} />
+        <div className="flex flex-wrap items-center gap-1.5">
+          {d.environment_slug ? (
+            <EnvironmentBadge slug={d.environment_slug} />
+          ) : null}
+          <StatusBadge status={d.status} className={deployBadgeClass(d.status)} />
+        </div>
       </button>
       <span className="text-[11px] text-muted-foreground">
         {formatRelativeTime(d.updated_at)}

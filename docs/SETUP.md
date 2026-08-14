@@ -144,7 +144,7 @@ Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar (col
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
-Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** + **Stop/Start** runtime + **History** / **Deploy** terpisah (dialog deployments; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin: create, role, disable/enable, reset password). Layout app shell **full width** untuk tabel dan data padat.
+Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** (badge environment) + dialog **Deploy** pilih dev/staging/prod + **Stop/Start** runtime + **History** / **Deploy** terpisah (dialog deployments; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin: create, role, disable/enable, reset password). Layout app shell **full width** untuk tabel dan data padat.
 
 ## Admin user & user management (Step 12a + 12b)
 
@@ -226,9 +226,11 @@ TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"you@example.com","password":"yourpass"}' | jq -r .token)
 
-# 2. Buat deployment pending (ganti SERVICE_ID)
+# 2. Buat deployment pending (ganti SERVICE_ID; environment opsional, default dev)
 curl -X POST "http://localhost:8080/api/v1/services/SERVICE_ID/deployments" \
-  -H "Authorization: Bearer $TOKEN"
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"environment":"staging"}'
 
 # 3. Agent poll → build → run; cek health di port yang tertulis di deployment
 curl http://localhost:18080/healthz   # service pertama; service berikutnya 18081, dst.
