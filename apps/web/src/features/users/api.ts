@@ -61,3 +61,14 @@ export async function resetUserPassword(
     );
   }
 }
+
+export async function deleteUser(id: string): Promise<void> {
+  const res = await apiFetch(`/api/v1/users/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error(
+      await readErrorMessage(res, `Failed to delete user: ${res.status}`),
+    );
+  }
+}

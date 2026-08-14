@@ -4,11 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 12e — admin reset password
-- **Step berikutnya:** **12f lanjut Step 5** — HTTP `DELETE /api/v1/users/{id}` + router; lalu Step 6 portal Delete UI
-- **Sedang dikerjakan:** 12f — soft-delete user (Steps 1–4 selesai; handler + UI belum)
-- **Terakhir dikerjakan:** 2026-08-13 — soft-delete store + service; fix flicker DeploymentsDialog
-- **Mesin terakhir:** kantor / lokal
+- **Step selesai:** 12f — soft-delete user (API + portal)
+- **Step berikutnya:** Environments (dev/staging/prod); opsional logs / multi-port
+- **Terakhir dikerjakan:** 2026-08-14 — DELETE /users/{id} + portal Delete; konfirmasi Enable
+- **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
 
@@ -35,7 +34,7 @@
 - [x] Step 12c — Admin create user (temporary password / invite-style MVP)
 - [x] Step 12d — Admin disable / enable user (blokir login)
 - [x] Step 12e — Admin reset password (temporary password)
-- [ ] Step 12f — Soft-delete user (rename email + `deleted_at`) — **WIP: store + service selesai**
+- [x] Step 12f — Soft-delete user (rename email + `deleted_at`)
 - [x] Harden — agent token (register/heartbeat/claim/update)
 - [x] R0 — latest deploy di catalog (API `latest_deployment` + kolom Deploy di portal)
 - [x] R1 — agent docker helpers (`Stop` / `Start` / `Remove`)
@@ -81,6 +80,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `POST /api/v1/users` | admin | create user (email, name, password, role) |
 | `PATCH /api/v1/users/{id}` | admin | ubah `role` **atau** `disabled` (bukan keduanya sekaligus); tidak boleh ubah role/disable diri sendiri; id harus UUID |
 | `POST /api/v1/users/{id}/password` | admin | set temporary password baru; tidak boleh reset password diri sendiri → **204** |
+| `DELETE /api/v1/users/{id}` | admin | soft-delete (rename email + `deleted_at`); tidak boleh hapus diri sendiri → **204** |
 | `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD; `GET` list menyertakan `latest_deployment` per service |
 | `GET /api/v1/templates`, `POST /api/v1/scaffold` | viewer+ / developer+ | golden path |
 | `POST /api/v1/workers/register` | agent token | agent register |
@@ -124,7 +124,7 @@ docker exec -it sailorport-postgres psql -U sailorport -d sailorport \
 
 Login ulang agar JWT berisi role baru.
 
-### Soft-delete user (12f — WIP)
+### Soft-delete user (12f)
 
 Desain: soft delete (bukan `DELETE FROM`); rename email agar UNIQUE bebas; filter `deleted_at IS NULL`; no self-delete.
 
@@ -132,41 +132,37 @@ Desain: soft delete (bukan `DELETE FROM`); rename email agar UNIQUE bebas; filte
 |----------|--------|-----|
 | 1 Migrasi | ✅ | `00009_add_users_deleted_at.sql` — kolom `deleted_at TIMESTAMPTZ` + index |
 | 2 Model | ✅ | `User.DeletedAt *time.Time` |
-| 3 Store | ✅ | `scanUser` + `deleted_at`; filter aktif di Get/List/Update*; `GetByEmail` filter; `SoftDelete` rename `email \|\| '__deleted__' \|\| id` + `disabled=true` |
-| 4 Service | ✅ | `Users.SoftDelete(actor, target)` — validasi UUID, no self-delete → `ErrForbidden` |
-| 4c Auth | skip | Login/me sudah aman via store filter (`GetByEmail` / `GetByID` + `deleted_at IS NULL`) |
-| 5 Handler | ⏳ | `DELETE /api/v1/users/{id}` → 204; admin only; pola mirip `ResetPassword` |
-| 6 Portal | ⏳ | Tombol Delete + konfirmasi di `/users` |
-
-**Belum ada route HTTP** — service sudah bisa dipanggil dari handler.
-
-Test manual setelah Step 5:
+| 3 Store | ✅ | filter aktif + `SoftDelete` rename `email \|\| '__deleted__' \|\| id` + `disabled=true` |
+| 4 Service | ✅ | `Users.SoftDelete` — UUID + no self-delete |
+| 5 Handler | ✅ | `DELETE /api/v1/users/{id}` → **204** (admin) |
+| 6 Portal | ✅ | tombol Delete + konfirmasi; Enable juga pakai konfirmasi |
 
 ```bash
-# admin token
 curl -X DELETE http://localhost:8080/api/v1/users/{id} \
   -H "Authorization: Bearer $TOKEN" -w '\n%{http_code}\n'
 # sukses → 204; self-delete → 403; id tidak ada → 404
 ```
 
-### User management API (12a + 12c + 12d + 12e)
+### User management API (12a + 12c + 12d + 12e + 12f)
 
 - Lapisan: `store/user` → `service/users` → `handler/user`
 - Migrasi `00008_add_users_disabled.sql` — kolom `users.disabled BOOLEAN NOT NULL DEFAULT false`
-- `GET /api/v1/users` — admin only (response termasuk `disabled`)
+- Migrasi `00009_add_users_deleted_at.sql` — kolom `users.deleted_at`
+- `GET /api/v1/users` — admin only (response termasuk `disabled`; hanya `deleted_at IS NULL`)
 - `POST /api/v1/users` body `{email,name,password,role}` — admin only; role boleh `admin`/`developer`/`viewer`; email unik → **409**
 - `PATCH /api/v1/users/{id}` — admin only; body `{"role":"..."}` **atau** `{"disabled":true|false}` (bukan keduanya); self-change → **403**; id non-UUID → **400**
 - `POST /api/v1/users/{id}/password` body `{"password":"..."}` — admin only; min 8 chars; self-reset → **403**; sukses → **204**
-- Login / `me`: akun `disabled` → **401**
+- `DELETE /api/v1/users/{id}` — admin only; soft-delete; self-delete → **403**; sukses → **204**
+- Login / `me`: akun `disabled` → **401**; soft-deleted tidak ketemu (store filter)
 - Invite-style MVP: admin set / reset temporary password, bagikan manual (belum email SMTP)
 
-### Portal users UI + catalog RBAC (12b + 12c + 12d + 12e)
+### Portal users UI + catalog RBAC (12b + 12c + 12d + 12e + 12f)
 
 - Feature: `apps/web/src/features/users/` (`type`, `api`, `UsersPage`)
 - Helper RBAC: `apps/web/src/lib/rbac.ts` — `isAdmin()`, `canWriteCatalog()`
 - Route `/users` + guard admin; non-admin → `/overview`
 - Sidebar: sections Workspace / Platform / Administration; **Users** hanya admin
-- `UsersPage`: tabel user, dropdown role, status active/disabled, **Create user**, **Reset password**, **Disable** (konfirmasi) / **Enable**; baris diri sendiri = badge + “You”
+- `UsersPage`: tabel user, dropdown role, status active/disabled, **Create user**, **Reset password**, **Disable** / **Enable** (keduanya konfirmasi), **Delete** (soft-delete + konfirmasi); baris diri sendiri = badge + “You”
 - Catalog: `canWriteCatalog` — viewer tanpa Create / Deploy / Edit / Delete (desktop + mobile)
 
 ### Agent token (Harden)
@@ -250,7 +246,7 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 - **Sidebar sections:** Workspace (Overview), Platform (Catalog, Workers), Administration (Users — admin)
 - **Routes (flat):** `/overview`, `/catalog`, `/worker`, `/users` (admin)
 - **Catalog UX:** daftar + kolom deploy terakhir; Create/Deploy/Stop/Start/Edit/Delete hanya `admin`/`developer`; viewer read-only + History
-- **Users:** admin create, ubah role, disable/enable, reset password (`admin` | `developer` | `viewer`)
+- **Users:** admin create, ubah role, disable/enable (konfirmasi), reset password, soft-delete
 - **Workers:** tabel dengan status badge, relative last seen
 - **Overview:** metrik services/workers + panel recent
 - **Shared:** `src/components/app/` (DataPanel, Toolbar, EmptyState, …)
@@ -285,9 +281,8 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 
 ## Next action
 
-1. **12f Step 5** — `UsersHandler.Delete` + route `DELETE /api/v1/users/{id}` (admin) di `handler/router.go`
-2. **12f Step 6** — portal: tombol Delete + konfirmasi di `UsersPage`
-3. Setelah 12f selesai: Environments (dev/staging/prod); opsional logs / multi-port deploy
+1. Environments (dev/staging/prod)
+2. Opsional: container logs; multi-port deploy
 
 ## Cara lanjut di mesin lain
 

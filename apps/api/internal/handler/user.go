@@ -120,6 +120,25 @@ func (h *UsersHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	writeNoContent(w)
 }
 
+func (h *UsersHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	err := h.users.SoftDelete(
+		r.Context(),
+		claims.UserID,
+		r.PathValue("id"),
+	)
+	if err != nil {
+		writeUserError(w, "delete user", err)
+		return
+	}
+	writeNoContent(w)
+}
+
 func writeUserError(w http.ResponseWriter, op string, err error) {
 	switch {
 	case errors.Is(err, service.ErrInvalid):

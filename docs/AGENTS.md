@@ -20,7 +20,7 @@ Fitur inti: software catalog, golden path scaffold, environments, deploy via age
 
 | Komponen | Path | Status |
 |----------|------|--------|
-| Portal | `apps/web` | auth + app shell + catalog deploy/runtime + workers + users (create/role/disable/reset password; soft-delete UI belum) + RBAC |
+| Portal | `apps/web` | auth + app shell + catalog deploy/runtime + workers + users (create/role/disable/reset/soft-delete) + RBAC |
 | API | `apps/api` | layered + scaffold/templates + workers + deployments |
 | Worker | `apps/worker` | belum (job queue / orchestrator) |
 | Agent | `apps/agent` | register + heartbeat + poll deploy/runtime (stop/start/remove); Bearer agent token |
@@ -62,7 +62,7 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 | `/overview` | ringkasan services + workers |
 | `/catalog` | daftar services + deploy terakhir; History; Deploy; **Stop/Start** (runtime); create/edit/delete |
 | `/worker` | daftar workers + status |
-| `/users` | admin: list, create, role, disable/enable, reset password; **delete (soft) belum di UI** |
+| `/users` | admin: list, create, role, disable/enable (confirm), reset password, soft-delete |
 
 Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
@@ -94,4 +94,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: deploy + stop/start + delete cleanup + admin user mgmt OK. **WIP:** soft-delete user — store + service selesai; next: `DELETE /users/{id}` handler + portal Delete button. Lalu Environments.)
+(Saat ini: deploy + stop/start + delete cleanup + admin user mgmt termasuk soft-delete OK. Next: Environments.)

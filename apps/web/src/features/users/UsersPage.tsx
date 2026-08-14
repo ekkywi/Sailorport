@@ -33,6 +33,7 @@ import { me } from "@/features/auth/api";
 import type { AuthUser } from "@/features/auth/types";
 import {
   createUser,
+  deleteUser,
   listUsers,
   resetUserPassword,
   setUserDisabled,
@@ -41,6 +42,12 @@ import {
 import type { User, UserRole } from "./type";
 
 const ROLES: UserRole[] = ["admin", "developer", "viewer"];
+
+type StatusTarget = {
+  user: User;
+  /** true = disable, false = enable */
+  disabled: boolean;
+};
 
 const emptyForm = {
   email: "",
@@ -60,8 +67,10 @@ export function UsersPage() {
   const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
-  const [disableTarget, setDisableTarget] = useState<User | null>(null);
+  const [statusTarget, setStatusTarget] = useState<StatusTarget | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [passwordTarget, setPasswordTarget] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [resetting, setResetting] = useState(false);
@@ -128,35 +137,49 @@ export function UsersPage() {
     }
   }
 
-  async function confirmDisable() {
-    if (!disableTarget) return;
-    const target = disableTarget;
-    setTogglingId(target.id);
+  async function confirmStatusChange() {
+    if (!statusTarget) return;
+    const { user, disabled } = statusTarget;
+    setTogglingId(user.id);
     setError("");
     try {
-      const updated = await setUserDisabled(target.id, true);
+      const updated = await setUserDisabled(user.id, disabled);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      toast(`Disabled ${updated.email}`);
-      setDisableTarget(null);
+      toast(
+        disabled
+          ? `Disabled ${updated.email}`
+          : `Enabled ${updated.email}`,
+      );
+      setStatusTarget(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to disable user");
-      setDisableTarget(null);
+      setError(
+        err instanceof Error
+          ? err.message
+          : disabled
+            ? "Failed to disable user"
+            : "Failed to enable user",
+      );
+      setStatusTarget(null);
     } finally {
       setTogglingId(null);
     }
   }
 
-  async function onEnable(user: User) {
-    setTogglingId(user.id);
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeletingId(target.id);
     setError("");
     try {
-      const updated = await setUserDisabled(user.id, false);
-      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      toast(`Enabled ${updated.email}`);
+      await deleteUser(target.id);
+      setUsers((prev) => prev.filter((u) => u.id !== target.id));
+      toast(`Deleted ${target.email}`);
+      setDeleteTarget(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to enable user");
+      setError(err instanceof Error ? err.message : "Failed to delete user");
+      setDeleteTarget(null);
     } finally {
-      setTogglingId(null);
+      setDeletingId(null);
     }
   }
 
@@ -317,7 +340,7 @@ export function UsersPage() {
                               variant="outline"
                               size="sm"
                               className="h-8 text-[13px]"
-                              disabled={resetting}
+                              disabled={resetting || deletingId !== null}
                               onClick={() => {
                                 setPasswordError("");
                                 setNewPassword("");
@@ -332,10 +355,14 @@ export function UsersPage() {
                                 variant="outline"
                                 size="sm"
                                 className="h-8 text-[13px]"
-                                disabled={togglingId === u.id}
-                                onClick={() => void onEnable(u)}
+                                disabled={
+                                  togglingId === u.id || deletingId !== null
+                                }
+                                onClick={() =>
+                                  setStatusTarget({ user: u, disabled: false })
+                                }
                               >
-                                {togglingId === u.id ? "Enabling…" : "Enable"}
+                                Enable
                               </Button>
                             ) : (
                               <Button
@@ -343,12 +370,26 @@ export function UsersPage() {
                                 variant="outline"
                                 size="sm"
                                 className="h-8 text-[13px]"
-                                disabled={togglingId === u.id}
-                                onClick={() => setDisableTarget(u)}
+                                disabled={
+                                  togglingId === u.id || deletingId !== null
+                                }
+                                onClick={() =>
+                                  setStatusTarget({ user: u, disabled: true })
+                                }
                               >
                                 Disable
                               </Button>
                             )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-[13px] text-destructive hover:text-destructive"
+                              disabled={deletingId !== null}
+                              onClick={() => setDeleteTarget(u)}
+                            >
+                              Delete
+                            </Button>
                           </div>
                         )}
                       </td>
@@ -543,19 +584,32 @@ export function UsersPage() {
       </Dialog>
 
       <AlertDialog
-        open={disableTarget !== null}
+        open={statusTarget !== null}
         onOpenChange={(open) => {
-          if (!open && togglingId === null) setDisableTarget(null);
+          if (!open && togglingId === null) setStatusTarget(null);
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disable user?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {statusTarget?.disabled ? "Disable user?" : "Enable user?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-medium text-foreground">
-                {disableTarget?.email}
-              </span>{" "}
-              will not be able to sign in until enabled again.
+              {statusTarget?.disabled ? (
+                <>
+                  <span className="font-medium text-foreground">
+                    {statusTarget.user.email}
+                  </span>{" "}
+                  will not be able to sign in until enabled again.
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-foreground">
+                    {statusTarget?.user.email}
+                  </span>{" "}
+                  will be able to sign in again.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -574,13 +628,65 @@ export function UsersPage() {
             </AlertDialogClose>
             <Button
               type="button"
-              variant="destructive"
+              variant={statusTarget?.disabled ? "destructive" : "default"}
               size="sm"
               className="h-8 text-[13px]"
               disabled={togglingId !== null}
-              onClick={() => void confirmDisable()}
+              onClick={() => void confirmStatusChange()}
             >
-              {togglingId ? "Disabling…" : "Disable"}
+              {togglingId
+                ? statusTarget?.disabled
+                  ? "Disabling…"
+                  : "Enabling…"
+                : statusTarget?.disabled
+                  ? "Disable"
+                  : "Enable"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && deletingId === null) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Soft-delete{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.email}
+              </span>
+              . They will disappear from this list and cannot sign in. The email
+              can be reused for a new account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-[13px]"
+                  disabled={deletingId !== null}
+                />
+              }
+            >
+              Cancel
+            </AlertDialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="h-8 text-[13px]"
+              disabled={deletingId !== null}
+              onClick={() => void confirmDelete()}
+            >
+              {deletingId ? "Deleting…" : "Delete"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

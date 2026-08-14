@@ -92,7 +92,7 @@ Satu flow ini harus jalan di mesin orang lain:
 | 12c | Admin create user | selesai |
 | 12d | Admin disable / enable user | selesai |
 | 12e | Admin reset password | selesai |
-| 12f | Soft-delete user (rename email + `deleted_at`) | **WIP** (store + service; handler + UI belum) |
+| 12f | Soft-delete user (rename email + `deleted_at`) | selesai |
 | R0 | Latest deploy di catalog + layout full width | selesai |
 | R1 | Agent docker stop/start/remove helpers | selesai |
 | R2 | Runtime controls (API + portal stop/start) | selesai |
