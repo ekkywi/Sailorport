@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Rocket } from "lucide-react";
+import { Check, Rocket } from "lucide-react";
 import { ErrorBanner } from "@/components/app";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import type { Service } from "../catalog/types";
 import { listEnvironments } from "../environments/api";
 import type { Environment } from "../environments/types";
@@ -22,9 +22,6 @@ type DeployDialogProps = {
   onOpenChange: (open: boolean) => void;
   onDeployed?: (service: Service, environment: string) => void;
 };
-
-const selectClassName =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-[13px] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 export function DeployDialog({
   service,
@@ -75,6 +72,8 @@ export function DeployDialog({
     }
   }
 
+  const pickerDisabled = deploying || loadingEnvs || envs.length === 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -93,28 +92,48 @@ export function DeployDialog({
           <ErrorBanner message={error} onRetry={() => setError("")} />
         ) : null}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="deploy-environment" className="text-[12px] text-muted-foreground">
+        <fieldset className="space-y-2" disabled={pickerDisabled}>
+          <legend className="text-[12px] text-muted-foreground">
             Environment
-          </Label>
+          </legend>
           {loadingEnvs ? (
-            <div className="h-9 animate-pulse rounded-md bg-muted" />
-          ) : (
-            <select
-              id="deploy-environment"
-              value={environment}
-              onChange={(e) => setEnvironment(e.target.value)}
-              disabled={deploying || envs.length === 0}
-              className={selectClassName}
-            >
-              {envs.map((env) => (
-                <option key={env.id} value={env.slug}>
-                  {env.name} ({env.slug})
-                </option>
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-11 animate-pulse rounded-md bg-muted" />
               ))}
-            </select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {envs.map((env) => {
+                const selected = environment === env.slug;
+                return (
+                  <button
+                    key={env.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setEnvironment(env.slug)}
+                    className={cn(
+                      "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-[13px] transition-colors",
+                      selected
+                        ? "border-ring bg-accent/40"
+                        : "border-border hover:bg-muted/50",
+                    )}
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-medium">{env.name}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground uppercase">
+                        {env.slug}
+                      </span>
+                    </span>
+                    {selected ? (
+                      <Check className="size-4 shrink-0 text-foreground" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
           )}
-        </div>
+        </fieldset>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
