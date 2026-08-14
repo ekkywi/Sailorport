@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 12f — soft-delete user (`DELETE /api/v1/users/{id}` → 204; portal Delete + konfirmasi; Enable juga pakai konfirmasi).
+**Step terakhir selesai:** R4 — multi-port deploy (agent alokasi host port unik di rentang `SAILORPORT_DEPLOY_PORT_BASE` + count; reuse saat redeploy).
 
-**Step berikutnya:** Environments (dev/staging/prod); opsional logs / multi-port.
+**Step berikutnya:** Environments (dev/staging/prod); opsional logs / multi-agent targeting.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -26,7 +26,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue container cleanup (`remove`) jika pernah deploy
 - Admin Users: list, change role, create, disable/enable (konfirmasi), reset password, **soft-delete** (rename email + `deleted_at`); belum email SMTP
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
-- Deploy MVP: satu host port (`SAILORPORT_DEPLOY_PORT_BASE`, default 18080)
+- Deploy: host port unik per container di mesin agent (`SAILORPORT_DEPLOY_PORT_BASE` + `SAILORPORT_DEPLOY_PORT_COUNT`); hasil di `deployments.port`
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
 - Catalog: kolom Deploy menampilkan `latest_deployment`; rocket = deploy baru, jam = history; square/play = stop/start runtime

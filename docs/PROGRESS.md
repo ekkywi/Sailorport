@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 12f — soft-delete user (API + portal)
-- **Step berikutnya:** Environments (dev/staging/prod); opsional logs / multi-port
-- **Terakhir dikerjakan:** 2026-08-14 — DELETE /users/{id} + portal Delete; konfirmasi Enable
+- **Step selesai:** R4 — multi-port deploy (agent alokasi host port unik)
+- **Step berikutnya:** Environments (dev/staging/prod); opsional logs
+- **Terakhir dikerjakan:** 2026-08-14 — agent pilih port bebas di rentang PortBase; reuse jika container service sudah ada
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -40,6 +40,7 @@
 - [x] R1 — agent docker helpers (`Stop` / `Start` / `Remove`)
 - [x] R2 — runtime controls (stop/start via agent job + portal UI)
 - [x] R3 Delete cleanup — stop/rm container saat hapus service
+- [x] R4 — multi-port deploy (port unik per container di host agent)
 - [ ] Environments (dev/staging/prod)
 
 ## Yang sudah jalan
@@ -111,7 +112,8 @@ Env agent:
 | `SAILORPORT_WORKER_NAME` | hostname mesin | nama worker di registry |
 | `SAILORPORT_HEARTBEAT_INTERVAL` | `15s` | interval heartbeat |
 | `SAILORPORT_POLL_INTERVAL` | `5s` | interval poll job deploy |
-| `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | host port untuk container (MVP: satu port) |
+| `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | awal rentang host port workload |
+| `SAILORPORT_DEPLOY_PORT_COUNT` | `32` | jumlah port di rentang (`18080`–`18111`) |
 
 Role: `admin`, `developer`, `viewer`
 
@@ -188,6 +190,8 @@ curl -X DELETE http://localhost:8080/api/v1/users/{id} \
 - Flow: claim → `building` → `docker build` + `docker run` → `running` | `failed`
 - Image tag: `sailorport/{service_name}:{deployment_id[:8]}`
 - Container name: `sailorport-{service_name}`; map host port → container `:8080`
+- Host port: `AllocateHostPort` — reuse mapping container yang sama (redeploy), else port bebas di `[PortBase, PortBase+Count)`
+- Hasil port disimpan di `deployments.port` (portal link `:port/healthz`)
 - Template `go-api` punya `Dockerfile.tmpl` (scaffold baru otomatis dapat `Dockerfile`)
 - Service scaffold **lama** (sebelum 10C.2) perlu `Dockerfile` manual di workspace
 
@@ -259,7 +263,6 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 ## Known debt (sengaja ditunda)
 
 - **Template management** belum CRUD di DB/portal
-- **Deploy port** MVP pakai satu `PortBase` (18080); multi-service collision belum di-handle
 - **Workspace lama** (path `/tmp/...`) tidak ikut terhapus saat delete (di luar root baru); scaffold ulang ke `data/workspaces`
 - **Self-host API + agent host:** path workspace di DB adalah path container; agent host perlu API lokal untuk E2E deploy (atau solusi path-mapping nanti)
 
@@ -269,6 +272,15 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - Agent Ctrl+C mengirim heartbeat `offline`
 - Delete service menghapus folder workspace jika path di bawah workspace root
 - **R3:** Delete service enqueue job `remove` → agent `docker rm -f sailorport-{name}`
+- **R4:** Agent alokasi host port unik per container (bukan selalu 18080)
+
+### Multi-port deploy (R4)
+
+- Port unik **per Docker host** (bukan global fleet) — agent yang memilih
+- Redeploy service yang sama: reuse port container `sailorport-{name}` jika masih ada
+- Service baru: port berikutnya yang tidak dipakai mapping `sailorport-*` dan tidak listen di host
+- Pool habis → job `failed` dengan pesan rentang port
+- Catalog sudah menampilkan `latest_deployment.port`
 
 ### Compose full stack (Step 11)
 
@@ -282,7 +294,7 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 ## Next action
 
 1. Environments (dev/staging/prod)
-2. Opsional: container logs; multi-port deploy
+2. Opsional: container logs; multi-agent targeting (job prod → worker prod)
 
 ## Cara lanjut di mesin lain
 

@@ -12,6 +12,7 @@ type Config struct {
 	HeartbeatInterval time.Duration
 	PollInterval      time.Duration
 	PortBase          int
+	PortCount         int
 	AgentToken        string
 }
 
@@ -33,6 +34,11 @@ func Load() Config {
 	portBase := 18080
 	if v := os.Getenv("SAILORPORT_DEPLOY_PORT_BASE"); v != "" {
 		fmt.Sscanf(v, "%d", &portBase)
+	}
+
+	portCount := 32
+	if v := os.Getenv("SAILORPORT_DEPLOY_PORT_COUNT"); v != "" {
+		fmt.Sscanf(v, "%d", &portCount)
 	}
 
 	name := os.Getenv("SAILORPORT_WORKER_NAME")
@@ -59,6 +65,7 @@ func Load() Config {
 		HeartbeatInterval: interval,
 		PollInterval:      poll,
 		PortBase:          portBase,
+		PortCount:         portCount,
 		AgentToken:        agentToken,
 	}
 }

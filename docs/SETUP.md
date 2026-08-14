@@ -191,6 +191,7 @@ SAILORPORT_WORKER_NAME=local-dev \
 SAILORPORT_HEARTBEAT_INTERVAL=15s \
 SAILORPORT_POLL_INTERVAL=5s \
 SAILORPORT_DEPLOY_PORT_BASE=18080 \
+SAILORPORT_DEPLOY_PORT_COUNT=32 \
 go run .
 ```
 
@@ -229,8 +230,8 @@ TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
 curl -X POST "http://localhost:8080/api/v1/services/SERVICE_ID/deployments" \
   -H "Authorization: Bearer $TOKEN"
 
-# 3. Agent poll → build → run; cek health service
-curl http://localhost:18080/healthz
+# 3. Agent poll → build → run; cek health di port yang tertulis di deployment
+curl http://localhost:18080/healthz   # service pertama; service berikutnya 18081, dst.
 ```
 
 ## Environment variables
@@ -255,7 +256,8 @@ Agent (`apps/agent`):
 | `SAILORPORT_WORKER_NAME` | hostname | nama worker |
 | `SAILORPORT_HEARTBEAT_INTERVAL` | `15s` | interval heartbeat |
 | `SAILORPORT_POLL_INTERVAL` | `5s` | interval poll job deploy |
-| `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | host port container deploy |
+| `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | awal rentang host port workload |
+| `SAILORPORT_DEPLOY_PORT_COUNT` | `32` | ukuran pool (`18080`–`18111` default) |
 
 Contoh:
 

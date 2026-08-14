@@ -89,7 +89,14 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 
 	imageTag := fmt.Sprintf("sailorport/%s:%s", job.ServiceName, job.ID[:8])
 	containerName := docker.ContainerName(job.ServiceName)
-	port := a.cfg.PortBase
+	port, err := docker.AllocateHostPort(containerName, a.cfg.PortBase, a.cfg.PortCount)
+	if err != nil {
+		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+			Status: "failed", ErrorMessage: err.Error(),
+		})
+		return err
+	}
+	log.Printf("host port=%d container=%s", port, containerName)
 
 	if err := docker.Build(job.WorkspacePath, imageTag); err != nil {
 		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
