@@ -35,6 +35,7 @@ type Repository interface {
 
 type DeploymentReader interface {
 	LatestByServices(ctx context.Context) (map[string]model.Deployment, error)
+	LatestPerEnvByServices(ctx context.Context) (map[string]map[string]model.Deployment, error)
 }
 
 type Catalog struct {
@@ -68,10 +69,17 @@ func (c *Catalog) List(ctx context.Context) ([]model.Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("List services latest deployments: %w", err)
 	}
+	perEnv, err := c.deployments.LatestPerEnvByServices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("List services env deployments: %w", err)
+	}
 	for i := range services {
 		if d, ok := latest[services[i].ID]; ok {
 			cp := d
 			services[i].LatestDeployment = &cp
+		}
+		if envs, ok := perEnv[services[i].ID]; ok && len(envs) > 0 {
+			services[i].EnvDeployments = envs
 		}
 	}
 	return services, nil

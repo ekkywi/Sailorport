@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 13d — Environments (API + deploy bound + agent container per env + portal UI).
+**Step terakhir selesai:** 14a — API `env_deployments` (latest deploy per environment di `GET /services`).
 
-**Step berikutnya:** Opsional — runtime per environment; logs; multi-agent targeting.
+**Step berikutnya:** 14b — stop/start terima `environment`; 14c — portal UI 3 env di catalog.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -27,7 +27,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Admin Users: list, change role, create, disable/enable (konfirmasi), reset password, **soft-delete** (rename email + `deleted_at`); belum email SMTP
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
 - Deploy: host port unik per container di mesin agent; container name `sailorport-{service}-{env}`; body deploy `{"environment":"staging"}` (default dev)
-- Environments: `GET /api/v1/environments`; portal Deploy dialog pilih dev/staging/prod; history + catalog tampilkan `environment_slug`
+- Environments: `GET /api/v1/environments`; portal Deploy dialog; `GET /services` juga return `env_deployments` (map slug → latest deploy per env)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
 - Catalog: kolom Deploy menampilkan `latest_deployment` + badge environment; rocket = dialog deploy (pilih env), jam = history; square/play = stop/start runtime (**konfirmasi**)

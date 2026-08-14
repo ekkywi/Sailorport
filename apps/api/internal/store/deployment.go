@@ -260,3 +260,35 @@ func (s *DeploymentsStore) LatestByServices(ctx context.Context) (map[string]mod
 	}
 	return out, rows.Err()
 }
+
+// LatestPerEnvByServices returns the newest deployment per (service, environment).
+// Outer map key = service_id, inner map key = environment slug (dev, staging, prod).
+func (s *DeploymentsStore) LatestPerEnvByServices(ctx context.Context) (map[string]map[string]model.Deployment, error) {
+	const q = `
+		SELECT DISTINCT ON (d.service_id, d.environment_id)
+			d.id, d.service_id, d.environment_id, e.slug,
+			d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.error_message, d.created_at, d.updated_at
+		FROM deployments d
+		JOIN environments e ON e.id = d.environment_id
+		ORDER BY d.service_id, d.environment_id, d.created_at DESC
+	`
+
+	rows, err := s.db.QueryContext(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("LatestPerEnvByServices: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[string]map[string]model.Deployment)
+	for rows.Next() {
+		d, err := scanDeployment(rows)
+		if err != nil {
+			return nil, err
+		}
+		if out[d.ServiceID] == nil {
+			out[d.ServiceID] = make(map[string]model.Deployment)
+		}
+		out[d.ServiceID][d.EnvironmentSlug] = d
+	}
+	return out, rows.Err()
+}

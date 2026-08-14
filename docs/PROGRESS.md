@@ -4,8 +4,8 @@
 
 ## Status saat ini
 
-- **Step selesai:** 13d — Environments portal UI (dropdown deploy + tampil slug)
-- **Step berikutnya:** Opsional — runtime/stop-start per environment; logs; multi-agent targeting
+- **Step selesai:** 14a — API `env_deployments` (latest deploy per environment)
+- **Step berikutnya:** 14b — stop/start API terima `environment`; lalu 14c portal
 - **Terakhir dikerjakan:** 2026-08-14 — deploy ke dev/staging/prod dari portal; container name `sailorport-{service}-{env}`
 - **Mesin terakhir:** rumah / lokal
 
@@ -42,6 +42,7 @@
 - [x] R3 Delete cleanup — stop/rm container saat hapus service
 - [x] R4 — multi-port deploy (port unik per container di host agent)
 - [x] Environments (dev/staging/prod) — 13a–13d
+- [ ] Step 14 — runtime per environment (14a API ✅, 14b stop/start, 14c portal, 14d delete cleanup)
 
 ## Yang sudah jalan
 
@@ -82,7 +83,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `PATCH /api/v1/users/{id}` | admin | ubah `role` **atau** `disabled` (bukan keduanya sekaligus); tidak boleh ubah role/disable diri sendiri; id harus UUID |
 | `POST /api/v1/users/{id}/password` | admin | set temporary password baru; tidak boleh reset password diri sendiri → **204** |
 | `DELETE /api/v1/users/{id}` | admin | soft-delete (rename email + `deleted_at`); tidak boleh hapus diri sendiri → **204** |
-| `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD; `GET` list menyertakan `latest_deployment` per service |
+| `GET/POST/PUT/DELETE /api/v1/services` | viewer+ / developer+ | catalog CRUD; `GET` list: `latest_deployment` (global terbaru) + `env_deployments` (map slug → deploy terbaru per env) |
 | `GET /api/v1/templates`, `POST /api/v1/scaffold` | viewer+ / developer+ | golden path |
 | `POST /api/v1/workers/register` | agent token | agent register |
 | `POST /api/v1/workers/{id}/heartbeat` | agent token | agent heartbeat |
@@ -308,7 +309,23 @@ docker ps | grep sailorport-
 # expect sailorport-{name}-dev and sailorport-{name}-staging on different ports
 ```
 
-**Known limitation:** `latest_deployment` di catalog masih satu per service (bukan per env); stop/start runtime mengikuti deploy terbaru global — perbaikan opsional berikutnya.
+**Known limitation (14b–14c):** stop/start runtime & tombol portal masih pakai `latest_deployment` global — 14b/14c akan selaraskan dengan `env_deployments`.
+
+### Step 14 — runtime per environment (Opsi A)
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 14a API | ✅ | `env_deployments` di `GET /services` — `LatestPerEnvByServices` (`DISTINCT ON service+env`) |
+| 14b API | ⬜ | `POST .../runtime/stop|start` + query/body `environment` |
+| 14c Portal | ⬜ | Kolom Deploy: 3 baris env + stop/start per env |
+| 14d Delete | ⬜ | Enqueue `remove` untuk semua container env |
+
+**Tes 14a:**
+
+```bash
+curl -s http://localhost:8080/api/v1/services -H "Authorization: Bearer $TOKEN" \
+  | jq '.[0] | {name, latest: .latest_deployment.environment_slug, env_deployments: (.env_deployments | keys)}'
+```
 
 ### Runtime queue hardening (post-13d)
 
@@ -328,8 +345,9 @@ docker ps | grep sailorport-
 
 ## Next action
 
-1. Opsional: runtime stop/start per environment (bukan latest global)
-2. Opsional: container logs; multi-agent targeting (job prod → worker prod)
+1. Step 14b — stop/start API per environment
+2. Step 14c — portal kolom Deploy (3 env)
+3. Opsional: 14d delete multi-env; logs; multi-agent targeting
 
 ## Cara lanjut di mesin lain
 
