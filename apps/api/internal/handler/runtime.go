@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -20,7 +21,14 @@ func NewRuntimeHandler(r *service.Runtime) *RuntimeHandler {
 }
 
 func (h *RuntimeHandler) Stop(w http.ResponseWriter, r *http.Request) {
-	job, err := h.runtime.RequestStop(r.Context(), r.PathValue("id"))
+	var req model.RuntimeActionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	defer r.Body.Close()
+
+	job, err := h.runtime.RequestStop(r.Context(), r.PathValue("id"), req.Environment)
 	if err != nil {
 		writeRuntimeError(w, "Stop service", err)
 		return
@@ -29,7 +37,14 @@ func (h *RuntimeHandler) Stop(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RuntimeHandler) Start(w http.ResponseWriter, r *http.Request) {
-	job, err := h.runtime.RequestStart(r.Context(), r.PathValue("id"))
+	var req model.RuntimeActionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	defer r.Body.Close()
+
+	job, err := h.runtime.RequestStart(r.Context(), r.PathValue("id"), req.Environment)
 	if err != nil {
 		writeRuntimeError(w, "Start service", err)
 		return

@@ -4,15 +4,16 @@ import {
   EmptyState,
   EnvironmentBadge,
   StatusBadge,
-  formatRelativeTime,
   truncateMiddle,
   userInitials,
 } from "@/components/app";
 import { Button } from "@/components/ui/button";
+import type { Environment } from "../environments/types";
 import type { Service } from "./types";
 
 type ServiceListProps = {
   services: Service[];
+  environments: Environment[];
   loading: boolean;
   canWrite: boolean;
   onEdit: (svc: Service) => void;
@@ -20,9 +21,15 @@ type ServiceListProps = {
   onCreate?: () => void;
   onDeploy: (svc: Service) => void;
   onOpenHistory: (svc: Service) => void;
-  onStop: (svc: Service) => void;
-  onStart: (svc: Service) => void;
+  onStop: (svc: Service, environment: string) => void;
+  onStart: (svc: Service, environment: string) => void;
 };
+
+const FALLBACK_ENVIRONMENTS: Pick<Environment, "slug" | "name" | "sort_order">[] = [
+  { slug: "dev", name: "Development", sort_order: 0 },
+  { slug: "staging", name: "Staging", sort_order: 1 },
+  { slug: "prod", name: "Production", sort_order: 2 },
+];
 
 function deployBadgeClass(status: string) {
   if (status === "running") {
@@ -48,47 +55,90 @@ function ServiceGlyph({ name }: { name: string }) {
   );
 }
 
-function LatestDeployCell({
+function EnvDeployCell({
   svc,
+  environments,
+  canWrite,
   onOpenHistory,
+  onStop,
+  onStart,
 }: {
   svc: Service;
+  environments: Environment[];
+  canWrite: boolean;
   onOpenHistory: (svc: Service) => void;
+  onStop: (svc: Service, environment: string) => void;
+  onStart: (svc: Service, environment: string) => void;
 }) {
-  const d = svc.latest_deployment;
-  if (!d) {
-    return <span className="text-[12px] text-muted-foreground">Not deployed</span>;
-  }
+  const envs = svc.env_deployments ?? {};
+  const ordered =
+    environments.length > 0
+      ? [...environments].sort((a, b) => a.sort_order - b.sort_order)
+      : FALLBACK_ENVIRONMENTS;
 
   return (
-    <div className="flex min-w-0 flex-col items-start gap-1">
-      <button
-        type="button"
-        className="rounded-md text-left outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring/40"
-        onClick={() => onOpenHistory(svc)}
-        title="View deployment history"
-      >
-        <div className="flex flex-wrap items-center gap-1.5">
-          {d.environment_slug ? (
-            <EnvironmentBadge slug={d.environment_slug} />
-          ) : null}
-          <StatusBadge status={d.status} className={deployBadgeClass(d.status)} />
-        </div>
-      </button>
-      <span className="text-[11px] text-muted-foreground">
-        {formatRelativeTime(d.updated_at)}
-      </span>
-      {d.status === "running" && d.port != null ? (
-        <a
-          href={`http://localhost:${d.port}/healthz`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          :{d.port}/healthz
-        </a>
-      ) : null}
+    <div className="flex min-w-0 flex-col gap-1.5">
+      {ordered.map((env) => {
+        const slug = env.slug;
+        const d = envs[slug];
+        return (
+          <div key={slug} className="flex min-w-0 items-center gap-1.5">
+            <EnvironmentBadge slug={slug} />
+            {!d ? (
+              <span className="text-[11px] text-muted-foreground">Not deployed</span>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="rounded-md outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring/40"
+                  onClick={() => onOpenHistory(svc)}
+                  title={`History ${svc.name} (${slug})`}
+                >
+                  <StatusBadge
+                    status={d.status}
+                    className={deployBadgeClass(d.status)}
+                  />
+                </button>
+                {d.status === "running" && d.port != null ? (
+                  <a
+                    href={`http://localhost:${d.port}/healthz`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    :{d.port}
+                  </a>
+                ) : null}
+                {canWrite && d.status === "running" ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-7 text-muted-foreground hover:text-foreground"
+                    aria-label={`Stop ${svc.name} ${slug}`}
+                    onClick={() => onStop(svc, slug)}
+                  >
+                    <Square className="size-3" />
+                  </Button>
+                ) : null}
+                {canWrite && d.status === "stopped" ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-7 text-muted-foreground hover:text-foreground"
+                    aria-label={`Start ${svc.name} ${slug}`}
+                    onClick={() => onStart(svc, slug)}
+                  >
+                    <Play className="size-3" />
+                  </Button>
+                ) : null}
+              </>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -100,8 +150,6 @@ function RowActions({
   onEdit,
   onDelete,
   onOpenHistory,
-  onStop,
-  onStart,
 }: {
   svc: Service;
   canWrite: boolean;
@@ -109,11 +157,7 @@ function RowActions({
   onEdit: (svc: Service) => void;
   onDelete: (svc: Service) => void;
   onOpenHistory: (svc: Service) => void;
-  onStop: (svc: Service) => void;
-  onStart: (svc: Service) => void;
 }) {
-  const deployStatus = svc.latest_deployment?.status;
-
   return (
     <div className="flex shrink-0 items-center justify-end gap-0.5 whitespace-nowrap">
       <Button
@@ -128,30 +172,6 @@ function RowActions({
       </Button>
       {canWrite ? (
         <>
-          {deployStatus === "running" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="text-muted-foreground hover:text-foreground"
-              aria-label={`Stop ${svc.name}`}
-              onClick={() => onStop(svc)}
-            >
-              <Square className="size-3.5" />
-            </Button>
-          ) : null}
-          {deployStatus === "stopped" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="text-muted-foreground hover:text-foreground"
-              aria-label={`Start ${svc.name}`}
-              onClick={() => onStart(svc)}
-            >
-              <Play className="size-3.5" />
-            </Button>
-          ) : null}
           {svc.workspace_path ? (
             <Button
               type="button"
@@ -192,6 +212,7 @@ function RowActions({
 
 export function ServiceList({
   services,
+  environments,
   loading,
   canWrite,
   onEdit,
@@ -257,7 +278,7 @@ export function ServiceList({
             <tr className="border-b border-border text-[11px] font-medium tracking-[0.04em] text-muted-foreground uppercase">
               <th className="min-w-[220px] px-4 py-2.5 font-medium">Service</th>
               <th className="w-[12%] px-4 py-2.5 font-medium">Owner</th>
-              <th className="w-[14%] px-4 py-2.5 font-medium">Deploy</th>
+              <th className="min-w-[200px] px-4 py-2.5 font-medium">Deploy</th>
               <th className="min-w-[240px] px-4 py-2.5 font-medium">Origin</th>
               <th className="w-[120px] px-4 py-2.5 font-medium">
                 <span className="sr-only">Actions</span>
@@ -293,7 +314,14 @@ export function ServiceList({
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <LatestDeployCell svc={svc} onOpenHistory={onOpenHistory} />
+                  <EnvDeployCell
+                    svc={svc}
+                    environments={environments}
+                    canWrite={canWrite}
+                    onOpenHistory={onOpenHistory}
+                    onStop={onStop}
+                    onStart={onStart}
+                  />
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex min-w-0 flex-col gap-0.5">
@@ -325,8 +353,6 @@ export function ServiceList({
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onOpenHistory={onOpenHistory}
-                    onStop={onStop}
-                    onStart={onStart}
                   />
                 </td>
               </tr>
@@ -358,12 +384,17 @@ export function ServiceList({
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onOpenHistory={onOpenHistory}
-                    onStop={onStop}
-                    onStart={onStart}
                   />
                 </div>
                 <div className="mt-2">
-                  <LatestDeployCell svc={svc} onOpenHistory={onOpenHistory} />
+                  <EnvDeployCell
+                    svc={svc}
+                    environments={environments}
+                    canWrite={canWrite}
+                    onOpenHistory={onOpenHistory}
+                    onStop={onStop}
+                    onStart={onStart}
+                  />
                 </div>
                 {(svc.template_id || svc.workspace_path) && (
                   <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">

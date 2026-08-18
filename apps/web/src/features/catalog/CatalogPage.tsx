@@ -35,6 +35,8 @@ import { DeploymentsDialog } from "../deployments/DeploymentsDialog";
 import { startService, stopService } from "../runtime/api";
 import type { AuthUser } from "@/features/auth/types";
 import { canWriteCatalog } from "@/lib/rbac";
+import { listEnvironments } from "../environments/api";
+import type { Environment } from "../environments/types";
 
 const emptyForm: ServiceFormValues = {
   name: "",
@@ -62,9 +64,11 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [deployDialogTarget, setDeployDialogTarget] = useState<Service | null>(null);
   const [runtimeTarget, setRuntimeTarget] = useState<{
     service: Service;
+    environment: string;
     action: "stop" | "start";
   } | null>(null);
   const [runtimePending, setRuntimePending] = useState(false);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
 
   async function load(options?: { silent?: boolean }) {
     if (!options?.silent) {
@@ -100,16 +104,16 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   async function confirmRuntime() {
     if (!runtimeTarget) return;
-    const { service: svc, action } = runtimeTarget;
+    const { service: svc, environment, action } = runtimeTarget;
     setRuntimePending(true);
     setListError("");
     try {
       if (action === "stop") {
-        await stopService(svc.id);
-        toast(`Stopping "${svc.name}"…`);
+        await stopService(svc.id, environment);
+        toast(`Stopping ${environment} for "${svc.name}"…`);
       } else {
-        await startService(svc.id);
-        toast(`Starting "${svc.name}"…`);
+        await startService(svc.id, environment);
+        toast(`Starting ${environment} for "${svc.name}"…`);
       }
       setRuntimeTarget(null);
       refreshAfterRuntime();
@@ -129,12 +133,27 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   useEffect(() => {
     void load();
+    void listEnvironments()
+      .then(setEnvironments)
+      .catch(() => {
+        /* fallback handled in ServiceList */
+      });
   }, []);
 
   useEffect(() => {
     const hasActive = services.some((svc) => {
-      const status = svc.latest_deployment?.status;
-      return status === "pending" || status === "claimed" || status === "building";
+      const envActive = Object.values(svc.env_deployments ?? {}).some(
+        (d) =>
+          d.status === "pending" ||
+          d.status === "claimed" ||
+          d.status === "building",
+      );
+      const latest = svc.latest_deployment?.status;
+      const latestActive =
+        latest === "pending" ||
+        latest === "claimed" ||
+        latest === "building";
+      return envActive || latestActive;
     });
     if (!hasActive) return;
 
@@ -210,8 +229,32 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     }
   }
 
+  const dialogOpen = dialog !== "none";
+  const countLabel =
+    loading && services.length === 0
+      ? "Loading…"
+      : `${services.length} service${services.length === 1 ? "" : "s"}`;
+
+  const deleteRunningEnvs =
+    deleteTarget == null
+      ? []
+      : Object.entries(deleteTarget.env_deployments ?? {})
+          .filter(([, d]) => d.status === "running")
+          .map(([slug]) => slug);
+
+  const deleteBlocked = deleteRunningEnvs.length > 0;
+  const deleteHasProdRunning = deleteRunningEnvs.includes("prod");
+
+  const deleteContainers =
+    deleteTarget == null
+      ? []
+      : Object.entries(deleteTarget.env_deployments ?? {}).map(([slug]) => ({
+          slug,
+          name: `sailorport-${deleteTarget.name}-${slug}`,
+        }));
+
   async function confirmDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || deleteBlocked) return;
     const name = deleteTarget.name;
     setDeleting(true);
     setListError("");
@@ -230,12 +273,6 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
       setDeleting(false);
     }
   }
-
-  const dialogOpen = dialog !== "none";
-  const countLabel =
-    loading && services.length === 0
-      ? "Loading…"
-      : `${services.length} service${services.length === 1 ? "" : "s"}`;
 
   return (
     <div className="space-y-4">
@@ -275,14 +312,19 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
       <ServiceList
         services={services}
+        environments={environments}
         loading={loading}
         canWrite={canWrite}
         onEdit={startEdit}
         onDelete={setDeleteTarget}
         onDeploy={setDeployDialogTarget}
         onOpenHistory={openHistory}
-        onStop={(svc) => setRuntimeTarget({ service: svc, action: "stop" })}
-        onStart={(svc) => setRuntimeTarget({ service: svc, action: "start" })}
+        onStop={(svc, environment) =>
+          setRuntimeTarget({ service: svc, environment, action: "stop" })
+        }
+        onStart={(svc, environment) =>
+          setRuntimeTarget({ service: svc, environment, action: "start" })
+        }
         onCreate={canWrite ? startCreate : undefined}
       />
 
@@ -398,20 +440,31 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               </span>{" "}
               from the catalog and deletes its workspace folder (when under the configured
               workspace directory).
-              {deleteTarget?.latest_deployment ? (
-                <>
-                  {" "}
-                  A cleanup job will also remove the Docker container{" "}
-                  <span className="font-mono text-[12px]">
-                    sailorport-{deleteTarget.name}
-                    {deleteTarget.latest_deployment.environment_slug
-                      ? `-${deleteTarget.latest_deployment.environment_slug}`
-                      : ""}
-                  </span>{" "}
-                  on the agent node.
-                </>
-              ) : null}
             </AlertDialogDescription>
+            {deleteContainers.length > 0 ? (
+              <>
+                <p className="text-[13px] text-muted-foreground">
+                  Cleanup jobs will remove these Docker containers on the agent node:
+                </p>
+                <ul className="list-inside list-disc space-y-0.5 text-[13px] text-muted-foreground">
+                  {deleteContainers.map(({ slug, name }) => (
+                    <li key={slug}>
+                      <span className="font-mono text-[12px]">{name}</span>
+                      {deleteRunningEnvs.includes(slug) ? (
+                        <span className="text-destructive"> (still running)</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {deleteBlocked ? (
+              <p className="text-[13px] text-destructive">
+                {deleteHasProdRunning
+                  ? "Production is still running. Stop prod before deleting this service."
+                  : `Stop running environments first: ${deleteRunningEnvs.join(", ")}.`}
+              </p>
+            ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogClose
@@ -432,7 +485,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               variant="destructive"
               size="sm"
               className="h-8 text-[13px]"
-              disabled={deleting}
+              disabled={deleting || deleteBlocked}
               onClick={() => void confirmDelete()}
             >
               {deleting ? "Deleting…" : "Delete"}
@@ -458,15 +511,11 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                   <span className="font-medium text-foreground">
                     {runtimeTarget.service.name}
                   </span>
-                  {runtimeTarget.service.latest_deployment?.environment_slug ? (
-                    <>
-                      {" "}
-                      in{" "}
-                      <span className="font-mono text-[12px]">
-                        {runtimeTarget.service.latest_deployment.environment_slug}
-                      </span>
-                    </>
-                  ) : null}
+                  {" "}
+                  in{" "}
+                  <span className="font-mono text-[12px]">
+                    {runtimeTarget.environment}
+                  </span>
                   . The deployment stays registered; use Start to bring it back.
                 </>
               ) : (
@@ -475,15 +524,11 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                   <span className="font-medium text-foreground">
                     {runtimeTarget?.service.name}
                   </span>
-                  {runtimeTarget?.service.latest_deployment?.environment_slug ? (
-                    <>
-                      {" "}
-                      in{" "}
-                      <span className="font-mono text-[12px]">
-                        {runtimeTarget.service.latest_deployment.environment_slug}
-                      </span>
-                    </>
-                  ) : null}
+                  {" "}
+                  in{" "}
+                  <span className="font-mono text-[12px]">
+                    {runtimeTarget?.environment}
+                  </span>
                   .
                 </>
               )}

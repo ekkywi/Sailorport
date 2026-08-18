@@ -81,21 +81,25 @@ func (h *ServicesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func writeCatalogError(w http.ResponseWriter, op string, err error) {
 	switch {
 	case errors.Is(err, service.ErrInvalid):
-		msg := err.Error()
-		if i := strings.Index(msg, ": "); i >= 0 {
-			msg = msg[i+2:]
-		}
-		writeError(w, http.StatusBadRequest, msg)
+		writeError(w, http.StatusBadRequest, catalogClientMessage(err))
 	case errors.Is(err, service.ErrNotFound):
 		writeError(w, http.StatusNotFound, "service not found")
 	case errors.Is(err, service.ErrConflict):
-		writeError(w, http.StatusConflict, "service already exists")
+		writeError(w, http.StatusConflict, catalogClientMessage(err))
 	case errors.Is(err, service.ErrUnauthorized):
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 	case errors.Is(err, service.ErrForbidden):
-		writeError(w, http.StatusForbidden, "forbidden")
+		writeError(w, http.StatusForbidden, catalogClientMessage(err))
 	default:
 		log.Printf("%s: %v", op, err)
 		writeError(w, http.StatusInternalServerError, "internal server error")
 	}
+}
+
+func catalogClientMessage(err error) string {
+	msg := err.Error()
+	if i := strings.Index(msg, ": "); i >= 0 {
+		return msg[i+2:]
+	}
+	return msg
 }

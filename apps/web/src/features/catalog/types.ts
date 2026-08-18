@@ -8,7 +8,7 @@ export type LatestDeployment = {
   error_message: string;
   created_at: string;
   updated_at: string;
-}
+};
 
 export type Service = {
   id: string;
@@ -20,6 +20,7 @@ export type Service = {
   created_at: string;
   updated_at: string;
   latest_deployment?: LatestDeployment | null;
+  env_deployments?: Record<string, LatestDeployment>;
 };
 
 export type CreateServiceInput = {

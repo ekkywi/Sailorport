@@ -4,11 +4,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
+
+// latestPerEnv picks the newest deployment per environment slug.
+// deps must be ordered by created_at DESC (ListByService already does this).
+func latestPerEnv(deps []model.Deployment) map[string]model.Deployment {
+	out := make(map[string]model.Deployment)
+	for _, d := range deps {
+		slug := strings.ToLower(strings.TrimSpace(d.EnvironmentSlug))
+		if slug == "" {
+			slug = "dev"
+		}
+		if _, seen := out[slug]; !seen {
+			out[slug] = d
+		}
+	}
+	return out
+}
 
 type Runtime struct {
 	store       *store.RuntimeStore
@@ -20,18 +37,23 @@ func NewRuntime(s *store.RuntimeStore, deployments *Deployments, catalog *Catalo
 	return &Runtime{store: s, deployments: deployments, catalog: catalog}
 }
 
-func (r *Runtime) RequestStop(ctx context.Context, serviceID string) (model.RuntimeJob, error) {
-	return r.enqueue(ctx, serviceID, "stop", "running")
+func (r *Runtime) RequestStop(ctx context.Context, serviceID, environment string) (model.RuntimeJob, error) {
+	return r.enqueue(ctx, serviceID, environment, "stop", "running")
 }
 
-func (r *Runtime) RequestStart(ctx context.Context, serviceID string) (model.RuntimeJob, error) {
-	return r.enqueue(ctx, serviceID, "start", "stopped")
+func (r *Runtime) RequestStart(ctx context.Context, serviceID, environment string) (model.RuntimeJob, error) {
+	return r.enqueue(ctx, serviceID, environment, "start", "stopped")
 }
 
-func (r *Runtime) enqueue(ctx context.Context, serviceID, action, requiredStatus string) (model.RuntimeJob, error) {
+func (r *Runtime) enqueue(ctx context.Context, serviceID, environment, action, requiredStatus string) (model.RuntimeJob, error) {
 	serviceID = strings.TrimSpace(serviceID)
 	if serviceID == "" {
 		return model.RuntimeJob{}, fmt.Errorf("%w: service_id is required", ErrInvalid)
+	}
+
+	slug := strings.ToLower(strings.TrimSpace(environment))
+	if slug == "" {
+		slug = "dev"
 	}
 
 	svc, err := r.catalog.Get(ctx, serviceID)
@@ -47,12 +69,24 @@ func (r *Runtime) enqueue(ctx context.Context, serviceID, action, requiredStatus
 		return model.RuntimeJob{}, fmt.Errorf("%w: no deployments for this service", ErrInvalid)
 	}
 
-	latest := deps[0]
-	if latest.Status != requiredStatus {
-		return model.RuntimeJob{}, fmt.Errorf("%w: deployment must be %s (current: %s)", ErrInvalid, requiredStatus, latest.Status)
+	var target *model.Deployment
+	for i := range deps {
+		if deps[i].EnvironmentSlug == slug {
+			cp := deps[i]
+			target = &cp
+			break
+		}
 	}
 
-	busy, err := r.store.HasActiveJob(ctx, latest.ID)
+	if target == nil {
+		return model.RuntimeJob{}, fmt.Errorf("%w: no deployment for environment %q", ErrInvalid, slug)
+	}
+
+	if target.Status != requiredStatus {
+		return model.RuntimeJob{}, fmt.Errorf("%w: %s deployment must be %s (current: %s)", ErrInvalid, slug, requiredStatus, target.Status)
+	}
+
+	busy, err := r.store.HasActiveJob(ctx, target.ID)
 	if err != nil {
 		return model.RuntimeJob{}, err
 	}
@@ -60,7 +94,7 @@ func (r *Runtime) enqueue(ctx context.Context, serviceID, action, requiredStatus
 		return model.RuntimeJob{}, fmt.Errorf("%w: runtime job already in progress for this deployment", ErrInvalid)
 	}
 
-	job, err := r.store.Create(ctx, serviceID, latest.ID, svc.Name, action)
+	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, action)
 	if err != nil {
 		return model.RuntimeJob{}, fmt.Errorf("enqueue runtime job: %w", err)
 	}
@@ -127,6 +161,42 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 	return existing, nil
 }
 
+func (r *Runtime) ValidateDelete(ctx context.Context, svc model.Service) error {
+	deps, err := r.deployments.ListByService(ctx, svc.ID)
+	if err != nil {
+		return err
+	}
+	if len(deps) == 0 {
+		return nil
+	}
+
+	perEnv := latestPerEnv(deps)
+	var running []string
+	for slug, d := range perEnv {
+		if d.Status == "running" {
+			running = append(running, slug)
+		}
+	}
+	if len(running) == 0 {
+		return nil
+	}
+	slices.Sort(running)
+
+	for _, slug := range running {
+		if slug == "prod" {
+			return fmt.Errorf(
+				"%w: production is still running; stop prod before deleting this service",
+				ErrForbidden,
+			)
+		}
+	}
+	return fmt.Errorf(
+		"%w: stop running environments before delete: %s",
+		ErrConflict,
+		strings.Join(running, ", "),
+	)
+}
+
 func (r *Runtime) EnqueueRemove(ctx context.Context, svc model.Service) error {
 	deps, err := r.deployments.ListByService(ctx, svc.ID)
 	if err != nil {
@@ -136,10 +206,22 @@ func (r *Runtime) EnqueueRemove(ctx context.Context, svc model.Service) error {
 		return nil
 	}
 
-	latest := deps[0]
-	_, err = r.store.Create(ctx, svc.ID, latest.ID, svc.Name, "remove")
-	if err != nil {
-		return fmt.Errorf("Enqueue remove job: %w", err)
+	perEnv := latestPerEnv(deps)
+	for slug, d := range perEnv {
+		busy, err := r.store.HasActiveJob(ctx, d.ID)
+		if err != nil {
+			return err
+		}
+		if busy {
+			return fmt.Errorf(
+				"%w: runtime job in progress for environment %q",
+				ErrConflict,
+				slug,
+			)
+		}
+		if _, err := r.store.Create(ctx, svc.ID, d.ID, svc.Name, "remove"); err != nil {
+			return fmt.Errorf("enqueue remove job for %q: %w", slug, err)
+		}
 	}
 	return nil
 }

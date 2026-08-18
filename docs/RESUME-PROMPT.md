@@ -15,15 +15,15 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 14a — API `env_deployments` (latest deploy per environment di `GET /services`).
+**Step terakhir selesai:** 14d — delete cleanup semua env + proteksi running/prod.
 
-**Step berikutnya:** 14b — stop/start terima `environment`; 14c — portal UI 3 env di catalog.
+**Step berikutnya:** opsional — logs, atau multi-agent targeting.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
 - Register existing = metadata saja, tanpa generate folder
 - Template masih di folder `templates/`, bukan database
-- Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue container cleanup (`remove`) jika pernah deploy
+- Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue `remove` untuk **setiap** env; ditolak jika ada env `running` (prod running → 403)
 - Admin Users: list, change role, create, disable/enable (konfirmasi), reset password, **soft-delete** (rename email + `deleted_at`); belum email SMTP
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
 - Deploy: host port unik per container di mesin agent; container name `sailorport-{service}-{env}`; body deploy `{"environment":"staging"}` (default dev)

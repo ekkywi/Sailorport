@@ -4,8 +4,8 @@
 
 ## Status saat ini
 
-- **Step selesai:** 14a — API `env_deployments` (latest deploy per environment)
-- **Step berikutnya:** 14b — stop/start API terima `environment`; lalu 14c portal
+- **Step selesai:** 14d — delete cleanup semua env + proteksi running/prod
+- **Step berikutnya:** opsional — logs, multi-agent targeting
 - **Terakhir dikerjakan:** 2026-08-14 — deploy ke dev/staging/prod dari portal; container name `sailorport-{service}-{env}`
 - **Mesin terakhir:** rumah / lokal
 
@@ -42,7 +42,7 @@
 - [x] R3 Delete cleanup — stop/rm container saat hapus service
 - [x] R4 — multi-port deploy (port unik per container di host agent)
 - [x] Environments (dev/staging/prod) — 13a–13d
-- [ ] Step 14 — runtime per environment (14a API ✅, 14b stop/start, 14c portal, 14d delete cleanup)
+- [x] Step 14 — runtime per environment (14a–14d)
 
 ## Yang sudah jalan
 
@@ -309,22 +309,31 @@ docker ps | grep sailorport-
 # expect sailorport-{name}-dev and sailorport-{name}-staging on different ports
 ```
 
-**Known limitation (14b–14c):** stop/start runtime & tombol portal masih pakai `latest_deployment` global — 14b/14c akan selaraskan dengan `env_deployments`.
+**Delete protection (14d):** delete diblokir jika ada environment `running` (HTTP 409). Jika **prod** masih running → HTTP 403. Cleanup enqueue `remove` untuk **setiap** latest deploy per env.
 
 ### Step 14 — runtime per environment (Opsi A)
 
 | Sub-step | Status | Isi |
 |----------|--------|-----|
 | 14a API | ✅ | `env_deployments` di `GET /services` — `LatestPerEnvByServices` (`DISTINCT ON service+env`) |
-| 14b API | ⬜ | `POST .../runtime/stop|start` + query/body `environment` |
-| 14c Portal | ⬜ | Kolom Deploy: 3 baris env + stop/start per env |
-| 14d Delete | ⬜ | Enqueue `remove` untuk semua container env |
+| 14b API | ✅ | `POST .../runtime/stop|start` + body `{"environment":"staging"}` |
+| 14c Portal | ✅ | Kolom Deploy: 3 baris env + stop/start per env |
+| 14d Delete | ✅ | Enqueue `remove` per env; blokir delete jika ada env running (prod → 403) |
 
 **Tes 14a:**
 
 ```bash
 curl -s http://localhost:8080/api/v1/services -H "Authorization: Bearer $TOKEN" \
   | jq '.[0] | {name, latest: .latest_deployment.environment_slug, env_deployments: (.env_deployments | keys)}'
+```
+
+**Tes 14d:**
+
+```bash
+# running env → 409; prod running → 403; semua stopped → 204 + job remove per env
+curl -s -o /dev/null -w "%{http_code}\n" -X DELETE \
+  "http://localhost:8080/api/v1/services/SERVICE_ID" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### Runtime queue hardening (post-13d)
@@ -345,9 +354,8 @@ curl -s http://localhost:8080/api/v1/services -H "Authorization: Bearer $TOKEN" 
 
 ## Next action
 
-1. Step 14b — stop/start API per environment
-2. Step 14c — portal kolom Deploy (3 env)
-3. Opsional: 14d delete multi-env; logs; multi-agent targeting
+1. Opsional: logs
+2. Opsional: multi-agent targeting
 
 ## Cara lanjut di mesin lain
 

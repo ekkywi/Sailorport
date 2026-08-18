@@ -14,6 +14,7 @@ import (
 )
 
 type CleanupEnqueue interface {
+	ValidateDelete(ctx context.Context, svc model.Service) error
 	EnqueueRemove(ctx context.Context, svc model.Service) error
 }
 
@@ -137,8 +138,11 @@ func (c *Catalog) Delete(ctx context.Context, id string) error {
 	}
 
 	if c.cleanup != nil {
+		if err := c.cleanup.ValidateDelete(ctx, svc); err != nil {
+			return err
+		}
 		if err := c.cleanup.EnqueueRemove(ctx, svc); err != nil {
-			log.Printf("Catalog delete: enqueue container cleanup failed for %s: %v", svc.Name, err)
+			return fmt.Errorf("enqueue container cleanup: %w", err)
 		}
 	}
 

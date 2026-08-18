@@ -20,3 +20,7 @@ type UpdateRuntimeJobRequest struct {
 	Status       string `json:"status"`
 	ErrorMessage string `json:"error_message"`
 }
+
+type RuntimeActionRequest struct {
+	Environment string `json:"environment"`
+}
