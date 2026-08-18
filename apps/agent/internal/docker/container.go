@@ -47,3 +47,17 @@ func Remove(containerName string) error {
 	}
 	return err
 }
+
+func Logs(containerName string, tail int) (string, error) {
+	if tail <= 0 {
+		tail = 200
+	}
+	out, err := runDocker("logs", "--tail", fmt.Sprintf("%d", tail), containerName)
+	if err != nil && isNotFound(out) {
+		return "", fmt.Errorf("container %s not found", containerName)
+	}
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}

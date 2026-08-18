@@ -21,7 +21,9 @@ func (s *RuntimeStore) HasActiveJob(ctx context.Context, deploymentID string) (b
 	const q = `
 		SELECT EXISTS (
 			SELECT 1 FROM runtime_jobs
-			WHERE deployment_id = $1 AND status IN ('pending', 'claimed')
+			WHERE deployment_id = $1 
+				AND status IN ('pending', 'claimed')
+				AND action IN ('stop', 'start', 'remove')
 		)`
 	var exists bool
 	if err := s.db.QueryRowContext(ctx, q, deploymentID).Scan(&exists); err != nil {
@@ -38,7 +40,7 @@ func (s *RuntimeStore) Create(ctx context.Context, serviceID, deploymentID, serv
 			RETURNING *
 		)
 		SELECT
-			i.id, i.service_id, i.deployment_id, i.service_name, e.slug, i.action, i.status, i.worker_id, i.error_message, i.created_at, i.updated_at
+			i.id, i.service_id, i.deployment_id, i.service_name, e.slug, i.action, i.status, i.worker_id, i.error_message, i.output, i.created_at, i.updated_at
 		FROM inserted i
 		JOIN deployments d ON d.id = i.deployment_id
 		JOIN environments e ON e.id = d.environment_id`
@@ -64,7 +66,7 @@ func (s *RuntimeStore) ClaimNext(ctx context.Context, workerID string) (model.Ru
 		WHERE r.id = nj.id
 		RETURNING
 			r.id, r.service_id, r.deployment_id, r.service_name, nj.environment_slug, r.action, r.status,
-			r.worker_id, r.error_message, r.created_at, r.updated_at`
+			r.worker_id, r.error_message, r.output, r.created_at, r.updated_at`
 
 	job, err := scanRuntimeJob(s.db.QueryRowContext(ctx, q, workerID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -83,24 +85,45 @@ func (s *RuntimeStore) Update(ctx context.Context, id string, req model.UpdateRu
 			SET
 				status = COALESCE(NULLIF($2, ''), status),
 				error_message = COALESCE(NULLIF($3, ''), error_message),
+				output = COALESCE(NULLIF($4, ''), output),
 				updated_at = NOW()
 			WHERE id = $1
 			RETURNING *
 		)
 		SELECT
 			u.id, u.service_id, u.deployment_id, u.service_name, e.slug,
-			u.action, u.status, u.worker_id, u.error_message, u.created_at, u.updated_at
+			u.action, u.status, u.worker_id, u.error_message, u.output, u.created_at, u.updated_at
 		FROM updated u
 		JOIN deployments d ON d.id = u.deployment_id
 		JOIN environments e ON e.id = d.environment_id
 	`
 
-	job, err := scanRuntimeJob(s.db.QueryRowContext(ctx, q, id, req.Status, req.ErrorMessage))
+	job, err := scanRuntimeJob(s.db.QueryRowContext(ctx, q, id, req.Status, req.ErrorMessage, req.Output))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.RuntimeJob{}, ErrNotFound
 	}
 	if err != nil {
 		return model.RuntimeJob{}, fmt.Errorf("Update runtime job: %w", err)
+	}
+	return job, nil
+}
+
+func (s *RuntimeStore) Get(ctx context.Context, id string) (model.RuntimeJob, error) {
+	const q = `
+		SELECT
+			r.id, r.service_id, r.deployment_id, r.service_name, e.slug,
+			r.action, r.status, r.worker_id, r.error_message, r.output,
+			r.created_at, r.updated_at
+		FROM runtime_jobs r
+		JOIN deployments d ON d.id = r.deployment_id
+		JOIN environments e ON e.id = d.environment_id
+		WHERE r.id = $1`
+	job, err := scanRuntimeJob(s.db.QueryRowContext(ctx, q, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.RuntimeJob{}, ErrNotFound
+	}
+	if err != nil {
+		return model.RuntimeJob{}, fmt.Errorf("Get runtime job: %w", err)
 	}
 	return job, nil
 }
@@ -120,6 +143,7 @@ func scanRuntimeJob(row rowScanner) (model.RuntimeJob, error) {
 		&job.Status,
 		&workerID,
 		&job.ErrorMessage,
+		&job.Output,
 		&job.CreatedAt,
 		&job.UpdatedAt,
 	)

@@ -74,6 +74,8 @@ func NewRouter(api API) http.Handler {
 
 	mux.Handle("POST /api/v1/services/{id}/runtime/stop", withRole(secret, writer, runtimeH.Stop))
 	mux.Handle("POST /api/v1/services/{id}/runtime/start", withRole(secret, writer, runtimeH.Start))
+	mux.Handle("POST /api/v1/services/{id}/runtime/logs", withRole(secret, reader, runtimeH.Logs))
+	mux.Handle("GET /api/v1/runtime/{id}", withRole(secret, reader, runtimeH.Get))
 
 	mux.Handle("POST /api/v1/agent/jobs/next", withAgentToken(token, deploymentsH.ClaimNext))
 	mux.Handle("PATCH /api/v1/agent/deployments/{id}", withAgentToken(token, deploymentsH.Update))

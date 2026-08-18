@@ -45,6 +45,55 @@ func (r *Runtime) RequestStart(ctx context.Context, serviceID, environment strin
 	return r.enqueue(ctx, serviceID, environment, "start", "stopped")
 }
 
+func (r *Runtime) RequestLogs(ctx context.Context, serviceID, environment string) (model.RuntimeJob, error) {
+	serviceID = strings.TrimSpace(serviceID)
+	if serviceID == "" {
+		return model.RuntimeJob{}, fmt.Errorf("%w: service_id is required", ErrInvalid)
+	}
+
+	slug := strings.ToLower(strings.TrimSpace(environment))
+	if slug == "" {
+		slug = "dev"
+	}
+
+	svc, err := r.catalog.Get(ctx, serviceID)
+	if err != nil {
+		return model.RuntimeJob{}, err
+	}
+
+	deps, err := r.deployments.ListByService(ctx, serviceID)
+	if err != nil {
+		return model.RuntimeJob{}, err
+	}
+
+	var target *model.Deployment
+	for i := range deps {
+		if deps[i].EnvironmentSlug == slug {
+			cp := deps[i]
+			target = &cp
+			break
+		}
+	}
+	if target == nil {
+		return model.RuntimeJob{}, fmt.Errorf("%w: no deployment for environment %q", ErrInvalid, slug)
+	}
+
+	switch target.Status {
+	case "running", "stopped":
+	default:
+		return model.RuntimeJob{}, fmt.Errorf(
+			"%w %s deployment must be running or stopped to fetch logs (current: %s)",
+			ErrInvalid, slug, target.Status,
+		)
+	}
+
+	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, "logs")
+	if err != nil {
+		return model.RuntimeJob{}, fmt.Errorf("enqueue logs job: %w", err)
+	}
+	return job, nil
+}
+
 func (r *Runtime) enqueue(ctx context.Context, serviceID, environment, action, requiredStatus string) (model.RuntimeJob, error) {
 	serviceID = strings.TrimSpace(serviceID)
 	if serviceID == "" {
@@ -117,6 +166,18 @@ func (r *Runtime) ClaimNext(ctx context.Context, workerID string) (model.Runtime
 	return job, nil
 }
 
+func (r *Runtime) Get(ctx context.Context, id string) (model.RuntimeJob, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return model.RuntimeJob{}, fmt.Errorf("%w: id is required", ErrInvalid)
+	}
+	job, err := r.store.Get(ctx, id)
+	if err != nil {
+		return model.RuntimeJob{}, mapRepoErr(err)
+	}
+	return job, nil
+}
+
 func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.UpdateRuntimeJobRequest) (model.RuntimeJob, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -125,6 +186,7 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 
 	req.Status = strings.TrimSpace(req.Status)
 	req.ErrorMessage = strings.TrimSpace(req.ErrorMessage)
+	req.Output = strings.TrimSpace(req.Output)
 
 	if req.Status != "" {
 		switch req.Status {
@@ -146,7 +208,7 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 			deployStatus = "stopped"
 		case "start":
 			deployStatus = "running"
-		case "remove":
+		case "remove", "logs":
 		}
 		if deployStatus != "" {
 			_, err := r.deployments.Update(ctx, existing.DeploymentID, model.UpdateDeploymentRequest{

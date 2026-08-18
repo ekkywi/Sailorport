@@ -52,6 +52,31 @@ func (h *RuntimeHandler) Start(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, job)
 }
 
+func (h *RuntimeHandler) Logs(w http.ResponseWriter, r *http.Request) {
+	var req model.RuntimeActionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	defer r.Body.Close()
+
+	job, err := h.runtime.RequestLogs(r.Context(), r.PathValue("id"), req.Environment)
+	if err != nil {
+		writeRuntimeError(w, "Request logs", err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, job)
+}
+
+func (h *RuntimeHandler) Get(w http.ResponseWriter, r *http.Request) {
+	job, err := h.runtime.Get(r.Context(), r.PathValue("id"))
+	if err != nil {
+		writeRuntimeError(w, "Get runtime job", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, job)
+}
+
 func (h *RuntimeHandler) ClaimNext(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		WorkerID string `json:"worker_id"`

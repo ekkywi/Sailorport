@@ -54,6 +54,7 @@ type RuntimeJob struct {
 type UpdateRuntimeRequest struct {
 	Status       string `json:"status"`
 	ErrorMessage string `json:"error_message"`
+	Output       string `json:"output"`
 }
 
 func New(baseURL, token string) *APIClient {

@@ -131,7 +131,7 @@ func (a *Agent) handleRuntime(workerID string) error {
 	}
 
 	containerName := docker.ContainerName(job.ServiceName, job.EnvironmentSlug)
-	log.Printf("runtime job id=%s action=%s env=%s container=%s", job.ID, job.Action, job.EnvironmentSlug, containerName)
+	log.Printf("runtime job id=%s action=%s env %s container=%s", job.ID, job.Action, job.EnvironmentSlug, containerName)
 
 	var runErr error
 	switch job.Action {
@@ -141,6 +141,20 @@ func (a *Agent) handleRuntime(workerID string) error {
 		runErr = docker.Start(containerName)
 	case "remove":
 		runErr = docker.Remove(containerName)
+	case "logs":
+		text, err := docker.Logs(containerName, 200)
+		if err != nil {
+			runErr = err
+			break
+		}
+		const maxLogBytes = 64 * 1024
+		if len(text) > maxLogBytes {
+			text = text[len(text)-maxLogBytes:]
+		}
+		return a.client.UpdateRuntime(job.ID, client.UpdateRuntimeRequest{
+			Status: "done",
+			Output: text,
+		})
 	default:
 		runErr = fmt.Errorf("unknown action %q", job.Action)
 	}
@@ -151,6 +165,5 @@ func (a *Agent) handleRuntime(workerID string) error {
 		})
 		return runErr
 	}
-
 	return a.client.UpdateRuntime(job.ID, client.UpdateRuntimeRequest{Status: "done"})
 }

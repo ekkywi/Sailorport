@@ -12,6 +12,7 @@ type RuntimeJob struct {
 	Status          string    `json:"status"`
 	WorkerID        *string   `json:"worker_id"`
 	ErrorMessage    string    `json:"error_message"`
+	Output          string    `json:"output"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
@@ -19,6 +20,7 @@ type RuntimeJob struct {
 type UpdateRuntimeJobRequest struct {
 	Status       string `json:"status"`
 	ErrorMessage string `json:"error_message"`
+	Output       string `json:"output"`
 }
 
 type RuntimeActionRequest struct {
