@@ -32,6 +32,7 @@ import { ServiceList } from "./ServiceList";
 import type { Service, ServiceFormValues } from "./types";
 import { DeployDialog } from "../deployments/DeployDialog";
 import { DeploymentsDialog } from "../deployments/DeploymentsDialog";
+import { LogsDialog } from "./LogsDialog";
 import { startService, stopService } from "../runtime/api";
 import type { AuthUser } from "@/features/auth/types";
 import { canWriteCatalog } from "@/lib/rbac";
@@ -68,6 +69,10 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     action: "stop" | "start";
   } | null>(null);
   const [runtimePending, setRuntimePending] = useState(false);
+  const [logsTarget, setLogsTarget] = useState<{
+    service: Service;
+    environment: string;
+  } | null>(null);
   const [environments, setEnvironments] = useState<Environment[]>([]);
 
   async function load(options?: { silent?: boolean }) {
@@ -325,6 +330,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         onStart={(svc, environment) =>
           setRuntimeTarget({ service: svc, environment, action: "start" })
         }
+        onLogs={(svc, environment) => setLogsTarget({ service: svc, environment })}
         onCreate={canWrite ? startCreate : undefined}
       />
 
@@ -582,6 +588,15 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
           if (!open) setHistoryTarget(null);
         }}
         onRefreshCatalog={() => void load({ silent: true })}
+      />
+      <LogsDialog
+        open={logsTarget !== null}
+        serviceId={logsTarget?.service.id ?? null}
+        serviceName={logsTarget?.service.name ?? ""}
+        environment={logsTarget?.environment ?? "dev"}
+        onOpenChange={(open) => {
+          if (!open) setLogsTarget(null);
+        }}
       />
     </div>
   );

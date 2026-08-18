@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 14d — delete cleanup semua env + proteksi running/prod.
+**Step terakhir selesai:** 15e — logs end-to-end (API + agent docker logs + portal LogsDialog).
 
-**Step berikutnya:** opsional — logs, atau multi-agent targeting.
+**Step berikutnya:** opsional — multi-agent targeting, audit log, webhook auto-deploy.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -30,11 +30,12 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Environments: `GET /api/v1/environments`; portal Deploy dialog; `GET /services` juga return `env_deployments` (map slug → latest deploy per env)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
-- Catalog: kolom Deploy menampilkan `latest_deployment` + badge environment; rocket = dialog deploy (pilih env), jam = history; square/play = stop/start runtime (**konfirmasi**)
+- Catalog: kolom Deploy menampilkan `latest_deployment` + badge environment; rocket = dialog deploy (pilih env), jam = history; square/play = stop/start runtime (**konfirmasi**); 📜 = logs (semua role)
+- Logs: POST `/services/{id}/runtime/logs` → agent `docker logs --tail 200` → output di `runtime_jobs.output`; portal `LogsDialog` poll `GET /runtime/{job_id}` tiap 2s; viewer+ boleh akses
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan step opsional berikutnya (runtime per env, logs, atau multi-agent targeting) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan step opsional berikutnya (multi-agent targeting, audit log, atau webhook auto-deploy) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

@@ -41,7 +41,7 @@ Satu flow ini harus jalan di mesin orang lain:
 - [x] Auth + RBAC dasar (JWT lokal; OIDC menyusul)
 - [x] Software catalog (API + portal CRUD lengkap)
 - [x] Scaffolder / golden path (template `go-api`)
-- [ ] Environments (dev/staging/prod)
+- [x] Environments (dev/staging/prod)
 - [x] Deploy via agent (API + agent docker + portal Deploy UI)
 - [x] Worker registry + health (API + portal + agent heartbeat)
 - [ ] Audit log
@@ -51,7 +51,7 @@ Satu flow ini harus jalan di mesin orang lain:
 
 - Git webhook auto-deploy
 - Rollback / redeploy
-- Runtime controls (start/stop/restart + logs)
+- ~~Runtime controls (start/stop/restart + logs)~~ ✅
 - Docs-as-code
 - CI visibility (GitHub/GitLab)
 - Scorecards ringan
@@ -98,3 +98,6 @@ Satu flow ini harus jalan di mesin orang lain:
 | R2 | Runtime controls (API + portal stop/start) | selesai |
 | R3 | Delete cleanup (stop/rm container) | selesai |
 | R4 | Multi-port deploy (host port unik per container) | selesai |
+| 13 | Environments (dev/staging/prod) | selesai |
+| 14 | Runtime per environment (stop/start per env) | selesai |
+| 15 | Logs end-to-end (API + agent + portal) | selesai |

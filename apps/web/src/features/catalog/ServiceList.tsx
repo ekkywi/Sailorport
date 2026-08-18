@@ -1,4 +1,4 @@
-import { Boxes, FolderGit2, History, Pencil, Play, Rocket, Square, Trash2 } from "lucide-react";
+import { Boxes, FolderGit2, History, Pencil, Play, Rocket, ScrollText, Square, Trash2 } from "lucide-react";
 import {
   DataPanel,
   EmptyState,
@@ -23,6 +23,7 @@ type ServiceListProps = {
   onOpenHistory: (svc: Service) => void;
   onStop: (svc: Service, environment: string) => void;
   onStart: (svc: Service, environment: string) => void;
+  onLogs: (svc: Service, environment: string) => void;
 };
 
 const FALLBACK_ENVIRONMENTS: Pick<Environment, "slug" | "name" | "sort_order">[] = [
@@ -62,6 +63,7 @@ function EnvDeployCell({
   onOpenHistory,
   onStop,
   onStart,
+  onLogs,
 }: {
   svc: Service;
   environments: Environment[];
@@ -69,6 +71,7 @@ function EnvDeployCell({
   onOpenHistory: (svc: Service) => void;
   onStop: (svc: Service, environment: string) => void;
   onStart: (svc: Service, environment: string) => void;
+  onLogs: (svc: Service, environment: string) => void;
 }) {
   const envs = svc.env_deployments ?? {};
   const ordered =
@@ -109,6 +112,18 @@ function EnvDeployCell({
                   >
                     :{d.port}
                   </a>
+                ) : null}
+                {(d.status === "running" || d.status === "stopped") ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-7 text-muted-foreground hover:text-foreground"
+                    aria-label={`Logs ${svc.name} ${slug}`}
+                    onClick={() => onLogs(svc, slug)}
+                  >
+                    <ScrollText className="size-3" />
+                  </Button>
                 ) : null}
                 {canWrite && d.status === "running" ? (
                   <Button
@@ -221,6 +236,7 @@ export function ServiceList({
   onOpenHistory,
   onStop,
   onStart,
+  onLogs,
   onCreate,
 }: ServiceListProps) {
   if (loading && services.length === 0) {
@@ -321,6 +337,7 @@ export function ServiceList({
                     onOpenHistory={onOpenHistory}
                     onStop={onStop}
                     onStart={onStart}
+                    onLogs={onLogs}
                   />
                 </td>
                 <td className="px-4 py-3">
@@ -394,6 +411,7 @@ export function ServiceList({
                     onOpenHistory={onOpenHistory}
                     onStop={onStop}
                     onStart={onStart}
+                    onLogs={onLogs}
                   />
                 </div>
                 {(svc.template_id || svc.workspace_path) && (

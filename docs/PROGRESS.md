@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 14d — delete cleanup semua env + proteksi running/prod
-- **Step berikutnya:** opsional — logs, multi-agent targeting
-- **Terakhir dikerjakan:** 2026-08-14 — deploy ke dev/staging/prod dari portal; container name `sailorport-{service}-{env}`
+- **Step selesai:** 15e — logs frontend (portal LogsDialog + tombol per env)
+- **Step berikutnya:** opsional — multi-agent targeting, audit log, webhook auto-deploy
+- **Terakhir dikerjakan:** 2026-08-18 — logs end-to-end (API + agent + portal); backend 15a–15d + frontend 15e
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -43,6 +43,7 @@
 - [x] R4 — multi-port deploy (port unik per container di host agent)
 - [x] Environments (dev/staging/prod) — 13a–13d
 - [x] Step 14 — runtime per environment (14a–14d)
+- [x] Step 15 — logs end-to-end (15a–15e: API + agent + portal)
 
 ## Yang sudah jalan
 
@@ -96,10 +97,12 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `PATCH /api/v1/deployments/{id}` | developer+ | update status (portal/curl JWT) |
 | `POST /api/v1/services/{id}/runtime/stop` | developer+ | enqueue stop container (deployment harus `running`) → **202** |
 | `POST /api/v1/services/{id}/runtime/start` | developer+ | enqueue start container (deployment harus `stopped`) → **202** |
+| `POST /api/v1/services/{id}/runtime/logs` | viewer+ | enqueue logs job (deployment harus `running`/`stopped`) → **202** |
+| `GET /api/v1/runtime/{id}` | viewer+ | get runtime job by ID (poll status + output) |
 | `POST /api/v1/agent/jobs/next` | agent token | claim 1 deploy job pending → `claimed` (204 jika kosong) |
 | `PATCH /api/v1/agent/deployments/{id}` | agent token | agent update deploy status |
-| `POST /api/v1/agent/runtime/next` | agent token | claim 1 runtime job (`stop`/`start`) |
-| `PATCH /api/v1/agent/runtime/{id}` | agent token | agent selesai runtime job; API update deployment → `stopped`/`running` |
+| `POST /api/v1/agent/runtime/next` | agent token | claim 1 runtime job (`stop`/`start`/`logs`) |
+| `PATCH /api/v1/agent/runtime/{id}` | agent token | agent selesai runtime job; API update deployment → `stopped`/`running`; logs → output only |
 | Portal `/login`, `/register` | — | auth gate |
 | Portal `/overview`, `/catalog`, `/worker`, `/users` | JWT | app shell; `/users` admin-only (redirect non-admin) |
 
@@ -352,10 +355,41 @@ curl -s -o /dev/null -w "%{http_code}\n" -X DELETE \
 - Agent **tidak** di compose (perlu Docker daemon di host untuk deploy workload)
 - Deploy E2E agent: lebih cocok API host (`go run`) agar path workspace di DB = path host
 
+### Logs end-to-end (Step 15a–15e)
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 15a Migrasi | ✅ | `00013_runtime_jobs_logs.sql` — action `logs` + kolom `output TEXT` |
+| 15b API | ✅ | `POST .../runtime/logs` enqueue; `GET /runtime/{id}` poll; agent update menyimpan output |
+| 15c Agent | ✅ | `docker.Logs(container, 200)` → truncate 64KB → update job `done` + output |
+| 15d Store | ✅ | `Update` SQL persist `output` via `COALESCE(NULLIF($4,''), output)` |
+| 15e Portal | ✅ | `LogsDialog` + tombol `ScrollText` per env (running/stopped); semua role; POST → poll GET → `<pre>` |
+
+**Tes logs:**
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@sailorport.com","password":"changeme"}' | jq -r .token)
+
+JOB=$(curl -s -X POST "http://localhost:8080/api/v1/services/SERVICE_ID/runtime/logs" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"environment":"dev"}' | jq -r .id)
+
+sleep 8
+curl -s "http://localhost:8080/api/v1/runtime/$JOB" \
+  -H "Authorization: Bearer $TOKEN" | jq '{status, output: (.output | length)}'
+# expect: status "done", output > 0
+```
+
+Portal: klik icon 📜 (ScrollText) di baris env → dialog logs → "Waiting for agent…" → output muncul.
+
 ## Next action
 
-1. Opsional: logs
-2. Opsional: multi-agent targeting
+1. Opsional: multi-agent targeting
+2. Opsional: audit log
+3. Opsional: webhook auto-deploy
 
 ## Cara lanjut di mesin lain
 
