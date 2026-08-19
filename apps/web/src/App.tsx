@@ -12,6 +12,7 @@ import { RegisterPage } from "./features/auth/RegisterPage";
 import { logout, me } from "./features/auth/api";
 import type { AuthUser } from "./features/auth/types";
 import { OverviewPage } from "./features/overview/OverviewPage";
+import { AuditPage } from "./features/audit/AuditPage";
 import { UsersPage } from "./features/users/UsersPage";
 import { WorkersPage } from "./features/workers/WorkersPage";
 import { AppShell } from "./layouts/AppShell";
@@ -130,6 +131,16 @@ function App() {
                 element={
                   isAdmin(user.role) ? (
                     <UsersPage />
+                  ) : (
+                    <Navigate to="/overview" replace />
+                  )
+                }
+              />
+              <Route
+                path="/audit"
+                element={
+                  isAdmin(user.role) ? (
+                    <AuditPage />
                   ) : (
                     <Navigate to="/overview" replace />
                   )

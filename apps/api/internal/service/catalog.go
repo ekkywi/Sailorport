@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
@@ -44,10 +45,15 @@ type Catalog struct {
 	deployments  DeploymentReader
 	workspaceDir string
 	cleanup      CleanupEnqueue
+	audit        *Audit
 }
 
 func (c *Catalog) SetCleanupEnqueue(e CleanupEnqueue) {
 	c.cleanup = e
+}
+
+func (c *Catalog) SetAudit(a *Audit) {
+	c.audit = a
 }
 
 func NewCatalog(repo Repository, deployments DeploymentReader, workspaceDir string) *Catalog {
@@ -98,7 +104,7 @@ func (c *Catalog) Get(ctx context.Context, id string) (model.Service, error) {
 	return svc, nil
 }
 
-func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest) (model.Service, error) {
+func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest, actorID, actorEmail string) (model.Service, error) {
 	req, err := normalizeCreate(req)
 	if err != nil {
 		return model.Service{}, err
@@ -107,10 +113,11 @@ func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest) (m
 	if err != nil {
 		return model.Service{}, mapRepoErr(err)
 	}
+	c.recordService(ctx, actorID, actorEmail, "service.create", svc)
 	return svc, nil
 }
 
-func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateServiceRequest) (model.Service, error) {
+func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateServiceRequest, actorID, actorEmail string) (model.Service, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return model.Service{}, fmt.Errorf("%w: id is required", ErrInvalid)
@@ -123,10 +130,11 @@ func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateService
 	if err != nil {
 		return model.Service{}, mapRepoErr(err)
 	}
+	c.recordService(ctx, actorID, actorEmail, "service.update", svc)
 	return svc, nil
 }
 
-func (c *Catalog) Delete(ctx context.Context, id string) error {
+func (c *Catalog) Delete(ctx context.Context, id, actorID, actorEmail string) error {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("%w: id is required", ErrInvalid)
@@ -146,6 +154,10 @@ func (c *Catalog) Delete(ctx context.Context, id string) error {
 		}
 	}
 
+	if err := c.recordDelete(ctx, svc, actorID, actorEmail); err != nil {
+		return err
+	}
+
 	if err := c.repo.Delete(ctx, id); err != nil {
 		return mapRepoErr(err)
 	}
@@ -155,6 +167,66 @@ func (c *Catalog) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("deleted from catalog but workspace cleanup failed: %w", err)
 	}
 	return nil
+}
+
+func (c *Catalog) recordDelete(ctx context.Context, svc model.Service, actorID, actorEmail string) error {
+	if c.audit == nil {
+		return nil
+	}
+	payload := map[string]any{
+		"description":    svc.Description,
+		"owner":          svc.Owner,
+		"template_id":    svc.TemplateID,
+		"workspace_path": svc.WorkspacePath,
+	}
+	if c.deployments != nil {
+		perEnv, err := c.deployments.LatestPerEnvByServices(ctx)
+		if err == nil {
+			if m, ok := perEnv[svc.ID]; ok && len(m) > 0 {
+				slugs := make([]string, 0, len(m))
+				statuses := make(map[string]string, len(m))
+				for slug, d := range m {
+					slugs = append(slugs, slug)
+					statuses[slug] = d.Status
+				}
+				slices.Sort(slugs)
+				payload["environments"] = slugs
+				payload["env_status"] = statuses
+			}
+		}
+	}
+	return c.audit.Record(ctx, model.AuditRecord{
+		ActorID:      strings.TrimSpace(actorID),
+		ActorEmail:   strings.TrimSpace(actorEmail),
+		Action:       "service.delete",
+		ResourceType: "service",
+		ResourceID:   svc.ID,
+		ResourceName: svc.Name,
+		Payload:      payload,
+	})
+}
+
+func (c *Catalog) recordService(ctx context.Context, actorID, actorEmail, action string, svc model.Service) {
+	if c.audit == nil {
+		return
+	}
+	err := c.audit.Record(ctx, model.AuditRecord{
+		ActorID:      strings.TrimSpace(actorID),
+		ActorEmail:   strings.TrimSpace(actorEmail),
+		Action:       action,
+		ResourceType: "service",
+		ResourceID:   svc.ID,
+		ResourceName: svc.Name,
+		Payload: map[string]any{
+			"description":    svc.Description,
+			"owner":          svc.Owner,
+			"template_id":    svc.TemplateID,
+			"workspace_path": svc.WorkspacePath,
+		},
+	})
+	if err != nil {
+		log.Printf("audit %s: %v", action, err)
+	}
 }
 
 func (c *Catalog) removeWorkspace(workspacePath string) error {

@@ -30,6 +30,12 @@ func (h *UsersHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	var req model.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -37,7 +43,7 @@ func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	out, err := h.users.Create(r.Context(), req)
+	out, err := h.users.Create(r.Context(), req, claims.UserID, claims.Email)
 	if err != nil {
 		writeUserError(w, "create user", err)
 		return
@@ -70,7 +76,7 @@ func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case req.Disabled != nil:
-		out, err := h.users.SetDisabled(r.Context(), claims.UserID, targetID, *req.Disabled)
+		out, err := h.users.SetDisabled(r.Context(), claims.UserID, claims.Email, targetID, *req.Disabled)
 		if err != nil {
 			writeUserError(w, "update user disabled", err)
 			return
@@ -79,7 +85,7 @@ func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case req.Role != nil:
-		out, err := h.users.UpdateRole(r.Context(), claims.UserID, targetID, *req.Role)
+		out, err := h.users.UpdateRole(r.Context(), claims.UserID, claims.Email, targetID, *req.Role)
 		if err != nil {
 			writeUserError(w, "update user role", err)
 			return
@@ -110,6 +116,7 @@ func (h *UsersHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	err := h.users.ResetPassword(
 		r.Context(),
 		claims.UserID,
+		claims.Email,
 		r.PathValue("id"),
 		req.Password,
 	)
@@ -130,6 +137,7 @@ func (h *UsersHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	err := h.users.SoftDelete(
 		r.Context(),
 		claims.UserID,
+		claims.Email,
 		r.PathValue("id"),
 	)
 	if err != nil {

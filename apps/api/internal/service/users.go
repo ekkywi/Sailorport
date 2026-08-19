@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/mail"
 	"strings"
 
@@ -29,7 +30,38 @@ type UserAdminRepository interface {
 }
 
 type Users struct {
-	repo UserAdminRepository
+	repo  UserAdminRepository
+	audit *Audit
+}
+
+func (u *Users) SetAudit(a *Audit) {
+	u.audit = a
+}
+
+func (u *Users) recordUser(ctx context.Context, actorID, actorEmail, action string, target model.User, extra map[string]any) {
+	if u.audit == nil {
+		return
+	}
+	payload := map[string]any{
+		"email": target.Email,
+		"name":  target.Name,
+		"role":  target.Role,
+	}
+	for k, v := range extra {
+		payload[k] = v
+	}
+	err := u.audit.Record(ctx, model.AuditRecord{
+		ActorID:      strings.TrimSpace(actorID),
+		ActorEmail:   strings.TrimSpace(actorEmail),
+		Action:       action,
+		ResourceType: "user",
+		ResourceID:   target.ID,
+		ResourceName: target.Email,
+		Payload:      payload,
+	})
+	if err != nil {
+		log.Printf("audit %s: %v", action, err)
+	}
 }
 
 func NewUsers(repo UserAdminRepository) *Users {
@@ -44,7 +76,7 @@ func (u *Users) List(ctx context.Context) ([]model.User, error) {
 	return users, nil
 }
 
-func (u *Users) Create(ctx context.Context, req model.CreateUserRequest) (model.User, error) {
+func (u *Users) Create(ctx context.Context, req model.CreateUserRequest, actorID, actorEmail string) (model.User, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.Name = strings.TrimSpace(req.Name)
 	req.Password = strings.TrimSpace(req.Password)
@@ -78,10 +110,11 @@ func (u *Users) Create(ctx context.Context, req model.CreateUserRequest) (model.
 	if err != nil {
 		return model.User{}, mapUserAdminErr(err)
 	}
+	u.recordUser(ctx, actorID, actorEmail, "user.create", out, nil)
 	return out, nil
 }
 
-func (u *Users) UpdateRole(ctx context.Context, actorID, targetID string, role string) (model.User, error) {
+func (u *Users) UpdateRole(ctx context.Context, actorID, actorEmail, targetID string, role string) (model.User, error) {
 	actorID = strings.TrimSpace(actorID)
 	targetID = strings.TrimSpace(targetID)
 	role = strings.TrimSpace(role)
@@ -103,10 +136,11 @@ func (u *Users) UpdateRole(ctx context.Context, actorID, targetID string, role s
 	if err != nil {
 		return model.User{}, mapUserAdminErr(err)
 	}
+	u.recordUser(ctx, actorID, actorEmail, "user.role", out, nil)
 	return out, nil
 }
 
-func (u *Users) SetDisabled(ctx context.Context, actorID, targetID string, disabled bool) (model.User, error) {
+func (u *Users) SetDisabled(ctx context.Context, actorID, actorEmail, targetID string, disabled bool) (model.User, error) {
 	actorID = strings.TrimSpace(actorID)
 	targetID = strings.TrimSpace(targetID)
 
@@ -124,10 +158,15 @@ func (u *Users) SetDisabled(ctx context.Context, actorID, targetID string, disab
 	if err != nil {
 		return model.User{}, mapUserAdminErr(err)
 	}
+	action := "user.enable"
+	if disabled {
+		action = "user.disable"
+	}
+	u.recordUser(ctx, actorID, actorEmail, action, out, nil)
 	return out, nil
 }
 
-func (u *Users) ResetPassword(ctx context.Context, actorID, targetID, password string) error {
+func (u *Users) ResetPassword(ctx context.Context, actorID, actorEmail, targetID, password string) error {
 	actorID = strings.TrimSpace(actorID)
 	targetID = strings.TrimSpace(targetID)
 	password = strings.TrimSpace(password)
@@ -150,13 +189,18 @@ func (u *Users) ResetPassword(ctx context.Context, actorID, targetID, password s
 		return fmt.Errorf("hash password: %w", err)
 	}
 
+	target, err := u.repo.GetByID(ctx, targetID)
+	if err != nil {
+		return mapUserAdminErr(err)
+	}
 	if err := u.repo.UpdatePasswordHash(ctx, targetID, hash); err != nil {
 		return mapUserAdminErr(err)
 	}
+	u.recordUser(ctx, actorID, actorEmail, "user.password_reset", target, nil)
 	return nil
 }
 
-func (u *Users) SoftDelete(ctx context.Context, actorID, targetID string) error {
+func (u *Users) SoftDelete(ctx context.Context, actorID, actorEmail, targetID string) error {
 	actorID = strings.TrimSpace(actorID)
 	targetID = strings.TrimSpace(targetID)
 
@@ -170,9 +214,14 @@ func (u *Users) SoftDelete(ctx context.Context, actorID, targetID string) error 
 		return fmt.Errorf("%w: cannot delete yourself", ErrForbidden)
 	}
 
+	target, err := u.repo.GetByID(ctx, targetID)
+	if err != nil {
+		return mapUserAdminErr(err)
+	}
 	if err := u.repo.SoftDelete(ctx, targetID); err != nil {
 		return mapUserAdminErr(err)
 	}
+	u.recordUser(ctx, actorID, actorEmail, "user.delete", target, nil)
 	return nil
 }
 

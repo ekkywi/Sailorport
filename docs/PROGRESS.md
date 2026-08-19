@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 15e — logs frontend (portal LogsDialog + tombol per env)
-- **Step berikutnya:** opsional — multi-agent targeting, audit log, webhook auto-deploy
-- **Terakhir dikerjakan:** 2026-08-18 — logs end-to-end (API + agent + portal); backend 15a–15d + frontend 15e
+- **Step selesai:** 16e — audit log portal (`/audit` admin)
+- **Step berikutnya:** opsional — multi-agent targeting, webhook auto-deploy
+- **Terakhir dikerjakan:** 2026-08-19 — audit log end-to-end (16a–16e) + fix delete container cleanup (00014)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -44,6 +44,7 @@
 - [x] Environments (dev/staging/prod) — 13a–13d
 - [x] Step 14 — runtime per environment (14a–14d)
 - [x] Step 15 — logs end-to-end (15a–15e: API + agent + portal)
+- [x] Step 16 — audit log (16a–16e: record + list API + portal)
 
 ## Yang sudah jalan
 
@@ -99,12 +100,13 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | `POST /api/v1/services/{id}/runtime/start` | developer+ | enqueue start container (deployment harus `stopped`) → **202** |
 | `POST /api/v1/services/{id}/runtime/logs` | viewer+ | enqueue logs job (deployment harus `running`/`stopped`) → **202** |
 | `GET /api/v1/runtime/{id}` | viewer+ | get runtime job by ID (poll status + output) |
+| `GET /api/v1/audit` | admin | list audit events (`?limit=50`, max 200) |
 | `POST /api/v1/agent/jobs/next` | agent token | claim 1 deploy job pending → `claimed` (204 jika kosong) |
 | `PATCH /api/v1/agent/deployments/{id}` | agent token | agent update deploy status |
 | `POST /api/v1/agent/runtime/next` | agent token | claim 1 runtime job (`stop`/`start`/`logs`) |
 | `PATCH /api/v1/agent/runtime/{id}` | agent token | agent selesai runtime job; API update deployment → `stopped`/`running`; logs → output only |
 | Portal `/login`, `/register` | — | auth gate |
-| Portal `/overview`, `/catalog`, `/worker`, `/users` | JWT | app shell; `/users` admin-only (redirect non-admin) |
+| Portal `/overview`, `/catalog`, `/worker`, `/users`, `/audit` | JWT | app shell; `/users` dan `/audit` admin-only (redirect non-admin) |
 
 Env API: `AUTH_JWT_SECRET` (default `dev-only-change-me`), `SAILORPORT_AGENT_TOKEN` (default `dev-agent-token` — ganti di production)
 
@@ -236,10 +238,12 @@ curl http://localhost:18080/healthz   # service yang di-deploy
 ### Delete container cleanup (R3)
 
 - Migrasi `00007_runtime_remove_action.sql` — `runtime_jobs.action` boleh `remove`
-- `Catalog.Delete`: enqueue job `remove` (jika ada deployment) **sebelum** hapus row; lalu workspace cleanup
-- Wiring: `catalog.SetCleanupEnqueuer(runtimeSvc)` di `main.go` (hindari circular dependency)
-- Agent: `handleRuntime` case `remove` → `docker.Remove` (`rm -f`, idempotent)
-- API `UpdateFromAgent` untuk `remove`: **tidak** update deployment (sudah CASCADE saat delete service)
+- Migrasi `00014_runtime_jobs_remove_survive.sql` — kolom `environment_slug`; `deployment_id` nullable + `ON DELETE SET NULL` (bukan CASCADE)
+- `Catalog.Delete`: enqueue job `remove` (slug tersimpan di job) **sebelum** hapus row; hapus service tidak menghapus job
+- `ClaimNext` / `Get` / `Update` tidak `JOIN deployments` — agent tetap bisa claim `remove` setelah catalog hilang
+- Wiring: `catalog.SetCleanupEnqueue(runtimeSvc)` di `main.go` (hindari circular dependency)
+- Agent: `handleRuntime` case `remove` → `docker.Remove` (`rm -f sailorport-{name}-{env}`, idempotent)
+- API `UpdateFromAgent` untuk `remove`: **tidak** update deployment (row sudah terhapus)
 - Portal: dialog delete menjelaskan cleanup container + workspace
 
 ### Latest deploy di catalog (R0)
@@ -337,14 +341,21 @@ curl -s http://localhost:8080/api/v1/services -H "Authorization: Bearer $TOKEN" 
 curl -s -o /dev/null -w "%{http_code}\n" -X DELETE \
   "http://localhost:8080/api/v1/services/SERVICE_ID" \
   -H "Authorization: Bearer $TOKEN"
+
+# job remove harus tetap ada (deployment_id NULL) sampai agent selesai
+docker exec -it sailorport-postgres psql -U sailorport -d sailorport -c \
+  "SELECT action, status, environment_slug, deployment_id IS NULL AS dep_gone FROM runtime_jobs WHERE action='remove' ORDER BY created_at DESC LIMIT 5;"
+
+# setelah agent poll (~5s): container hilang
+docker ps -a --filter name=sailorport-
 ```
 
 ### Runtime queue hardening (post-13d)
 
-- `ClaimNext` hanya ambil job dengan deployment masih ada (skip orphan)
-- Migrasi `00012_runtime_jobs_deployment_fk.sql` — bersihkan job orphan + FK `deployment_id` CASCADE
-- `HasActiveJob` — tolak stop/start ganda saat job masih `pending`/`claimed`
+- Migrasi `00012_runtime_jobs_deployment_fk.sql` — FK `deployment_id` (semula CASCADE; di 00014 jadi SET NULL)
+- `HasActiveJob` — tolak stop/start/remove ganda saat job masih `pending`/`claimed`
 - Portal: konfirmasi AlertDialog sebelum Stop / Start
+- **Fix 00014:** job `remove` tidak ikut terhapus saat service di-delete; slug disimpan di `runtime_jobs.environment_slug`
 
 ### Compose full stack (Step 11)
 
@@ -385,11 +396,31 @@ curl -s "http://localhost:8080/api/v1/runtime/$JOB" \
 
 Portal: klik icon 📜 (ScrollText) di baris env → dialog logs → "Waiting for agent…" → output muncul.
 
+### Audit log (Step 16a–16e)
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 16a Migrasi | ✅ | `00015_create_audit_events.sql` — tabel append-only + index |
+| 16b Catalog delete | ✅ | Snapshot service sebelum hard-delete; actor dari JWT |
+| 16c Events lain | ✅ | `service.create`/`update`, `user.create`/`role`/`disable`/`enable`/`password_reset`/`delete` |
+| 16d API list | ✅ | `GET /api/v1/audit?limit=50` (admin) |
+| 16e Portal | ✅ | `/audit` — tabel when/actor/action/resource/details; sidebar admin |
+
+**Actions yang dicatat:** catalog create/update/delete (scaffold → create), admin user CRUD-ish. **Tidak** dicatat: login, list, agent poll.
+
+**Tes audit:**
+
+```bash
+curl -s "http://localhost:8080/api/v1/audit?limit=10" \
+  -H "Authorization: Bearer $TOKEN" | jq '.[0] | {action, resource_name, actor_email}'
+```
+
+Portal: login admin → sidebar **Audit** → lihat jejak aksi.
+
 ## Next action
 
 1. Opsional: multi-agent targeting
-2. Opsional: audit log
-3. Opsional: webhook auto-deploy
+2. Opsional: webhook auto-deploy
 
 ## Cara lanjut di mesin lain
 

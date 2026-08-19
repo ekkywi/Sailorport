@@ -18,6 +18,7 @@ type API struct {
 	Runtime      *service.Runtime
 	AgentToken   string
 	Environments *service.Environments
+	Audit        *service.Audit
 }
 
 func NewRouter(api API) http.Handler {
@@ -45,6 +46,8 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("GET /api/v1/auth/me", withAuth(secret, authH.Me))
 
 	usersH := NewUsersHandler(api.Users)
+	auditH := NewAuditHandler(api.Audit)
+	mux.Handle("GET /api/v1/audit", withRole(secret, admin, auditH.List))
 	mux.Handle("GET /api/v1/users", withRole(secret, admin, usersH.List))
 	mux.Handle("POST /api/v1/users", withRole(secret, admin, usersH.Create))
 	mux.Handle("PATCH /api/v1/users/{id}", withRole(secret, admin, usersH.Update))

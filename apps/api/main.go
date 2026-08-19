@@ -59,19 +59,24 @@ func main() {
 	runtimeStore := store.NewRuntimeStore(sqlDB)
 	runtimeSvc := service.NewRuntime(runtimeStore, deploymentsSvc, catalog)
 	catalog.SetCleanupEnqueue(runtimeSvc)
+	auditStore := store.NewAuditStore(sqlDB)
+	auditSvc := service.NewAudit(auditStore)
+	catalog.SetAudit(auditSvc)
+	usersSvc.SetAudit(auditSvc)
 
 	router := handler.NewRouter(handler.API{
-		Version:     cfg.Version,
-		JWTSecret:   cfg.JWTSecret,
-		Catalog:     catalog,
-		Scaffold:    scaffold,
-		Auth:        authSvc,
-		Users:       usersSvc,
-		Workers:     workersSvc,
-		Deployments: deploymentsSvc,
-		Runtime:     runtimeSvc,
+		Version:      cfg.Version,
+		JWTSecret:    cfg.JWTSecret,
+		Catalog:      catalog,
+		Scaffold:     scaffold,
+		Auth:         authSvc,
+		Users:        usersSvc,
+		Workers:      workersSvc,
+		Deployments:  deploymentsSvc,
+		Runtime:      runtimeSvc,
 		Environments: envsSvc,
-		AgentToken:  cfg.AgentToken,
+		AgentToken:   cfg.AgentToken,
+		Audit:        auditSvc,
 	})
 
 	addr := ":" + cfg.Port

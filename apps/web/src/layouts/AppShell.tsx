@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Boxes,
   ChevronDown,
+  ClipboardList,
   LayoutDashboard,
   LogOut,
   ChevronLeft,
@@ -68,7 +69,10 @@ const navSections: NavSection[] = [
   {
     id: "admin",
     label: "Administration",
-    items: [{ to: "/users", label: "Users", icon: Users, adminOnly: true }],
+    items: [
+      { to: "/users", label: "Users", icon: Users, adminOnly: true },
+      { to: "/audit", label: "Audit", icon: ClipboardList, adminOnly: true },
+    ],
   },
 ];
 
@@ -88,6 +92,10 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   "/users": {
     title: "Users",
     description: "Manage accounts and roles",
+  },
+  "/audit": {
+    title: "Audit log",
+    description: "Administrative actions and catalog changes",
   },
 };
 

@@ -43,7 +43,7 @@ func (s *Scaffold) ListTemplates() ([]tpl.Manifest, error) {
 	return s.templates.List()
 }
 
-func (s *Scaffold) Run(ctx context.Context, req ScaffoldRequest) (ScaffoldResult, error) {
+func (s *Scaffold) Run(ctx context.Context, req ScaffoldRequest, actorID, actorEmail string) (ScaffoldResult, error) {
 	req.TemplateID = strings.TrimSpace(req.TemplateID)
 	req.Name = strings.TrimSpace(req.Name)
 	req.Owner = strings.TrimSpace(req.Owner)
@@ -105,7 +105,7 @@ func (s *Scaffold) Run(ctx context.Context, req ScaffoldRequest) (ScaffoldResult
 		Owner:         req.Owner,
 		TemplateID:    manifest.ID,
 		WorkspacePath: cleanTarget,
-	})
+	}, actorID, actorEmail)
 	if err != nil {
 		return ScaffoldResult{}, err
 	}

@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	testAdminID = "00000000-0000-0000-0000-000000000001"
-	testDevID   = "00000000-0000-0000-0000-000000000002"
+	testAdminID     = "00000000-0000-0000-0000-000000000001"
+	testDevID       = "00000000-0000-0000-0000-000000000002"
+	testActorEmail  = "admin@test.com"
 )
 
 type fakeUserAdminRepo struct {
@@ -110,7 +111,7 @@ func TestUsers_Create_ok(t *testing.T) {
 		Email:    "  Dev@Example.COM ",
 		Password: "password1",
 		Role:     "",
-	})
+	}, testAdminID, testActorEmail)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +133,7 @@ func TestUsers_Create_withNameAndRole(t *testing.T) {
 		Name:     "Alice",
 		Password: "password1",
 		Role:     "viewer",
-	})
+	}, testAdminID, testActorEmail)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +147,7 @@ func TestUsers_Create_invalidEmail(t *testing.T) {
 	_, err := svc.Create(context.Background(), model.CreateUserRequest{
 		Email:    "not-an-email",
 		Password: "password1",
-	})
+	}, testAdminID, testActorEmail)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -157,7 +158,7 @@ func TestUsers_Create_passwordTooShort(t *testing.T) {
 	_, err := svc.Create(context.Background(), model.CreateUserRequest{
 		Email:    "dev@example.com",
 		Password: "short",
-	})
+	}, testAdminID, testActorEmail)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -169,7 +170,7 @@ func TestUsers_Create_invalidRole(t *testing.T) {
 		Email:    "dev@example.com",
 		Password: "password1",
 		Role:     "qa",
-	})
+	}, testAdminID, testActorEmail)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -183,7 +184,7 @@ func TestUsers_Create_conflict(t *testing.T) {
 		Email:    "dev@example.com",
 		Password: "password1",
 		Role:     "viewer",
-	})
+	}, testAdminID, testActorEmail)
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected ErrConflict, got %v", err)
 	}
@@ -193,7 +194,7 @@ func TestUsers_UpdateRole_forbiddenSelfChange(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Email: "a@x.com", Role: "admin"}},
 	})
-	_, err := svc.UpdateRole(context.Background(), testAdminID, testAdminID, "viewer")
+	_, err := svc.UpdateRole(context.Background(), testAdminID, testActorEmail, testAdminID, "viewer")
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -206,7 +207,7 @@ func TestUsers_UpdateRole_invalidRole(t *testing.T) {
 			{ID: testDevID, Role: "developer"},
 		},
 	})
-	_, err := svc.UpdateRole(context.Background(), testAdminID, testDevID, "qa")
+	_, err := svc.UpdateRole(context.Background(), testAdminID, testActorEmail, testDevID, "qa")
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -219,7 +220,7 @@ func TestUsers_UpdateRole_ok(t *testing.T) {
 			{ID: testDevID, Role: "developer"},
 		},
 	})
-	out, err := svc.UpdateRole(context.Background(), testAdminID, testDevID, "viewer")
+	out, err := svc.UpdateRole(context.Background(), testAdminID, testActorEmail, testDevID, "viewer")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +233,7 @@ func TestUsers_UpdateRole_invalidID(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	_, err := svc.UpdateRole(context.Background(), testAdminID, "TARGET_USER_ID", "viewer")
+	_, err := svc.UpdateRole(context.Background(), testAdminID, testActorEmail, "TARGET_USER_ID", "viewer")
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -242,7 +243,7 @@ func TestUsers_UpdateRole_notFound(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	_, err := svc.UpdateRole(context.Background(), testAdminID, testDevID, "viewer")
+	_, err := svc.UpdateRole(context.Background(), testAdminID, testActorEmail, testDevID, "viewer")
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
@@ -252,7 +253,7 @@ func TestUsers_SetDisabled_forbiddenSelf(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Email: "a@x.com", Role: "admin"}},
 	})
-	_, err := svc.SetDisabled(context.Background(), testAdminID, testAdminID, true)
+	_, err := svc.SetDisabled(context.Background(), testAdminID, testActorEmail, testAdminID, true)
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -265,7 +266,7 @@ func TestUsers_SetDisabled_ok(t *testing.T) {
 			{ID: testDevID, Role: "developer", Disabled: false},
 		},
 	})
-	out, err := svc.SetDisabled(context.Background(), testAdminID, testDevID, true)
+	out, err := svc.SetDisabled(context.Background(), testAdminID, testActorEmail, testDevID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +282,7 @@ func TestUsers_SetDisabled_enable(t *testing.T) {
 			{ID: testDevID, Role: "developer", Disabled: true},
 		},
 	})
-	out, err := svc.SetDisabled(context.Background(), testAdminID, testDevID, false)
+	out, err := svc.SetDisabled(context.Background(), testAdminID, testActorEmail, testDevID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +295,7 @@ func TestUsers_SetDisabled_invalidID(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	_, err := svc.SetDisabled(context.Background(), testAdminID, "TARGET_USER_ID", true)
+	_, err := svc.SetDisabled(context.Background(), testAdminID, testActorEmail, "TARGET_USER_ID", true)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -304,7 +305,7 @@ func TestUsers_SetDisabled_notFound(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	_, err := svc.SetDisabled(context.Background(), testAdminID, testDevID, true)
+	_, err := svc.SetDisabled(context.Background(), testAdminID, testActorEmail, testDevID, true)
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
@@ -314,7 +315,7 @@ func TestUsers_ResetPassword_forbiddenSelf(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	err := svc.ResetPassword(context.Background(), testAdminID, testAdminID, "newpassword")
+	err := svc.ResetPassword(context.Background(), testAdminID, testActorEmail, testAdminID, "newpassword")
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -327,7 +328,7 @@ func TestUsers_ResetPassword_ok(t *testing.T) {
 			{ID: testDevID, Role: "developer"},
 		},
 	})
-	err := svc.ResetPassword(context.Background(), testAdminID, testDevID, "newpassword")
+	err := svc.ResetPassword(context.Background(), testAdminID, testActorEmail, testDevID, "newpassword")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -340,7 +341,7 @@ func TestUsers_ResetPassword_tooShort(t *testing.T) {
 			{ID: testDevID, Role: "developer"},
 		},
 	})
-	err := svc.ResetPassword(context.Background(), testAdminID, testDevID, "short")
+	err := svc.ResetPassword(context.Background(), testAdminID, testActorEmail, testDevID, "short")
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -350,7 +351,7 @@ func TestUsers_ResetPassword_invalidID(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	err := svc.ResetPassword(context.Background(), testAdminID, "TARGET_USER_ID", "newpassword")
+	err := svc.ResetPassword(context.Background(), testAdminID, testActorEmail, "TARGET_USER_ID", "newpassword")
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -360,7 +361,7 @@ func TestUsers_ResetPassword_notFound(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	err := svc.ResetPassword(context.Background(), testAdminID, testDevID, "newpassword")
+	err := svc.ResetPassword(context.Background(), testAdminID, testActorEmail, testDevID, "newpassword")
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
@@ -370,7 +371,7 @@ func TestUsers_SoftDelete_forbiddenSelf(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	err := svc.SoftDelete(context.Background(), testAdminID, testAdminID)
+	err := svc.SoftDelete(context.Background(), testAdminID, testActorEmail, testAdminID)
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden, got %v", err)
 	}
@@ -384,7 +385,7 @@ func TestUsers_SoftDelete_ok(t *testing.T) {
 		},
 	}
 	svc := NewUsers(repo)
-	err := svc.SoftDelete(context.Background(), testAdminID, testDevID)
+	err := svc.SoftDelete(context.Background(), testAdminID, testActorEmail, testDevID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -397,7 +398,7 @@ func TestUsers_SoftDelete_invalidID(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	err := svc.SoftDelete(context.Background(), testAdminID, "TARGET_USER_ID")
+	err := svc.SoftDelete(context.Background(), testAdminID, testActorEmail, "TARGET_USER_ID")
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
@@ -407,7 +408,7 @@ func TestUsers_SoftDelete_notFound(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{
 		users: []model.User{{ID: testAdminID, Role: "admin"}},
 	})
-	err := svc.SoftDelete(context.Background(), testAdminID, testDevID)
+	err := svc.SoftDelete(context.Background(), testAdminID, testActorEmail, testDevID)
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}

@@ -44,7 +44,7 @@ Satu flow ini harus jalan di mesin orang lain:
 - [x] Environments (dev/staging/prod)
 - [x] Deploy via agent (API + agent docker + portal Deploy UI)
 - [x] Worker registry + health (API + portal + agent heartbeat)
-- [ ] Audit log
+- [x] Audit log
 - [x] Self-hosting pack (compose + docs)
 
 ## Setelah MVP stabil
@@ -101,3 +101,4 @@ Satu flow ini harus jalan di mesin orang lain:
 | 13 | Environments (dev/staging/prod) | selesai |
 | 14 | Runtime per environment (stop/start per env) | selesai |
 | 15 | Logs end-to-end (API + agent + portal) | selesai |
+| 16 | Audit log (record + list API + portal) | selesai |

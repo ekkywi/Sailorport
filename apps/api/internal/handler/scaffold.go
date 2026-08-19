@@ -27,6 +27,11 @@ func (h *ScaffoldHandler) ListTemplates(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *ScaffoldHandler) Create(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	var req service.ScaffoldRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -34,7 +39,7 @@ func (h *ScaffoldHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	result, err := h.scaffold.Run(r.Context(), req)
+	result, err := h.scaffold.Run(r.Context(), req, claims.UserID, claims.Email)
 	if err != nil {
 		writeCatalogError(w, "scaffold service", err)
 		return

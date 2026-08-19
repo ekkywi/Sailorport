@@ -63,6 +63,7 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 | `/catalog` | daftar services + deploy terakhir; History; Deploy; **Stop/Start** (runtime); create/edit/delete |
 | `/worker` | daftar workers + status |
 | `/users` | admin: list, create, role, disable/enable (confirm), reset password, soft-delete |
+| `/audit` | admin: jejak aksi (catalog + user admin) |
 
 Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
@@ -70,7 +71,7 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 - **Create service** (default) = pilih template → generate workspace → daftar ke catalog
 - **Register existing** = metadata saja di catalog, tanpa folder
-- **Delete service** = enqueue job `remove` (jika pernah deploy) → hapus row DB + folder workspace jika path di bawah `SAILORPORT_WORKSPACE` → agent `docker rm -f`
+- **Delete service** = enqueue job `remove` (slug di job) → hapus row DB + folder workspace → agent `docker rm -f sailorport-{name}-{env}` (job survive SET NULL)
 
 ## Coding conventions
 

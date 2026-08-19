@@ -87,7 +87,7 @@ func (r *Runtime) RequestLogs(ctx context.Context, serviceID, environment string
 		)
 	}
 
-	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, "logs")
+	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, slug, "logs")
 	if err != nil {
 		return model.RuntimeJob{}, fmt.Errorf("enqueue logs job: %w", err)
 	}
@@ -143,7 +143,7 @@ func (r *Runtime) enqueue(ctx context.Context, serviceID, environment, action, r
 		return model.RuntimeJob{}, fmt.Errorf("%w: runtime job already in progress for this deployment", ErrInvalid)
 	}
 
-	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, action)
+	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, slug, action)
 	if err != nil {
 		return model.RuntimeJob{}, fmt.Errorf("enqueue runtime job: %w", err)
 	}
@@ -210,7 +210,7 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 			deployStatus = "running"
 		case "remove", "logs":
 		}
-		if deployStatus != "" {
+		if deployStatus != "" && existing.DeploymentID != "" {
 			_, err := r.deployments.Update(ctx, existing.DeploymentID, model.UpdateDeploymentRequest{
 				Status: deployStatus,
 			})
@@ -281,7 +281,7 @@ func (r *Runtime) EnqueueRemove(ctx context.Context, svc model.Service) error {
 				slug,
 			)
 		}
-		if _, err := r.store.Create(ctx, svc.ID, d.ID, svc.Name, "remove"); err != nil {
+		if _, err := r.store.Create(ctx, svc.ID, d.ID, svc.Name, slug, "remove"); err != nil {
 			return fmt.Errorf("enqueue remove job for %q: %w", slug, err)
 		}
 	}

@@ -30,6 +30,11 @@ func (h *ServicesHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServicesHandler) Create(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	var req model.CreateServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -37,7 +42,7 @@ func (h *ServicesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	svc, err := h.catalog.Create(r.Context(), req)
+	svc, err := h.catalog.Create(r.Context(), req, claims.UserID, claims.Email)
 	if err != nil {
 		writeCatalogError(w, "create service", err)
 		return
@@ -55,6 +60,11 @@ func (h *ServicesHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServicesHandler) Update(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	var req model.UpdateServiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -62,7 +72,7 @@ func (h *ServicesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	svc, err := h.catalog.Update(r.Context(), r.PathValue("id"), req)
+	svc, err := h.catalog.Update(r.Context(), r.PathValue("id"), req, claims.UserID, claims.Email)
 	if err != nil {
 		writeCatalogError(w, "update service", err)
 		return
@@ -71,7 +81,12 @@ func (h *ServicesHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServicesHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	if err := h.catalog.Delete(r.Context(), r.PathValue("id")); err != nil {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if err := h.catalog.Delete(r.Context(), r.PathValue("id"), claims.UserID, claims.Email); err != nil {
 		writeCatalogError(w, "delete service", err)
 		return
 	}
