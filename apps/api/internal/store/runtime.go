@@ -41,7 +41,7 @@ func (s *RuntimeStore) Create(ctx context.Context, serviceID, deploymentID, serv
 		VALUES ($1, $2, $3, $4, $5, 'pending')
 		RETURNING
 			id, service_id, deployment_id, service_name, environment_slug,
-			action, status, worker_id, error_message, output, created_at, updated_at`
+			action, status, target_worker_id, worker_id, error_message, output, created_at, updated_at`
 
 	return scanRuntimeJob(s.db.QueryRowContext(ctx, q, serviceID, deploymentID, serviceName, envSlug, action))
 }
@@ -62,7 +62,7 @@ func (s *RuntimeStore) ClaimNext(ctx context.Context, workerID string) (model.Ru
 		WHERE r.id = nj.id
 		RETURNING
 			r.id, r.service_id, r.deployment_id, r.service_name, r.environment_slug,
-			r.action, r.status, r.worker_id, r.error_message, r.output,
+			r.action, r.status, r.target_worker_id, r.worker_id, r.error_message, r.output,
 			r.created_at, r.updated_at`
 
 	job, err := scanRuntimeJob(s.db.QueryRowContext(ctx, q, workerID))
@@ -86,7 +86,7 @@ func (s *RuntimeStore) Update(ctx context.Context, id string, req model.UpdateRu
 		WHERE id = $1
 		RETURNING
 			id, service_id, deployment_id, service_name, environment_slug,
-			action, status, worker_id, error_message, output, created_at, updated_at`
+			action, status, target_worker_id, worker_id, error_message, output, created_at, updated_at`
 
 	job, err := scanRuntimeJob(s.db.QueryRowContext(ctx, q, id, req.Status, req.ErrorMessage, req.Output))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -102,7 +102,7 @@ func (s *RuntimeStore) Get(ctx context.Context, id string) (model.RuntimeJob, er
 	const q = `
 		SELECT
 			id, service_id, deployment_id, service_name, environment_slug,
-			action, status, worker_id, error_message, output, created_at, updated_at
+			action, status, target_worker_id, worker_id, error_message, output, created_at, updated_at
 		FROM runtime_jobs
 		WHERE id = $1`
 	job, err := scanRuntimeJob(s.db.QueryRowContext(ctx, q, id))
@@ -117,9 +117,10 @@ func (s *RuntimeStore) Get(ctx context.Context, id string) (model.RuntimeJob, er
 
 func scanRuntimeJob(row rowScanner) (model.RuntimeJob, error) {
 	var (
-		job          model.RuntimeJob
-		deploymentID sql.NullString
-		workerID     sql.NullString
+		job            model.RuntimeJob
+		deploymentID   sql.NullString
+		targetWorkerID sql.NullString
+		workerID       sql.NullString
 	)
 	err := row.Scan(
 		&job.ID,
@@ -129,6 +130,7 @@ func scanRuntimeJob(row rowScanner) (model.RuntimeJob, error) {
 		&job.EnvironmentSlug,
 		&job.Action,
 		&job.Status,
+		&targetWorkerID,
 		&workerID,
 		&job.ErrorMessage,
 		&job.Output,
@@ -140,6 +142,10 @@ func scanRuntimeJob(row rowScanner) (model.RuntimeJob, error) {
 	}
 	if deploymentID.Valid {
 		job.DeploymentID = deploymentID.String
+	}
+	if targetWorkerID.Valid {
+		v := targetWorkerID.String
+		job.TargetWorkerID = &v
 	}
 	if workerID.Valid {
 		v := workerID.String

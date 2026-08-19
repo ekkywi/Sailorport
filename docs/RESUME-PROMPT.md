@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 16e — audit log end-to-end (record + GET /audit + portal `/audit`).
+**Step terakhir selesai:** 17b — multi-agent targeting (migrasi 00016, model, store scan, deploy with `worker_id` targeting + validasi online).
 
-**Step berikutnya:** opsional — multi-agent targeting, webhook auto-deploy.
+**Step berikutnya:** 17c — filter ClaimNext deploy, lalu 17d (runtime affinity) + 17e (portal worker picker).
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog

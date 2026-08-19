@@ -101,3 +101,19 @@ func scanWorker(row rowScanner) (model.Worker, error) {
 	}
 	return w, nil
 }
+
+func (s *WorkersStore) Get(ctx context.Context, id string) (model.Worker, error) {
+	const q = `
+		SELECT id, name, hostname, status, labels, last_seen_at, created_at, updated_at
+		FROM workers
+		WHERE id = $1
+	`
+	w, err := scanWorker(s.db.QueryRowContext(ctx, q, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.Worker{}, ErrNotFound
+	}
+	if err != nil {
+		return model.Worker{}, err
+	}
+	return w, nil
+}

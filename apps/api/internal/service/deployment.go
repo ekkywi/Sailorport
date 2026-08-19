@@ -15,10 +15,11 @@ type Deployments struct {
 	store   *store.DeploymentsStore
 	envs    *store.EnvironmentsStore
 	catalog *Catalog
+	workers *Workers
 }
 
-func NewDeployments(s *store.DeploymentsStore, envs *store.EnvironmentsStore, catalog *Catalog) *Deployments {
-	return &Deployments{store: s, envs: envs, catalog: catalog}
+func NewDeployments(s *store.DeploymentsStore, envs *store.EnvironmentsStore, catalog *Catalog, workers *Workers) *Deployments {
+	return &Deployments{store: s, envs: envs, catalog: catalog, workers: workers}
 }
 
 func (d *Deployments) Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest) (model.Deployment, error) {
@@ -48,7 +49,11 @@ func (d *Deployments) Create(ctx context.Context, serviceID string, req model.Cr
 		return model.Deployment{}, err
 	}
 
-	out, err := d.store.Create(ctx, serviceID, env.ID)
+	targetWorkerID, err := d.resolveTargetWorker(ctx, serviceID, slug, req.WorkerID)
+	if err != nil {
+		return model.Deployment{}, err
+	}
+	out, err := d.store.Create(ctx, serviceID, env.ID, targetWorkerID)
 	if err != nil {
 		return model.Deployment{}, fmt.Errorf("Create deployment: %w", err)
 	}
@@ -123,4 +128,43 @@ func (d *Deployments) Update(ctx context.Context, id string, req model.UpdateDep
 		return model.Deployment{}, mapRepoErr(err)
 	}
 	return out, nil
+}
+
+func (d *Deployments) resolveTargetWorker(
+	ctx context.Context,
+	serviceID, envSlug, requestedWorkerID string,
+) (*string, error) {
+	requestedWorkerID = strings.TrimSpace(requestedWorkerID)
+
+	if requestedWorkerID != "" {
+		return d.validateOnlineWorker(ctx, requestedWorkerID)
+	}
+
+	deps, err := d.store.ListByService(ctx, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	for _, dep := range deps {
+		if dep.EnvironmentSlug != envSlug {
+			continue
+		}
+		if dep.WorkerID != nil && strings.TrimSpace(*dep.WorkerID) != "" {
+			id := strings.TrimSpace(*dep.WorkerID)
+			return &id, nil
+		}
+		break
+	}
+	return nil, nil
+}
+
+func (d *Deployments) validateOnlineWorker(ctx context.Context, workerID string) (*string, error) {
+	w, err := d.workers.Get(ctx, workerID)
+	if err != nil {
+		return nil, err
+	}
+	if w.Status != "online" {
+		return nil, fmt.Errorf("%w: worker %q is %s (must be online)", ErrConflict, w.Name, w.Status)
+	}
+	id := w.ID
+	return &id, nil
 }

@@ -17,28 +17,28 @@ func NewDeploymentsStore(db *sql.DB) *DeploymentsStore {
 	return &DeploymentsStore{db: db}
 }
 
-func (s *DeploymentsStore) Create(ctx context.Context, serviceID, environmentID string) (model.Deployment, error) {
+func (s *DeploymentsStore) Create(ctx context.Context, serviceID, environmentID string, targetWorkerID *string) (model.Deployment, error) {
 	const q = `
 		WITH inserted AS (
-			INSERT INTO deployments (service_id, environment_id, status)
-			VALUES ($1, $2, 'pending')
+			INSERT INTO deployments (service_id, environment_id, status, target_worker_id)
+			VALUES ($1, $2, 'pending', $3)
 			RETURNING *
 		)
 		SELECT
 			i.id, i.service_id, i.environment_id, e.slug,
-			i.worker_id, i.status, i.image_tag, i.container_id, i.port,
+			i.target_worker_id, i.worker_id, i.status, i.image_tag, i.container_id, i.port,
 			i.error_message, i.created_at, i.updated_at
 		FROM inserted i
 		JOIN environments e ON e.id = i.environment_id`
 
-	return scanDeployment(s.db.QueryRowContext(ctx, q, serviceID, environmentID))
+	return scanDeployment(s.db.QueryRowContext(ctx, q, serviceID, environmentID, targetWorkerID))
 }
 
 func (s *DeploymentsStore) Get(ctx context.Context, id string) (model.Deployment, error) {
 	const q = `
 		SELECT
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id
@@ -58,7 +58,7 @@ func (s *DeploymentsStore) List(ctx context.Context) ([]model.Deployment, error)
 	const q = `
 		SELECT
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id
@@ -85,7 +85,7 @@ func (s *DeploymentsStore) ListByService(ctx context.Context, serviceID string) 
 	const q = `
 		SELECT
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id
@@ -126,7 +126,7 @@ func (s *DeploymentsStore) ClaimNext(ctx context.Context, workerID string) (mode
 			AND e.id = d.environment_id
 		RETURNING
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.worker_id, d.status, d.image_tag, d.container_id,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id,
 			d.port, d.error_message, d.created_at, d.updated_at,
 			s.name, s.workspace_path`
 	return scanDeploymentJob(s.db.QueryRowContext(ctx, claimQ, workerID))
@@ -148,7 +148,7 @@ func (s *DeploymentsStore) Update(ctx context.Context, id string, req model.Upda
 		)
 		SELECT
 			u.id, u.service_id, u.environment_id, e.slug,
-			u.worker_id, u.status, u.image_tag, u.container_id, u.port,
+			u.target_worker_id, u.worker_id, u.status, u.image_tag, u.container_id, u.port,
 			u.error_message, u.created_at, u.updated_at
 		FROM updated u
 		JOIN environments e ON e.id = u.environment_id`
@@ -165,15 +165,17 @@ func (s *DeploymentsStore) Update(ctx context.Context, id string, req model.Upda
 
 func scanDeployment(row rowScanner) (model.Deployment, error) {
 	var (
-		d        model.Deployment
-		workerID sql.NullString
-		port     sql.NullInt64
+		d              model.Deployment
+		targetWorkerID sql.NullString
+		workerID       sql.NullString
+		port           sql.NullInt64
 	)
 	err := row.Scan(
 		&d.ID,
 		&d.ServiceID,
 		&d.EnvironmentID,
 		&d.EnvironmentSlug,
+		&targetWorkerID,
 		&workerID,
 		&d.Status,
 		&d.ImageTag,
@@ -185,6 +187,10 @@ func scanDeployment(row rowScanner) (model.Deployment, error) {
 	)
 	if err != nil {
 		return model.Deployment{}, err
+	}
+	if targetWorkerID.Valid {
+		v := targetWorkerID.String
+		d.TargetWorkerID = &v
 	}
 	if workerID.Valid {
 		v := workerID.String
@@ -199,15 +205,17 @@ func scanDeployment(row rowScanner) (model.Deployment, error) {
 
 func scanDeploymentJob(row rowScanner) (model.DeploymentJob, error) {
 	var (
-		job      model.DeploymentJob
-		workerID sql.NullString
-		port     sql.NullInt64
+		job            model.DeploymentJob
+		targetWorkerID sql.NullString
+		workerID       sql.NullString
+		port           sql.NullInt64
 	)
 	err := row.Scan(
 		&job.ID,
 		&job.ServiceID,
 		&job.EnvironmentID,
 		&job.EnvironmentSlug,
+		&targetWorkerID,
 		&workerID,
 		&job.Status,
 		&job.ImageTag,
@@ -221,6 +229,10 @@ func scanDeploymentJob(row rowScanner) (model.DeploymentJob, error) {
 	)
 	if err != nil {
 		return model.DeploymentJob{}, err
+	}
+	if targetWorkerID.Valid {
+		v := targetWorkerID.String
+		job.TargetWorkerID = &v
 	}
 	if workerID.Valid {
 		v := workerID.String
@@ -237,7 +249,7 @@ func (s *DeploymentsStore) LatestByServices(ctx context.Context) (map[string]mod
 	const q = `
 		SELECT DISTINCT ON (d.service_id)
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id
@@ -267,7 +279,7 @@ func (s *DeploymentsStore) LatestPerEnvByServices(ctx context.Context) (map[stri
 	const q = `
 		SELECT DISTINCT ON (d.service_id, d.environment_id)
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id

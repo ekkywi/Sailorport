@@ -7,6 +7,7 @@ type Deployment struct {
 	ServiceID       string    `json:"service_id"`
 	EnvironmentID   string    `json:"environment_id"`
 	EnvironmentSlug string    `json:"environment_slug"`
+	TargetWorkerID  *string   `json:"target_worker_id"`
 	WorkerID        *string   `json:"worker_id"`
 	Status          string    `json:"status"`
 	ImageTag        string    `json:"image_tag"`
@@ -18,6 +19,7 @@ type Deployment struct {
 }
 type CreateDeploymentRequest struct {
 	Environment string `json:"environment"`
+	WorkerID    string `json:"worker_id"`
 }
 
 type UpdateDeploymentRequest struct {

@@ -116,6 +116,12 @@ func writeDeploymentError(w http.ResponseWriter, op string, err error) {
 		writeError(w, http.StatusBadRequest, msg)
 	case errors.Is(err, service.ErrNotFound):
 		writeError(w, http.StatusNotFound, "Not found")
+	case errors.Is(err, service.ErrConflict):
+		msg := err.Error()
+		if i := strings.Index(msg, ": "); i >= 0 {
+			msg = msg[i+2:]
+		}
+		writeError(w, http.StatusConflict, msg)
 	default:
 		log.Printf("%s: %v", op, err)
 		writeError(w, http.StatusInternalServerError, "Internal server error")

@@ -51,3 +51,18 @@ func (w *Workers) Heartbeat(ctx context.Context, id, status string) (model.Worke
 func (w *Workers) List(ctx context.Context) ([]model.Worker, error) {
 	return w.store.List(ctx)
 }
+
+func (w *Workers) Get(ctx context.Context, id string) (model.Worker, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return model.Worker{}, ErrInvalid
+	}
+	out, err := w.store.Get(ctx, id)
+	if errors.Is(err, store.ErrNotFound) {
+		return model.Worker{}, ErrNotFound
+	}
+	if err != nil {
+		return model.Worker{}, err
+	}
+	return out, nil
+}

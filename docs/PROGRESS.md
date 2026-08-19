@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 16e — audit log portal (`/audit` admin)
-- **Step berikutnya:** opsional — multi-agent targeting, webhook auto-deploy
-- **Terakhir dikerjakan:** 2026-08-19 — audit log end-to-end (16a–16e) + fix delete container cleanup (00014)
+- **Step selesai:** 17b — multi-agent targeting (DB + model + store + deploy with worker)
+- **Step berikutnya:** 17c — filter ClaimNext deploy by target_worker_id, lalu 17d–17e
+- **Terakhir dikerjakan:** 2026-08-19 — multi-agent targeting 17a–17b (migrasi, model, store scan, deploy targeting + validasi worker online)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -417,10 +417,38 @@ curl -s "http://localhost:8080/api/v1/audit?limit=10" \
 
 Portal: login admin → sidebar **Audit** → lihat jejak aksi.
 
+### Step 17 — Multi-agent targeting (in progress)
+
+**Tujuan:** deploy dan runtime job hanya dijalankan oleh worker yang benar (bukan race).
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 17a Migrasi + model + store | ✅ | `00016_multi_agent_targeting.sql` (`target_worker_id` di deployments + runtime_jobs); model struct + scanner updated |
+| 17b Deploy with worker | ✅ | `CreateDeploymentRequest.WorkerID`; `WorkersStore.Get` + `Workers.Get`; `resolveTargetWorker` (explicit/redeploy affinity/null); validasi online → 409; `writeDeploymentError` handle `ErrConflict` |
+| 17c Claim deploy filter | ⬜ | `ClaimNext` WHERE `target_worker_id IS NULL OR = $1` |
+| 17d Runtime affinity | ⬜ | Enqueue set target dari deployment.worker_id; `ClaimNext` runtime filter |
+| 17e Portal worker picker | ⬜ | DeployDialog dropdown worker online |
+
+**Tes deploy dengan worker:**
+
+```bash
+# deploy tanpa worker (target = null atau affinity)
+curl -s -X POST "http://localhost:8080/api/v1/services/$SVC/deployments" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"environment":"dev"}' | jq '{target_worker_id, status}'
+
+# deploy dengan worker explicit
+curl -s -X POST "http://localhost:8080/api/v1/services/$SVC/deployments" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"environment\":\"dev\",\"worker_id\":\"$WORKER_ID\"}" | jq '{target_worker_id, status}'
+```
+
 ## Next action
 
-1. Opsional: multi-agent targeting
-2. Opsional: webhook auto-deploy
+1. 17c — filter `ClaimNext` deploy: `target_worker_id IS NULL OR = $1`
+2. 17d — runtime enqueue set target + filter claim runtime
+3. 17e — portal worker picker di DeployDialog
+4. Opsional: webhook auto-deploy
 
 ## Cara lanjut di mesin lain
 

@@ -10,6 +10,7 @@ type RuntimeJob struct {
 	EnvironmentSlug string    `json:"environment_slug"`
 	Action          string    `json:"action"`
 	Status          string    `json:"status"`
+	TargetWorkerID  *string   `json:"target_worker_id"`
 	WorkerID        *string   `json:"worker_id"`
 	ErrorMessage    string    `json:"error_message"`
 	Output          string    `json:"output"`
