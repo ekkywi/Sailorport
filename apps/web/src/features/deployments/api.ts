@@ -4,10 +4,15 @@ import type { Deployment } from "./types";
 export async function createDeployment(
     serviceId: string,
     environment = "dev",
+    workerId?: string,
 ): Promise<Deployment> {
+    const body: { environment: string; worker_id?: string } = { environment };
+    if (workerId) {
+        body.worker_id = workerId;
+    }
     const res = await apiFetch(`/api/v1/services/${serviceId}/deployments`, {
         method: "POST",
-        body: JSON.stringify({ environment }),
+        body: JSON.stringify(body),
     });
     if (!res.ok) {
         throw new Error (

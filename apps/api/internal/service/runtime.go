@@ -11,8 +11,6 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
-// latestPerEnv picks the newest deployment per environment slug.
-// deps must be ordered by created_at DESC (ListByService already does this).
 func latestPerEnv(deps []model.Deployment) map[string]model.Deployment {
 	out := make(map[string]model.Deployment)
 	for _, d := range deps {
@@ -87,7 +85,7 @@ func (r *Runtime) RequestLogs(ctx context.Context, serviceID, environment string
 		)
 	}
 
-	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, slug, "logs")
+	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, slug, "logs", workerIDFromDeployment(*target))
 	if err != nil {
 		return model.RuntimeJob{}, fmt.Errorf("enqueue logs job: %w", err)
 	}
@@ -143,7 +141,7 @@ func (r *Runtime) enqueue(ctx context.Context, serviceID, environment, action, r
 		return model.RuntimeJob{}, fmt.Errorf("%w: runtime job already in progress for this deployment", ErrInvalid)
 	}
 
-	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, slug, action)
+	job, err := r.store.Create(ctx, serviceID, target.ID, svc.Name, slug, action, workerIDFromDeployment(*target))
 	if err != nil {
 		return model.RuntimeJob{}, fmt.Errorf("enqueue runtime job: %w", err)
 	}
@@ -281,9 +279,17 @@ func (r *Runtime) EnqueueRemove(ctx context.Context, svc model.Service) error {
 				slug,
 			)
 		}
-		if _, err := r.store.Create(ctx, svc.ID, d.ID, svc.Name, slug, "remove"); err != nil {
+		if _, err := r.store.Create(ctx, svc.ID, d.ID, svc.Name, slug, "remove", workerIDFromDeployment(d)); err != nil {
 			return fmt.Errorf("enqueue remove job for %q: %w", slug, err)
 		}
+	}
+	return nil
+}
+
+func workerIDFromDeployment(d model.Deployment) *string {
+	if d.WorkerID != nil && strings.TrimSpace(*d.WorkerID) != "" {
+		id := strings.TrimSpace(*d.WorkerID)
+		return &id
 	}
 	return nil
 }

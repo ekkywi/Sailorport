@@ -114,6 +114,7 @@ func (s *DeploymentsStore) ClaimNext(ctx context.Context, workerID string) (mode
 		WITH next_job AS (
 			SELECT id FROM deployments
 			WHERE status = 'pending'
+			  AND (target_worker_id IS NULL OR target_worker_id = $1::uuid)
 			ORDER BY created_at ASC
 			LIMIT 1
 			FOR UPDATE SKIP LOCKED

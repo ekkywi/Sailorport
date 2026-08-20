@@ -3,7 +3,8 @@ export type Deployment = {
     service_id: string;
     environment_id: string;
     environment_slug: string;
-    worker_id: string;
+    target_worker_id: string | null;
+    worker_id: string | null;
     status: string;
     image_tag: string;
     container_id: string;
@@ -11,4 +12,4 @@ export type Deployment = {
     error_message: string;
     created_at: string;
     updated_at: string;
-}
+};

@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 17b — multi-agent targeting (migrasi 00016, model, store scan, deploy with `worker_id` targeting + validasi online).
+**Step terakhir selesai:** 17e — multi-agent targeting end-to-end (17a–17e: DB, deploy targeting, claim filter, runtime affinity, portal worker picker).
 
-**Step berikutnya:** 17c — filter ClaimNext deploy, lalu 17d (runtime affinity) + 17e (portal worker picker).
+**Step berikutnya:** opsional — webhook auto-deploy.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -26,7 +26,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue `remove` untuk **setiap** env; ditolak jika ada env `running` (prod running → 403)
 - Admin Users: list, change role, create, disable/enable (konfirmasi), reset password, **soft-delete** (rename email + `deleted_at`); belum email SMTP
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
-- Deploy: host port unik per container di mesin agent; container name `sailorport-{service}-{env}`; body deploy `{"environment":"staging"}` (default dev)
+- Deploy: body `{"environment":"staging","worker_id":"<uuid>"}` opsional; portal Deploy dialog pilih worker online atau Any available; redeploy affinity otomatis di API
 - Environments: `GET /api/v1/environments`; portal Deploy dialog; `GET /services` juga return `env_deployments` (map slug → latest deploy per env)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
@@ -37,7 +37,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan step opsional berikutnya (multi-agent targeting atau webhook auto-deploy) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan step opsional berikutnya (webhook auto-deploy) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

@@ -95,4 +95,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: deploy + multi-port + stop/start + delete cleanup + admin user mgmt + audit + multi-agent targeting (17a–17b) OK. Next: 17c–17e claim filter + portal picker.)
+(Saat ini: deploy + multi-port + stop/start + delete cleanup + admin user mgmt + audit + multi-agent targeting (17a–17e) OK. Next: webhook auto-deploy.)

@@ -32,18 +32,18 @@ func (s *RuntimeStore) HasActiveJob(ctx context.Context, deploymentID string) (b
 	return exists, nil
 }
 
-func (s *RuntimeStore) Create(ctx context.Context, serviceID, deploymentID, serviceName, envSlug, action string) (model.RuntimeJob, error) {
+func (s *RuntimeStore) Create(ctx context.Context, serviceID, deploymentID, serviceName, envSlug, action string, targetWorkerID *string) (model.RuntimeJob, error) {
 	if envSlug == "" {
 		envSlug = "dev"
 	}
 	const q = `
-		INSERT INTO runtime_jobs (service_id, deployment_id, service_name, environment_slug, action, status)
-		VALUES ($1, $2, $3, $4, $5, 'pending')
+		INSERT INTO runtime_jobs (service_id, deployment_id, service_name, environment_slug, action, status, target_worker_id)
+		VALUES ($1, $2, $3, $4, $5, 'pending', $6)
 		RETURNING
 			id, service_id, deployment_id, service_name, environment_slug,
 			action, status, target_worker_id, worker_id, error_message, output, created_at, updated_at`
 
-	return scanRuntimeJob(s.db.QueryRowContext(ctx, q, serviceID, deploymentID, serviceName, envSlug, action))
+	return scanRuntimeJob(s.db.QueryRowContext(ctx, q, serviceID, deploymentID, serviceName, envSlug, action, targetWorkerID))
 }
 
 func (s *RuntimeStore) ClaimNext(ctx context.Context, workerID string) (model.RuntimeJob, error) {
@@ -52,6 +52,7 @@ func (s *RuntimeStore) ClaimNext(ctx context.Context, workerID string) (model.Ru
 			SELECT r.id
 			FROM runtime_jobs r
 			WHERE r.status = 'pending'
+			  AND (r.target_worker_id IS NULL OR r.target_worker_id = $1::uuid)
 			ORDER BY r.created_at ASC
 			LIMIT 1
 			FOR UPDATE OF r SKIP LOCKED
