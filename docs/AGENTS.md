@@ -55,13 +55,21 @@ Developer → Web Portal
 
 Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi.
 
+## Workers (runtime nodes)
+
+- Worker = node dengan Docker + agent; **bukan** sama dengan environment dev/staging/prod.
+- Satu worker boleh menjalankan banyak environment (container `sailorport-{service}-{env}` terpisah).
+- Data worker dari **agent register + heartbeat** — tidak ada admin CRUD create/delete worker di MVP.
+- Kolom `labels` (JSONB) untuk capabilities (`tier`, `environments`) — Step 18.
+- Deploy: optional `worker_id`; `target_worker_id` + claim filter memastikan job ke node yang benar.
+
 ## Portal routes (setelah login)
 
 | Path | Isi |
 |------|-----|
 | `/overview` | ringkasan services + workers |
 | `/catalog` | daftar services + deploy terakhir; History; Deploy; **Stop/Start** (runtime); create/edit/delete |
-| `/worker` | daftar workers + status |
+| `/worker` | daftar workers + status (read-only; self-register via agent) |
 | `/users` | admin: list, create, role, disable/enable (confirm), reset password, soft-delete |
 | `/audit` | admin: jejak aksi (catalog + user admin) |
 
@@ -95,4 +103,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: deploy + multi-port + stop/start + delete cleanup + admin user mgmt + audit + multi-agent targeting (17a–17e) OK. Next: webhook auto-deploy.)
+(Saat ini: MVP core OK — deploy, runtime, audit, multi-agent targeting (17). Checkpoint sebelum Step 18. Next: worker labels + deploy policy.)

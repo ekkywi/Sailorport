@@ -45,10 +45,12 @@ Satu flow ini harus jalan di mesin orang lain:
 - [x] Deploy via agent (API + agent docker + portal Deploy UI)
 - [x] Worker registry + health (API + portal + agent heartbeat)
 - [x] Audit log
+- [x] Multi-agent targeting (deploy + runtime affinity; portal worker picker)
 - [x] Self-hosting pack (compose + docs)
 
 ## Setelah MVP stabil
 
+- Worker capabilities (labels + deploy policy by environment) — Step 18
 - Git webhook auto-deploy
 - Rollback / redeploy
 - ~~Runtime controls (start/stop/restart + logs)~~ ✅
@@ -102,3 +104,14 @@ Satu flow ini harus jalan di mesin orang lain:
 | 14 | Runtime per environment (stop/start per env) | selesai |
 | 15 | Logs end-to-end (API + agent + portal) | selesai |
 | 16 | Audit log (record + list API + portal) | selesai |
+| 17 | Multi-agent targeting (17a–17e) | selesai |
+| 18 | Worker capabilities (labels + deploy policy) | planned |
+
+## Post-MVP worker roadmap (referensi)
+
+| Fase | Fitur |
+|------|--------|
+| 18 | Agent labels; API validasi deploy by env; portal filter |
+| Ops | Admin lite (edit labels, decommission stale worker) |
+| Ops | Draining; auto-pick worker; worker detail (deployments on node) |
+| Scale | Workspace sync multi-node; capacity/port pool; region labels |

@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 17e — multi-agent targeting (portal worker picker)
-- **Step berikutnya:** opsional — webhook auto-deploy
-- **Terakhir dikerjakan:** 2026-08-20 — multi-agent targeting 17c–17e (claim filter, runtime affinity, DeployDialog worker picker)
+- **Step selesai:** 17e + DeployDialog UX polish (checkpoint sebelum Step 18)
+- **Step berikutnya:** 18 — worker capabilities (labels + deploy policy by environment)
+- **Terakhir dikerjakan:** 2026-08-20 — Step 17 selesai; DeployDialog search/scroll untuk banyak worker; docs checkpoint
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -443,11 +443,34 @@ curl -s -X POST "http://localhost:8080/api/v1/services/$SVC/deployments" \
   -d "{\"environment\":\"dev\",\"worker_id\":\"$WORKER_ID\"}" | jq '{target_worker_id, status}'
 ```
 
-Portal: Deploy dialog → pilih environment + worker (Any available atau worker online).
+Portal: Deploy dialog → pilih environment + worker (Any available atau worker online). UI worker: search (≥4 online), scroll `max-h-52`, fallback jika worker prior offline.
+
+### Checkpoint — Worker model (keputusan produk)
+
+- Worker **self-register** via agent (`POST /workers/register`); **tidak** perlu admin CRUD tambah/hapus worker di MVP.
+- **Environment** (dev/staging/prod) ≠ **Worker** (node Docker); satu worker boleh menampung banyak env (container terpisah).
+- Pola infra umum: nonprod VM (dev+staging) + prod VM terpisah — didukung dengan **labels** (Step 18), bukan 1 worker = 1 env.
+- Portal `/worker` = **monitoring** (read-only); admin edit labels / decommission = post-MVP.
+
+### Step 18 — Worker capabilities (planned)
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 18a Agent labels | ⬜ | Env `SAILORPORT_WORKER_LABELS` atau `tier` + `environments`; agent register kirim labels |
+| 18b Deploy policy API | ⬜ | Validasi deploy env X → worker labels harus allow X; 409 jika melanggar |
+| 18c Portal filter | ⬜ | DeployDialog filter worker by environment; Workers page tampilkan tier/environments |
+
+**Contoh labels (rencana):**
+
+```json
+{ "role": "agent", "tier": "nonprod", "environments": "dev,staging" }
+{ "role": "agent", "tier": "prod", "environments": "prod" }
+```
 
 ## Next action
 
-1. Opsional: webhook auto-deploy
+1. **Step 18a** — agent kirim labels saat register
+2. Opsional (setelah 18): webhook auto-deploy
 
 ## Cara lanjut di mesin lain
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Check, Rocket, Server } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Rocket, Search, Server } from "lucide-react";
 import { ErrorBanner, StatusBadge } from "@/components/app";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Service } from "../catalog/types";
 import { listEnvironments } from "../environments/api";
@@ -26,10 +27,16 @@ type DeployDialogProps = {
 };
 
 const ANY_WORKER = "";
+const WORKER_SEARCH_THRESHOLD = 4;
+const WORKER_LIST_MAX_HEIGHT = "max-h-52";
 
-function defaultWorkerForEnv(service: Service | null, envSlug: string): string {
-  const prior = service?.env_deployments?.[envSlug]?.worker_id;
-  if (prior && prior.trim() !== "") {
+function defaultWorkerForEnv(
+  service: Service | null,
+  envSlug: string,
+  onlineWorkers: Worker[],
+): string {
+  const prior = service?.env_deployments?.[envSlug]?.worker_id?.trim();
+  if (prior && onlineWorkers.some((w) => w.id === prior)) {
     return prior;
   }
   return ANY_WORKER;
@@ -45,6 +52,50 @@ function workerStatusClass(status: string) {
   return "bg-muted text-muted-foreground";
 }
 
+function matchesWorkerSearch(worker: Worker, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    worker.name.toLowerCase().includes(q) ||
+    worker.hostname.toLowerCase().includes(q) ||
+    worker.id.toLowerCase().includes(q)
+  );
+}
+
+function WorkerOption({
+  selected,
+  onSelect,
+  children,
+  className,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      className={cn(
+        "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-[13px] transition-colors",
+        selected
+          ? "border-ring bg-accent/40"
+          : "border-border hover:bg-muted/50",
+        className,
+      )}
+    >
+      {children}
+      {selected ? (
+        <Check className="size-4 shrink-0 text-foreground" />
+      ) : (
+        <span className="size-4 shrink-0" aria-hidden />
+      )}
+    </button>
+  );
+}
+
 export function DeployDialog({
   service,
   open,
@@ -55,23 +106,42 @@ export function DeployDialog({
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [environment, setEnvironment] = useState("dev");
   const [workerId, setWorkerId] = useState(ANY_WORKER);
+  const [workerSearch, setWorkerSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [error, setError] = useState("");
+
+  const onlineWorkers = useMemo(
+    () => workers.filter((w) => w.status === "online"),
+    [workers],
+  );
+
+  const filteredWorkers = useMemo(
+    () => onlineWorkers.filter((w) => matchesWorkerSearch(w, workerSearch)),
+    [onlineWorkers, workerSearch],
+  );
+
+  const priorWorkerId =
+    service?.env_deployments?.[environment]?.worker_id?.trim() ?? "";
+  const priorWorkerOffline =
+    priorWorkerId !== "" &&
+    !onlineWorkers.some((w) => w.id === priorWorkerId);
 
   useEffect(() => {
     if (!open) return;
 
     setError("");
+    setWorkerSearch("");
     setLoading(true);
     void Promise.all([listEnvironments(), listWorkers()])
       .then(([envData, workerData]) => {
         setEnvs(envData);
         setWorkers(workerData);
+        const online = workerData.filter((w) => w.status === "online");
         const dev = envData.find((e) => e.slug === "dev");
         const slug = dev?.slug ?? envData[0]?.slug ?? "dev";
         setEnvironment(slug);
-        setWorkerId(defaultWorkerForEnv(service, slug));
+        setWorkerId(defaultWorkerForEnv(service, slug, online));
       })
       .catch((err) => {
         setError(
@@ -85,8 +155,9 @@ export function DeployDialog({
 
   useEffect(() => {
     if (!open || !service) return;
-    setWorkerId(defaultWorkerForEnv(service, environment));
-  }, [environment, open, service]);
+    setWorkerSearch("");
+    setWorkerId(defaultWorkerForEnv(service, environment, onlineWorkers));
+  }, [environment, open, service, onlineWorkers]);
 
   async function handleDeploy() {
     if (!service) return;
@@ -108,14 +179,15 @@ export function DeployDialog({
     }
   }
 
-  const onlineWorkers = workers.filter((w) => w.status === "online");
   const pickerDisabled = deploying || loading || envs.length === 0;
   const selectedWorker = workers.find((w) => w.id === workerId);
+  const showWorkerSearch =
+    !loading && onlineWorkers.length >= WORKER_SEARCH_THRESHOLD;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[min(90vh,640px)] flex-col gap-0 overflow-hidden sm:max-w-md">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Deploy service</DialogTitle>
           <DialogDescription>
             Choose an environment and worker for{" "}
@@ -126,144 +198,168 @@ export function DeployDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {error ? (
-          <ErrorBanner message={error} onRetry={() => setError("")} />
-        ) : null}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-1">
+          {error ? (
+            <ErrorBanner message={error} onRetry={() => setError("")} />
+          ) : null}
 
-        <fieldset className="space-y-2" disabled={pickerDisabled}>
-          <legend className="text-[12px] text-muted-foreground">
-            Environment
-          </legend>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-11 animate-pulse rounded-md bg-muted" />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {envs.map((env) => {
-                const selected = environment === env.slug;
-                return (
-                  <button
-                    key={env.id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setEnvironment(env.slug)}
-                    className={cn(
-                      "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-[13px] transition-colors",
-                      selected
-                        ? "border-ring bg-accent/40"
-                        : "border-border hover:bg-muted/50",
-                    )}
-                  >
-                    <span className="min-w-0">
-                      <span className="block font-medium">{env.name}</span>
-                      <span className="font-mono text-[11px] text-muted-foreground uppercase">
-                        {env.slug}
-                      </span>
-                    </span>
-                    {selected ? (
-                      <Check className="size-4 shrink-0 text-foreground" />
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </fieldset>
-
-        <fieldset className="space-y-2" disabled={pickerDisabled}>
-          <legend className="text-[12px] text-muted-foreground">Worker</legend>
-          {loading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="h-11 animate-pulse rounded-md bg-muted" />
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <button
-                type="button"
-                aria-pressed={workerId === ANY_WORKER}
-                onClick={() => setWorkerId(ANY_WORKER)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-[13px] transition-colors",
-                  workerId === ANY_WORKER
-                    ? "border-ring bg-accent/40"
-                    : "border-border hover:bg-muted/50",
-                )}
-              >
-                <span className="min-w-0">
-                  <span className="block font-medium">Any available</span>
-                  <span className="text-[11px] text-muted-foreground">
-                    Redeploy uses the previous worker for this environment
-                  </span>
-                </span>
-                {workerId === ANY_WORKER ? (
-                  <Check className="size-4 shrink-0 text-foreground" />
-                ) : null}
-              </button>
-              {onlineWorkers.length === 0 ? (
-                <p className="rounded-md border border-dashed border-border px-3 py-2 text-[12px] text-muted-foreground">
-                  No online workers. Start an agent or pick Any available for
-                  auto-affinity on redeploy.
-                </p>
-              ) : (
-                onlineWorkers.map((worker) => {
-                  const selected = workerId === worker.id;
+          <fieldset className="space-y-2" disabled={pickerDisabled}>
+            <legend className="text-[12px] text-muted-foreground">
+              Environment
+            </legend>
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-11 animate-pulse rounded-md bg-muted"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {envs.map((env) => {
+                  const selected = environment === env.slug;
                   return (
-                    <button
-                      key={worker.id}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setWorkerId(worker.id)}
-                      className={cn(
-                        "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2.5 text-left text-[13px] transition-colors",
-                        selected
-                          ? "border-ring bg-accent/40"
-                          : "border-border hover:bg-muted/50",
-                      )}
+                    <WorkerOption
+                      key={env.id}
+                      selected={selected}
+                      onSelect={() => setEnvironment(env.slug)}
                     >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <Server className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-2">
-                            <span className="block truncate font-medium">
-                              {worker.name}
-                            </span>
-                            <StatusBadge
-                              status={worker.status}
-                              className={workerStatusClass(worker.status)}
-                            />
-                          </span>
-                          <span className="block truncate font-mono text-[11px] text-muted-foreground">
-                            {worker.hostname || worker.id.slice(0, 8)}
-                          </span>
+                      <span className="min-w-0">
+                        <span className="block font-medium">{env.name}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground uppercase">
+                          {env.slug}
                         </span>
                       </span>
-                      {selected ? (
-                        <Check className="size-4 shrink-0 text-foreground" />
-                      ) : null}
-                    </button>
+                    </WorkerOption>
                   );
-                })
-              )}
+                })}
+              </div>
+            )}
+          </fieldset>
+
+          <fieldset className="space-y-2" disabled={pickerDisabled}>
+            <div className="flex items-baseline justify-between gap-2">
+              <legend className="text-[12px] text-muted-foreground">
+                Worker
+              </legend>
+              {!loading ? (
+                <span className="text-[11px] text-muted-foreground">
+                  {onlineWorkers.length} online
+                  {workers.length > onlineWorkers.length
+                    ? ` · ${workers.length} total`
+                    : ""}
+                </span>
+              ) : null}
             </div>
-          )}
-        </fieldset>
 
-        {selectedWorker && workerId !== ANY_WORKER ? (
-          <p className="text-[11px] text-muted-foreground">
-            Deploy will target worker{" "}
-            <span className="font-medium text-foreground">
-              {selectedWorker.name}
-            </span>
-            .
-          </p>
-        ) : null}
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-11 animate-pulse rounded-md bg-muted"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <WorkerOption
+                  selected={workerId === ANY_WORKER}
+                  onSelect={() => setWorkerId(ANY_WORKER)}
+                >
+                  <span className="min-w-0">
+                    <span className="block font-medium">Any available</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Redeploy uses the previous worker for this environment
+                    </span>
+                  </span>
+                </WorkerOption>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+                {priorWorkerOffline ? (
+                  <p className="rounded-md border border-amber-500/30 bg-amber-500/8 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+                    Previous worker for{" "}
+                    <span className="font-mono uppercase">{environment}</span> is
+                    offline. Pick an online worker or use Any available.
+                  </p>
+                ) : null}
+
+                {showWorkerSearch ? (
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      value={workerSearch}
+                      onChange={(e) => setWorkerSearch(e.target.value)}
+                      placeholder="Search workers by name or host…"
+                      aria-label="Search workers"
+                      className="h-9 pl-8 text-[13px]"
+                    />
+                  </div>
+                ) : null}
+
+                {onlineWorkers.length === 0 ? (
+                  <p className="rounded-md border border-dashed border-border px-3 py-2 text-[12px] text-muted-foreground">
+                    No online workers. Start an agent or use Any available for
+                    auto-affinity on redeploy.
+                  </p>
+                ) : (
+                  <div
+                    className={cn(
+                      "space-y-2 overflow-y-auto pr-0.5",
+                      onlineWorkers.length > 2 && WORKER_LIST_MAX_HEIGHT,
+                    )}
+                  >
+                    {filteredWorkers.length === 0 ? (
+                      <p className="px-1 py-2 text-[12px] text-muted-foreground">
+                        No workers match &ldquo;{workerSearch.trim()}&rdquo;.
+                      </p>
+                    ) : (
+                      filteredWorkers.map((worker) => (
+                        <WorkerOption
+                          key={worker.id}
+                          selected={workerId === worker.id}
+                          onSelect={() => setWorkerId(worker.id)}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Server className="size-3.5 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0">
+                              <span className="flex items-center gap-2">
+                                <span className="block truncate font-medium">
+                                  {worker.name}
+                                </span>
+                                <StatusBadge
+                                  status={worker.status}
+                                  className={workerStatusClass(worker.status)}
+                                />
+                              </span>
+                              <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                                {worker.hostname || worker.id.slice(0, 8)}
+                              </span>
+                            </span>
+                          </span>
+                        </WorkerOption>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </fieldset>
+
+          {selectedWorker && workerId !== ANY_WORKER ? (
+            <p className="text-[11px] text-muted-foreground">
+              Deploy will target worker{" "}
+              <span className="font-medium text-foreground">
+                {selectedWorker.name}
+              </span>
+              .
+            </p>
+          ) : null}
+        </div>
+
+        <DialogFooter className="shrink-0 gap-2 border-t border-border pt-4 sm:gap-0">
           <Button
             type="button"
             variant="outline"

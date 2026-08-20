@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 17e — multi-agent targeting end-to-end (17a–17e: DB, deploy targeting, claim filter, runtime affinity, portal worker picker).
+**Step terakhir selesai:** 17e + DeployDialog UX polish (multi-agent targeting end-to-end; checkpoint docs).
 
-**Step berikutnya:** opsional — webhook auto-deploy.
+**Step berikutnya:** 18 — worker capabilities (agent labels + deploy policy by environment + portal filter).
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -26,7 +26,8 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue `remove` untuk **setiap** env; ditolak jika ada env `running` (prod running → 403)
 - Admin Users: list, change role, create, disable/enable (konfirmasi), reset password, **soft-delete** (rename email + `deleted_at`); belum email SMTP
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
-- Deploy: body `{"environment":"staging","worker_id":"<uuid>"}` opsional; portal Deploy dialog pilih worker online atau Any available; redeploy affinity otomatis di API
+- Deploy: body `{"environment":"staging","worker_id":"<uuid>"}` opsional; portal Deploy dialog pilih worker (search + scroll jika banyak); redeploy affinity otomatis di API
+- Workers: self-register via agent (bukan admin CRUD); `/worker` monitoring read-only; Step 18 akan pakai `labels` untuk tier/environments policy
 - Environments: `GET /api/v1/environments`; portal Deploy dialog; `GET /services` juga return `env_deployments` (map slug → latest deploy per env)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
@@ -37,7 +38,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan step opsional berikutnya (webhook auto-deploy) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan **Step 18** (worker labels + deploy policy) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 
