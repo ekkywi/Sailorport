@@ -23,15 +23,12 @@ func New(cfg config.Config, c *client.APIClient) *Agent {
 
 func (a *Agent) Run(ctx context.Context) error {
 	hostname, _ := os.Hostname()
-	labels := map[string]any{
-		"role": "agent",
-	}
 
-	w, err := a.client.Register(a.cfg.WorkerName, hostname, labels)
+	w, err := a.client.Register(a.cfg.WorkerName, hostname, a.cfg.Labels)
 	if err != nil {
 		return err
 	}
-	log.Printf("Registered worker id=%s name=%s", w.ID, w.Name)
+	log.Printf("Registered worker id=%s name=%s labels=%v", w.ID, w.Name, a.cfg.Labels)
 
 	workerID := w.ID
 

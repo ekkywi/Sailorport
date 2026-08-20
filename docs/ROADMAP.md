@@ -105,7 +105,7 @@ Satu flow ini harus jalan di mesin orang lain:
 | 15 | Logs end-to-end (API + agent + portal) | selesai |
 | 16 | Audit log (record + list API + portal) | selesai |
 | 17 | Multi-agent targeting (17a–17e) | selesai |
-| 18 | Worker capabilities (labels + deploy policy) | planned |
+| 18 | Worker capabilities (labels + deploy policy) | 18a selesai; 18b–18c planned |
 
 ## Post-MVP worker roadmap (referensi)
 

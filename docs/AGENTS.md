@@ -60,7 +60,7 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 - Worker = node dengan Docker + agent; **bukan** sama dengan environment dev/staging/prod.
 - Satu worker boleh menjalankan banyak environment (container `sailorport-{service}-{env}` terpisah).
 - Data worker dari **agent register + heartbeat** — tidak ada admin CRUD create/delete worker di MVP.
-- Kolom `labels` (JSONB) untuk capabilities (`tier`, `environments`) — Step 18.
+- Kolom `labels` (JSONB): agent kirim saat register (Step 18a). Env `SAILORPORT_WORKER_TIER`, `SAILORPORT_WORKER_ENVIRONMENTS`, optional `SAILORPORT_WORKER_LABELS` JSON. Policy deploy (18b) belum.
 - Deploy: optional `worker_id`; `target_worker_id` + claim filter memastikan job ke node yang benar.
 
 ## Portal routes (setelah login)
@@ -103,4 +103,4 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 `docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
 
-(Saat ini: MVP core OK — deploy, runtime, audit, multi-agent targeting (17). Checkpoint sebelum Step 18. Next: worker labels + deploy policy.)
+(Saat ini: MVP core OK + Step 18a labels. Next: 18b deploy policy, 18c portal filter.)

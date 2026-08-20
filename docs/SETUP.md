@@ -188,6 +188,8 @@ cd apps/agent
 SAILORPORT_API_URL=http://localhost:8080 \
 SAILORPORT_AGENT_TOKEN=dev-agent-token \
 SAILORPORT_WORKER_NAME=local-dev \
+SAILORPORT_WORKER_TIER=nonprod \
+SAILORPORT_WORKER_ENVIRONMENTS=dev,staging \
 SAILORPORT_HEARTBEAT_INTERVAL=15s \
 SAILORPORT_POLL_INTERVAL=5s \
 SAILORPORT_DEPLOY_PORT_BASE=18080 \
@@ -256,6 +258,9 @@ Agent (`apps/agent`):
 | `SAILORPORT_API_URL` | `http://localhost:8080` | base URL API |
 | `SAILORPORT_AGENT_TOKEN` | `dev-agent-token` | harus sama dengan API |
 | `SAILORPORT_WORKER_NAME` | hostname | nama worker |
+| `SAILORPORT_WORKER_TIER` | — | label `tier` (`nonprod`, `prod`) |
+| `SAILORPORT_WORKER_ENVIRONMENTS` | — | label `environments` (`dev,staging`) |
+| `SAILORPORT_WORKER_LABELS` | — | JSON extra labels; TIER/ENVIRONMENTS override |
 | `SAILORPORT_HEARTBEAT_INTERVAL` | `15s` | interval heartbeat |
 | `SAILORPORT_POLL_INTERVAL` | `5s` | interval poll job deploy |
 | `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | awal rentang host port workload |

@@ -1,14 +1,17 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
 type Config struct {
 	APIURL            string
 	WorkerName        string
+	Labels            map[string]any
 	HeartbeatInterval time.Duration
 	PollInterval      time.Duration
 	PortBase          int
@@ -67,5 +70,32 @@ func Load() Config {
 		PortBase:          portBase,
 		PortCount:         portCount,
 		AgentToken:        agentToken,
+		Labels:            parseWorkerLabels(),
 	}
+}
+
+func parseWorkerLabels() map[string]any {
+	labels := map[string]any{
+		"role": "agent",
+	}
+
+	if raw := strings.TrimSpace(os.Getenv("SAILORPORT_WORKER_LABELS")); raw != "" {
+		var extra map[string]any
+		if err := json.Unmarshal([]byte(raw), &extra); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: invalid SAILORPORT_WORKER_LABELS JSON: %v\n", err)
+		} else {
+			for k, v := range extra {
+				labels[k] = v
+			}
+		}
+	}
+
+	if tier := strings.TrimSpace(os.Getenv("SAILORPORT_WORKER_TIER")); tier != "" {
+		labels["tier"] = tier
+	}
+	if envs := strings.TrimSpace(os.Getenv("SAILORPORT_WORKER_ENVIRONMENTS")); envs != "" {
+		labels["environments"] = envs
+	}
+
+	return labels
 }
