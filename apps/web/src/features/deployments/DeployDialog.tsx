@@ -16,6 +16,7 @@ import type { Service } from "../catalog/types";
 import { listEnvironments } from "../environments/api";
 import type { Environment } from "../environments/types";
 import { listWorkers } from "../workers/api";
+import { workerAllowsEnvironment, formatWorkerEnvironments } from "../workers/labels";
 import type { Worker } from "../workers/types";
 import { createDeployment } from "./api";
 
@@ -33,10 +34,10 @@ const WORKER_LIST_MAX_HEIGHT = "max-h-52";
 function defaultWorkerForEnv(
   service: Service | null,
   envSlug: string,
-  onlineWorkers: Worker[],
+  eligibleWorkers: Worker[],
 ): string {
   const prior = service?.env_deployments?.[envSlug]?.worker_id?.trim();
-  if (prior && onlineWorkers.some((w) => w.id === prior)) {
+  if (prior && eligibleWorkers.some((w) => w.id === prior)) {
     return prior;
   }
   return ANY_WORKER;
@@ -116,9 +117,14 @@ export function DeployDialog({
     [workers],
   );
 
+  const eligibleWorkers = useMemo(
+    () => onlineWorkers.filter((w) => workerAllowsEnvironment(w, environment)),
+    [onlineWorkers, environment],
+  );
+
   const filteredWorkers = useMemo(
-    () => onlineWorkers.filter((w) => matchesWorkerSearch(w, workerSearch)),
-    [onlineWorkers, workerSearch],
+    () => eligibleWorkers.filter((w) => matchesWorkerSearch(w, workerSearch)),
+    [eligibleWorkers, workerSearch],
   );
 
   const priorWorkerId =
@@ -126,6 +132,10 @@ export function DeployDialog({
   const priorWorkerOffline =
     priorWorkerId !== "" &&
     !onlineWorkers.some((w) => w.id === priorWorkerId);
+  const priorWorkerIneligible =
+    priorWorkerId !== "" &&
+    onlineWorkers.some((w) => w.id === priorWorkerId) &&
+    !eligibleWorkers.some((w) => w.id === priorWorkerId);
 
   useEffect(() => {
     if (!open) return;
@@ -141,7 +151,8 @@ export function DeployDialog({
         const dev = envData.find((e) => e.slug === "dev");
         const slug = dev?.slug ?? envData[0]?.slug ?? "dev";
         setEnvironment(slug);
-        setWorkerId(defaultWorkerForEnv(service, slug, online));
+        const eligible = online.filter((w) => workerAllowsEnvironment(w, slug));
+        setWorkerId(defaultWorkerForEnv(service, slug, eligible));
       })
       .catch((err) => {
         setError(
@@ -156,8 +167,8 @@ export function DeployDialog({
   useEffect(() => {
     if (!open || !service) return;
     setWorkerSearch("");
-    setWorkerId(defaultWorkerForEnv(service, environment, onlineWorkers));
-  }, [environment, open, service, onlineWorkers]);
+    setWorkerId(defaultWorkerForEnv(service, environment, eligibleWorkers));
+  }, [environment, open, service, eligibleWorkers]);
 
   async function handleDeploy() {
     if (!service) return;
@@ -182,7 +193,7 @@ export function DeployDialog({
   const pickerDisabled = deploying || loading || envs.length === 0;
   const selectedWorker = workers.find((w) => w.id === workerId);
   const showWorkerSearch =
-    !loading && onlineWorkers.length >= WORKER_SEARCH_THRESHOLD;
+    !loading && eligibleWorkers.length >= WORKER_SEARCH_THRESHOLD;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -246,9 +257,10 @@ export function DeployDialog({
               </legend>
               {!loading ? (
                 <span className="text-[11px] text-muted-foreground">
-                  {onlineWorkers.length} online
-                  {workers.length > onlineWorkers.length
-                    ? ` · ${workers.length} total`
+                  {eligibleWorkers.length} for{" "}
+                  <span className="font-mono uppercase">{environment}</span>
+                  {onlineWorkers.length > eligibleWorkers.length
+                    ? ` · ${onlineWorkers.length} online`
                     : ""}
                 </span>
               ) : null}
@@ -285,6 +297,15 @@ export function DeployDialog({
                   </p>
                 ) : null}
 
+                {priorWorkerIneligible ? (
+                  <p className="rounded-md border border-amber-500/30 bg-amber-500/8 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+                    Previous worker for{" "}
+                    <span className="font-mono uppercase">{environment}</span> does
+                    not allow this environment. Pick another worker or use Any
+                    available.
+                  </p>
+                ) : null}
+
                 {showWorkerSearch ? (
                   <div className="relative">
                     <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -304,11 +325,18 @@ export function DeployDialog({
                     No online workers. Start an agent or use Any available for
                     auto-affinity on redeploy.
                   </p>
+                ) : eligibleWorkers.length === 0 ? (
+                  <p className="rounded-md border border-dashed border-border px-3 py-2 text-[12px] text-muted-foreground">
+                    No online workers allow{" "}
+                    <span className="font-mono uppercase">{environment}</span>.
+                    Use Any available for redeploy affinity, or pick another
+                    environment.
+                  </p>
                 ) : (
                   <div
                     className={cn(
                       "space-y-2 overflow-y-auto pr-0.5",
-                      onlineWorkers.length > 2 && WORKER_LIST_MAX_HEIGHT,
+                      eligibleWorkers.length > 2 && WORKER_LIST_MAX_HEIGHT,
                     )}
                   >
                     {filteredWorkers.length === 0 ? (
@@ -336,6 +364,8 @@ export function DeployDialog({
                               </span>
                               <span className="block truncate font-mono text-[11px] text-muted-foreground">
                                 {worker.hostname || worker.id.slice(0, 8)}
+                                {" · "}
+                                {formatWorkerEnvironments(worker)}
                               </span>
                             </span>
                           </span>

@@ -4,9 +4,9 @@
 
 ## Status saat ini
 
-- **Step selesai:** 18a — agent kirim worker labels saat register
-- **Step berikutnya:** 18b — deploy policy API (validasi env vs worker labels)
-- **Terakhir dikerjakan:** 2026-08-20 — Step 18a (SAILORPORT_WORKER_TIER / ENVIRONMENTS / LABELS)
+- **Step selesai:** 18c — portal filter worker by environment + Workers page tier/environments
+- **Step berikutnya:** Opsional — webhook auto-deploy; post-MVP admin edit worker labels
+- **Terakhir dikerjakan:** 2026-08-20 — Step 18b–18c (deploy policy API + portal filter)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -45,6 +45,8 @@
 - [x] Step 14 — runtime per environment (14a–14d)
 - [x] Step 15 — logs end-to-end (15a–15e: API + agent + portal)
 - [x] Step 16 — audit log (16a–16e: record + list API + portal)
+- [x] Step 17 — Multi-agent targeting (17a–17e)
+- [x] Step 18 — Worker capabilities (18a–18c: labels + deploy policy + portal filter)
 
 ## Yang sudah jalan
 
@@ -455,13 +457,13 @@ Portal: Deploy dialog → pilih environment + worker (Any available atau worker 
 - Pola infra umum: nonprod VM (dev+staging) + prod VM terpisah — didukung dengan **labels** (Step 18), bukan 1 worker = 1 env.
 - Portal `/worker` = **monitoring** (read-only); admin edit labels / decommission = post-MVP.
 
-### Step 18 — Worker capabilities (in progress)
+### Step 18 — Worker capabilities ✅
 
 | Sub-step | Status | Isi |
 |----------|--------|-----|
 | 18a Agent labels | ✅ | `parseWorkerLabels()`: `role=agent` + JSON `SAILORPORT_WORKER_LABELS` + override `TIER`/`ENVIRONMENTS`; register kirim `cfg.Labels` |
-| 18b Deploy policy API | ⬜ | Validasi deploy env X → worker labels harus allow X; 409 jika melanggar |
-| 18c Portal filter | ⬜ | DeployDialog filter worker by environment; Workers page tampilkan tier/environments |
+| 18b Deploy policy API | ✅ | `worker_env.go` + `validateWorkerForDeploy` di deploy; 409 jika env tidak diizinkan labels |
+| 18c Portal filter | ✅ | `DeployDialog` filter worker by environment; Workers page kolom Tier + Environments |
 
 **Contoh labels:**
 
@@ -482,11 +484,34 @@ go run .
 
 Portal `/worker` atau `GET /api/v1/workers` harus menampilkan `tier` + `environments`. Restart agent dengan env berbeda → labels ter-update (upsert by name).
 
+**Tip env file (opsional):** agent tidak auto-load `.env`; buat file lokal (gitignored) lalu `source`:
+
+```bash
+# apps/agent/.env.nonprod — export SAILORPORT_* …
+source .env.nonprod && go run .
+```
+
+**Tes 18b (API policy):**
+
+```bash
+# staging + worker nonprod → 201
+curl -s -X POST "http://localhost:8080/api/v1/services/$SVC/deployments" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"environment\":\"staging\",\"worker_id\":\"$WORKER_ID\"}" | jq '{status, target_worker_id}'
+
+# prod + worker nonprod → 409
+curl -s -o /tmp/out -w "%{http_code}\n" \
+  -X POST "http://localhost:8080/api/v1/services/$SVC/deployments" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"environment\":\"prod\",\"worker_id\":\"$WORKER_ID\"}"
+```
+
+**Tes 18c (portal):** Deploy dialog → pilih env → hanya worker yang allow env itu; Workers page → kolom Tier + Environments.
+
 ## Next action
 
-1. **Step 18b** — deploy policy: worker harus allow environment yang dipilih
-2. **Step 18c** — portal filter worker by environment
-3. Opsional (setelah 18): webhook auto-deploy
+1. Opsional: webhook auto-deploy
+2. Post-MVP: admin edit worker labels / decommission worker
 
 ## Cara lanjut di mesin lain
 

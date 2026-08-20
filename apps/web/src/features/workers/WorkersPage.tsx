@@ -8,22 +8,29 @@ import {
   Toolbar,
   formatAbsoluteTime,
   formatRelativeTime,
-  labelEntries,
   skeletonClass,
 } from "@/components/app";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { listWorkers } from "./api";
+import {
+  formatWorkerEnvironments,
+  workerExtraLabels,
+  workerTier,
+} from "./labels";
 import type { Worker } from "./types";
 
-function LabelChips({ labels }: { labels: Worker["labels"] }) {
-  const entries = labelEntries(labels);
-  if (entries.length === 0) {
+function LabelChips({
+  labels,
+}: {
+  labels: { key: string; value: string }[];
+}) {
+  if (labels.length === 0) {
     return <span className="text-muted-foreground">—</span>;
   }
   return (
     <div className="flex flex-wrap gap-1">
-      {entries.map(({ key, value }) => (
+      {labels.map(({ key, value }) => (
         <span
           key={key}
           className="inline-flex max-w-[140px] truncate rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
@@ -33,6 +40,28 @@ function LabelChips({ labels }: { labels: Worker["labels"] }) {
         </span>
       ))}
     </div>
+  );
+}
+
+function TierBadge({ tier }: { tier: string }) {
+  if (!tier) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const tone =
+    tier === "prod"
+      ? "bg-rose-500/12 text-rose-700 dark:text-rose-400"
+      : tier === "nonprod"
+        ? "bg-sky-500/12 text-sky-700 dark:text-sky-400"
+        : "bg-muted text-muted-foreground";
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+        tone,
+      )}
+    >
+      {tier}
+    </span>
   );
 }
 
@@ -117,14 +146,16 @@ export function WorkersPage() {
 
         {workers.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-[13px]">
+            <table className="w-full min-w-[720px] text-left text-[13px]">
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-[11px] font-medium tracking-[0.02em] text-muted-foreground uppercase">
                   <th className="px-4 py-2.5 font-medium">Name</th>
                   <th className="px-4 py-2.5 font-medium">Host</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
+                  <th className="px-4 py-2.5 font-medium">Tier</th>
+                  <th className="px-4 py-2.5 font-medium">Environments</th>
                   <th className="px-4 py-2.5 font-medium">Last seen</th>
-                  <th className="px-4 py-2.5 font-medium">Labels</th>
+                  <th className="px-4 py-2.5 font-medium">Other labels</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -139,6 +170,12 @@ export function WorkersPage() {
                     <td className="px-4 py-2.5">
                       <StatusBadge status={w.status} />
                     </td>
+                    <td className="px-4 py-2.5">
+                      <TierBadge tier={workerTier(w)} />
+                    </td>
+                    <td className="px-4 py-2.5 font-mono text-[11px] text-muted-foreground uppercase">
+                      {formatWorkerEnvironments(w)}
+                    </td>
                     <td
                       className="px-4 py-2.5 tabular-nums text-muted-foreground"
                       title={formatAbsoluteTime(w.last_seen_at)}
@@ -146,7 +183,7 @@ export function WorkersPage() {
                       {formatRelativeTime(w.last_seen_at)}
                     </td>
                     <td className="px-4 py-2.5">
-                      <LabelChips labels={w.labels} />
+                      <LabelChips labels={workerExtraLabels(w.labels)} />
                     </td>
                   </tr>
                 ))}

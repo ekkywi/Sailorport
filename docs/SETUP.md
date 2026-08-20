@@ -197,6 +197,16 @@ SAILORPORT_DEPLOY_PORT_COUNT=32 \
 go run .
 ```
 
+Atau simpan env di file lokal (tidak di-commit), lalu:
+
+```bash
+cd apps/agent
+# contoh isi .env.nonprod: export SAILORPORT_API_URL=… SAILORPORT_WORKER_TIER=nonprod …
+source .env.nonprod && go run .
+```
+
+Agent membaca env dari proses (`os.Getenv`) — tidak auto-load file `.env`.
+
 Cek portal `/worker` — worker muncul **online** dengan heartbeat berkala.
 
 Register / heartbeat / claim / update deploy memakai **agent token** (bukan JWT user):

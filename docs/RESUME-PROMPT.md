@@ -15,9 +15,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 18a — agent kirim worker labels saat register (`TIER` / `ENVIRONMENTS` / `LABELS` JSON).
+**Step terakhir selesai:** 18c — portal filter worker by environment; Workers page tier/environments; Step 18 (worker capabilities) selesai.
 
-**Step berikutnya:** 18b — deploy policy API (validasi env vs worker labels), lalu 18c portal filter.
+**Step berikutnya:** Opsional — webhook auto-deploy; post-MVP admin edit worker labels.
 
 **Catatan produk:**
 - Create service (default) = scaffold dari template + daftar catalog
@@ -27,7 +27,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 - Admin Users: list, change role, create, disable/enable (konfirmasi), reset password, **soft-delete** (rename email + `deleted_at`); belum email SMTP
 - Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
 - Deploy: body `{"environment":"staging","worker_id":"<uuid>"}` opsional; portal Deploy dialog pilih worker (search + scroll jika banyak); redeploy affinity otomatis di API
-- Workers: self-register via agent (bukan admin CRUD); `/worker` monitoring read-only; labels dari env agent (`SAILORPORT_WORKER_TIER`, `SAILORPORT_WORKER_ENVIRONMENTS`, optional JSON `SAILORPORT_WORKER_LABELS`); policy deploy by env masih Step 18b
+- Workers: self-register via agent (bukan admin CRUD); `/worker` monitoring read-only; labels dari env agent (`SAILORPORT_WORKER_TIER`, `SAILORPORT_WORKER_ENVIRONMENTS`, optional JSON `SAILORPORT_WORKER_LABELS`); deploy policy API 409 jika env tidak diizinkan; portal DeployDialog filter worker by env
 - Environments: `GET /api/v1/environments`; portal Deploy dialog; `GET /services` juga return `env_deployments` (map slug → latest deploy per env)
 - Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
 - Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
@@ -38,7 +38,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy vi
 
 **Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
 
-Tolong lanjutkan **Step 18b** (deploy policy: worker labels harus allow environment) dengan gaya panduan detail seperti sebelumnya.
+Tolong lanjutkan fitur berikutnya (webhook auto-deploy atau post-MVP worker admin) dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

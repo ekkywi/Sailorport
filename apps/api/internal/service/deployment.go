@@ -130,14 +130,11 @@ func (d *Deployments) Update(ctx context.Context, id string, req model.UpdateDep
 	return out, nil
 }
 
-func (d *Deployments) resolveTargetWorker(
-	ctx context.Context,
-	serviceID, envSlug, requestedWorkerID string,
-) (*string, error) {
+func (d *Deployments) resolveTargetWorker(ctx context.Context, serviceID, envSlug, requestedWorkerID string) (*string, error) {
 	requestedWorkerID = strings.TrimSpace(requestedWorkerID)
 
 	if requestedWorkerID != "" {
-		return d.validateOnlineWorker(ctx, requestedWorkerID)
+		return d.validateWorkerForDeploy(ctx, requestedWorkerID, envSlug, true)
 	}
 
 	deps, err := d.store.ListByService(ctx, serviceID)
@@ -150,20 +147,34 @@ func (d *Deployments) resolveTargetWorker(
 		}
 		if dep.WorkerID != nil && strings.TrimSpace(*dep.WorkerID) != "" {
 			id := strings.TrimSpace(*dep.WorkerID)
-			return &id, nil
+			target, err := d.validateWorkerForDeploy(ctx, id, envSlug, false)
+			if errors.Is(err, ErrNotFound) {
+				return nil, nil
+			}
+			return target, err
 		}
 		break
 	}
 	return nil, nil
 }
 
-func (d *Deployments) validateOnlineWorker(ctx context.Context, workerID string) (*string, error) {
+func (d *Deployments) validateWorkerForDeploy(
+	ctx context.Context,
+	workerID, envSlug string,
+	requireOnline bool,
+) (*string, error) {
 	w, err := d.workers.Get(ctx, workerID)
 	if err != nil {
 		return nil, err
 	}
-	if w.Status != "online" {
-		return nil, fmt.Errorf("%w: worker %q is %s (must be online)", ErrConflict, w.Name, w.Status)
+	if requireOnline && w.Status != "online" {
+		return nil, fmt.Errorf(
+			"%w: worker %q is %s (must be online)",
+			ErrConflict, w.Name, w.Status,
+		)
+	}
+	if err := workerEnvConflict(w, envSlug); err != nil {
+		return nil, err
 	}
 	id := w.ID
 	return &id, nil
