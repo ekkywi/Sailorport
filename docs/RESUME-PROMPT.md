@@ -4,42 +4,52 @@ Copy semua teks di bawah ini ke chat Cursor baru di mesin lain.
 
 ---
 
-Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, scaffold, deploy via agent).
+Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via agent).
 
 **Mode belajar:** saya coding manual, Anda pandu step-by-step dengan penjelasan detail baris per baris. Jangan refactor besar tanpa diminta.
 
-**Baca dulu file ini di repo:**
-- `docs/PROGRESS.md` — step terakhir yang selesai
+**Baca dulu file ini di repo (urutan penting):**
+- `docs/PRODUCT.md` — **visi produk & dua jalur deploy** (wajib baca)
+- `docs/PROGRESS.md` — step terakhir yang selesai + rencana Step 19+
 - `docs/ARCHITECTURE.md` — aturan lapisan (wajib diikuti)
 - `docs/AGENTS.md` — konvensi & konteks proyek
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** 18c — portal filter worker by environment; Workers page tier/environments; Step 18 (worker capabilities) selesai.
+**Step terakhir selesai:** 18c — worker capabilities (labels, deploy policy API, portal filter by env). **MVP core selesai.**
 
-**Step berikutnya:** Opsional — webhook auto-deploy; post-MVP admin edit worker labels.
+**Step berikutnya:** **19 — Git-backed custom app deploy** (`repo_url`, agent git clone/pull, Dockerfile path, build & run). Baca `docs/PRODUCT.md` Jalur 1.
 
-**Catatan produk:**
-- Create service (default) = scaffold dari template + daftar catalog
-- Register existing = metadata saja, tanpa generate folder
-- Template masih di folder `templates/`, bukan database
-- Delete catalog: hapus workspace di bawah `data/workspaces` + enqueue `remove` untuk **setiap** env; ditolak jika ada env `running` (prod running → 403)
-- Admin Users: list, change role, create, disable/enable (konfirmasi), reset password, **soft-delete** (rename email + `deleted_at`); belum email SMTP
-- Agent endpoints butuh `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
-- Deploy: body `{"environment":"staging","worker_id":"<uuid>"}` opsional; portal Deploy dialog pilih worker (search + scroll jika banyak); redeploy affinity otomatis di API
-- Workers: self-register via agent (bukan admin CRUD); `/worker` monitoring read-only; labels dari env agent (`SAILORPORT_WORKER_TIER`, `SAILORPORT_WORKER_ENVIRONMENTS`, optional JSON `SAILORPORT_WORKER_LABELS`); deploy policy API 409 jika env tidak diizinkan; portal DeployDialog filter worker by env
-- Environments: `GET /api/v1/environments`; portal Deploy dialog; `GET /services` juga return `env_deployments` (map slug → latest deploy per env)
-- Workspace default: `data/workspaces` (bukan `/tmp`); Compose workspaces = named volume
-- Portal RBAC UI: viewer read-only di Catalog (boleh History); Users page admin-only
-- Catalog: kolom Deploy menampilkan `latest_deployment` + badge environment; rocket = dialog deploy (pilih env), jam = history; square/play = stop/start runtime (**konfirmasi**); 📜 = logs (semua role)
-- Logs: POST `/services/{id}/runtime/logs` → agent `docker logs --tail 200` → output di `runtime_jobs.output`; portal `LogsDialog` poll `GET /runtime/{job_id}` tiap 2s; viewer+ boleh akses
-- Audit: tabel `audit_events` append-only; catalog hard-delete tetap tapi snapshot di audit; `GET /api/v1/audit` admin; portal `/audit` admin-only
-- Delete container fix (00014): job `remove` survive SET NULL + `environment_slug`; agent `docker rm` setelah catalog hilang
+**Visi produk (ringkas):**
+- Sailorport **tetap IDP**; **catalog** (`/catalog`, API services) = inventory pusat semua service.
+- **Jalur utama:** developer punya repo + Dockerfile → IDP deploy (pull → build → run). Scaffold **tidak wajib**.
+- **Jalur sekunder (nanti):** catalog apps siap pakai (Postgres, Redis, Gitea) — pull image, tanpa Git.
+- **Scaffold `go-api`:** opsional / golden path demo; deploy saat ini dari `data/workspaces/` lokal.
+- Webhook & rollback **setelah** Step 19, bukan sebelum Git path.
 
-**Cara jalankan lokal:** lihat `docs/PROGRESS.md` / `docs/SETUP.md` (dua mode).
+**Yang sudah jalan (jangan ulang):**
+- Catalog CRUD, deploy, history, env dev/staging/prod, worker picker, stop/start, logs, audit, RBAC
+- Agent: register, heartbeat, claim deploy/runtime, docker build/run workspace lokal
+- Worker labels (`SAILORPORT_WORKER_TIER`, `SAILORPORT_WORKER_ENVIRONMENTS`); deploy policy 409; portal filter worker by env
+- Multi-agent: `target_worker_id`, claim filter, redeploy affinity
 
-Tolong lanjutkan fitur berikutnya (webhook auto-deploy atau post-MVP worker admin) dengan gaya panduan detail seperti sebelumnya.
+**Yang belum (Step 19+):**
+- `repo_url`, `branch`, `source_type` di model service
+- Agent `git clone` / `git pull` sebelum `docker build`
+- Webhook, rollback, catalog apps (Postgres/Redis)
+
+**Catatan teknis:**
+- Create service (scaffold) = template → `data/workspaces/{name}/` → deploy build folder itu
+- Register existing = metadata saja, tanpa workspace — belum auto-deploy
+- Deploy body: `{"environment":"staging","worker_id":"<uuid>"}` opsional
+- Agent token: `Authorization: Bearer $SAILORPORT_AGENT_TOKEN` (bukan JWT user)
+- Workspace dev: `data/workspaces`; Compose: named volume
+- Agent env file: `apps/agent/.env.example` → copy ke `.env.nonprod` lokal, `source .env.nonprod && go run .`
+
+**Cara jalankan lokal:** `docs/SETUP.md` + `docs/PROGRESS.md` (mode development).
+
+Tolong lanjutkan **Step 19** (Git-backed deploy) dengan gaya panduan detail seperti sebelumnya. Ikuti `docs/PRODUCT.md` — kontrak deploy = Dockerfile di repo.
 
 ---
 
-*Catatan: update bagian "Step terakhir selesai" di prompt ini setiap kali Anda menyelesaikan step baru.*
+*Update bagian "Step terakhir selesai" setiap selesai step baru.*

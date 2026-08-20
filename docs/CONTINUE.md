@@ -35,10 +35,10 @@ git pull
 Lalu:
 
 1. Buka folder `Sailorport` di Cursor
-2. Baca `docs/PROGRESS.md`
+2. Baca `docs/PRODUCT.md` (visi) lalu `docs/PROGRESS.md` (step)
 3. Buka chat baru
 4. Paste isi `docs/RESUME-PROMPT.md`
-5. Lanjut step berikutnya
+5. Lanjut step berikutnya (saat ini: **Step 19 — Git-backed deploy**)
 
 ## Setup remote pertama kali (sekali saja)
 
@@ -74,6 +74,7 @@ Dengan ritual ini, Anda tidak perlu mengandalkan ingatan chat.
 
 | File | Fungsi |
 |------|--------|
+| `docs/PRODUCT.md` | **visi produk** — dua jalur deploy, positioning IDP |
 | `docs/PROGRESS.md` | step mana yang sudah/belum |
 | `docs/SETUP.md` | install tool di mesin baru |
 | `docs/AGENTS.md` | konteks untuk AI |

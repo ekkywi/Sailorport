@@ -4,9 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 18c — portal filter worker by environment + Workers page tier/environments
-- **Step berikutnya:** Opsional — webhook auto-deploy; post-MVP admin edit worker labels
-- **Terakhir dikerjakan:** 2026-08-20 — Step 18b–18c (deploy policy API + portal filter)
+- **Step selesai:** 18c — worker capabilities (labels + deploy policy + portal filter)
+- **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
+- **Step berikutnya:** 19 — Git-backed custom app deploy (`repo_url` + clone + build)
+- **Terakhir dikerjakan:** 2026-08-20 — Step 18b–18c + checkpoint product vision (lihat `docs/PRODUCT.md`)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -508,11 +509,37 @@ curl -s -o /tmp/out -w "%{http_code}\n" \
 
 **Tes 18c (portal):** Deploy dialog → pilih env → hanya worker yang allow env itu; Workers page → kolom Tier + Environments.
 
+### Checkpoint — Product vision (2026-08-20)
+
+Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
+
+1. **Sailorport tetap IDP** — catalog = inventory pusat; bukan bergeser ke non-IDP.
+2. **Jalur utama ke depan:** custom app dari **Git + Dockerfile** (developer setup mandiri; IDP untuk deploy).
+3. **Jalur sekunder:** **catalog apps** siap pakai (Postgres, Redis, Gitea, …) — pull image, tanpa build.
+4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
+5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
+
+**Yang belum di kode:** `repo_url`, `git pull` di agent, catalog apps manifest, webhook.
+
+## Rencana step berikutnya (belum dikerjakan)
+
+| Step | Topik | Isi singkat |
+|------|-------|-------------|
+| 19 | Git-backed deploy | `source_type`, `repo_url`, `branch`, `dockerfile_path`; agent clone/pull → build → run |
+| 20 | Webhook auto-deploy | POST webhook → validasi signature → create deployment |
+| 21 | Rollback / redeploy | Pin commit/tag; redeploy versi sebelumnya dari UI/API |
+| 22 | Catalog apps | Manifest app (image, env, volume); deploy tanpa Git |
+| — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
+
 ## Next action
 
-1. Opsional: webhook auto-deploy
-2. Post-MVP: admin edit worker labels / decommission worker
+1. **Step 19** — service model + agent git sync + deploy dari repo (baca `docs/PRODUCT.md` Jalur 1)
+2. Setelah 19 stabil → webhook (20), rollback (21)
+3. Catalog apps (22) — setelah custom path jalan
 
 ## Cara lanjut di mesin lain
 
-Lihat `docs/CONTINUE.md` dan paste prompt dari `docs/RESUME-PROMPT.md`.
+1. `git pull`
+2. Baca `docs/PRODUCT.md` (visi) + `docs/PROGRESS.md` (step)
+3. Paste `docs/RESUME-PROMPT.md` ke chat Cursor baru
+4. Lihat `docs/CONTINUE.md` untuk ritual Git

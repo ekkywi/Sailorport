@@ -6,9 +6,11 @@ Dokumen ini memberi konteks ke AI saat user membuka chat baru di mesin lain.
 
 **Sailorport** — self-hosted internal developer platform OSS.
 
-Tagline: *Self-hosted developer port — catalog, pave, and ship.*
+Tagline: *Self-hosted developer port — catalog, deploy, and ship.*
 
-Fitur inti: software catalog, golden path scaffold, environments, deploy via agent, worker health, secrets, RBAC, audit.
+Fitur inti: **software catalog** (inventory pusat), deploy via agent, environments, worker health/policy, RBAC, audit. Golden path scaffold = **opsional** (bukan jalur utama).
+
+**Visi produk lengkap:** `docs/PRODUCT.md` — baca sebelum fitur Git deploy / catalog apps.
 
 ## Repo
 
@@ -75,11 +77,25 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 
 Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
-## Catalog vs scaffold (mental model)
+## Catalog — mental model (penting)
 
-- **Create service** (default) = pilih template → generate workspace → daftar ke catalog
-- **Register existing** = metadata saja di catalog, tanpa folder
-- **Delete service** = enqueue job `remove` (slug di job) → hapus row DB + folder workspace → agent `docker rm -f sailorport-{name}-{env}` (job survive SET NULL)
+**Catalog = daftar semua service yang dikelola platform** (bukan “template store”).
+
+| Cara masuk catalog | Status | Deploy |
+|--------------------|--------|--------|
+| Scaffold template (`go-api`) | ✅ ada | Build `workspace_path` lokal |
+| Register existing (metadata) | ✅ ada | Belum auto-deploy |
+| Git repo + Dockerfile | ⬜ Step 19 | clone/pull → build → run |
+| Catalog app (Postgres, Redis, …) | ⬜ Step 22+ | pull image → run |
+
+Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sama.
+
+## Scaffold (golden path — opsional)
+
+- **Create service** (scaffold) = pilih template → generate `data/workspaces/{name}/` → daftar catalog
+- Developer **mengembangkan kode di workspace** setelah scaffold; template dipakai **sekali** di awal
+- **Register existing** = metadata saja, tanpa folder
+- **Delete service** = enqueue job `remove` → hapus row DB + folder workspace → agent `docker rm`
 
 ## Coding conventions
 
@@ -101,6 +117,6 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 
 ## MVP v1 success criteria
 
-`docker compose up` → install agent → register worker → scaffold service → deploy → lihat status/logs.
+`docker compose up` → agent → worker online → service di catalog → deploy → status/logs.
 
-(Saat ini: MVP core OK + Step 18 worker capabilities selesai. Next: opsional webhook auto-deploy.)
+**Selesai:** MVP core + Step 18. **Next:** Step 19 Git-backed deploy (`docs/PRODUCT.md`, `docs/ROADMAP.md`).

@@ -70,8 +70,20 @@ src/
 
 ```text
 Developer → Web → API → Postgres (+ Redis nanti)
-                      → Worker → Agent (Docker) → callback
+                      → Agent (Docker) → build/run di worker node
 ```
+
+Lihat **`docs/PRODUCT.md`** untuk dua jalur deploy (Git+Dockerfile vs catalog apps vs scaffold).
+
+## Service sources (evolusi model)
+
+| `source_type` (rencana) | Artifact | Agent flow |
+|-------------------------|----------|------------|
+| `scaffold` (sekarang) | `workspace_path` lokal | `docker build` folder |
+| `git` (Step 19) | repo + Dockerfile | `git pull` → `docker build` |
+| `catalog_app` (Step 22) | image manifest platform | `docker pull` → `run` |
+
+Satu tabel `services` + UI catalog untuk semua; perbedaan hanya di cara resolve artifact sebelum deploy.
 
 ## Konvensi
 
