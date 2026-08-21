@@ -122,7 +122,13 @@ func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateService
 	if id == "" {
 		return model.Service{}, fmt.Errorf("%w: id is required", ErrInvalid)
 	}
-	req, err := normalizeUpdate(req)
+
+	existing, err := c.repo.Get(ctx, id)
+	if err != nil {
+		return model.Service{}, mapRepoErr(err)
+	}
+
+	req, err = normalizeUpdate(req, existing)
 	if err != nil {
 		return model.Service{}, err
 	}
@@ -218,10 +224,14 @@ func (c *Catalog) recordService(ctx context.Context, actorID, actorEmail, action
 		ResourceID:   svc.ID,
 		ResourceName: svc.Name,
 		Payload: map[string]any{
-			"description":    svc.Description,
-			"owner":          svc.Owner,
-			"template_id":    svc.TemplateID,
-			"workspace_path": svc.WorkspacePath,
+			"description":     svc.Description,
+			"owner":           svc.Owner,
+			"template_id":     svc.TemplateID,
+			"workspace_path":  svc.WorkspacePath,
+			"source_type":     svc.SourceType,
+			"repo_url":        svc.RepoURL,
+			"branch":          svc.Branch,
+			"dockerfile_path": svc.DockerfilePath,
 		},
 	})
 	if err != nil {
@@ -246,7 +256,6 @@ func (c *Catalog) removeWorkspace(workspacePath string) error {
 
 	sep := string(filepath.Separator)
 	if cleanPath == cleanRoot || !strings.HasPrefix(cleanPath+sep, cleanRoot+sep) {
-		// Outside configured workspace root (e.g. legacy /tmp paths) — skip
 		return nil
 	}
 
@@ -262,20 +271,78 @@ func normalizeCreate(req model.CreateServiceRequest) (model.CreateServiceRequest
 	req.Owner = strings.TrimSpace(req.Owner)
 	req.TemplateID = strings.TrimSpace(req.TemplateID)
 	req.WorkspacePath = strings.TrimSpace(req.WorkspacePath)
+	req.SourceType = strings.TrimSpace(req.SourceType)
+	req.RepoURL = strings.TrimSpace(req.RepoURL)
+	req.Branch = strings.TrimSpace(req.Branch)
+	req.DockerfilePath = strings.TrimSpace(req.DockerfilePath)
+
+	if req.SourceType == "" {
+		req.SourceType = "scaffold"
+	}
+	if req.Branch == "" {
+		req.Branch = "main"
+	}
+	if req.DockerfilePath == "" {
+		req.DockerfilePath = "Dockerfile"
+	}
+
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
+	}
+	if err := validateSourceFields(req.SourceType, req.RepoURL); err != nil {
+		return req, err
 	}
 	return req, nil
 }
 
-func normalizeUpdate(req model.UpdateServiceRequest) (model.UpdateServiceRequest, error) {
+func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (model.UpdateServiceRequest, error) {
 	req.Name = strings.TrimSpace(req.Name)
 	req.Description = strings.TrimSpace(req.Description)
 	req.Owner = strings.TrimSpace(req.Owner)
+	req.SourceType = strings.TrimSpace(req.SourceType)
+	req.RepoURL = strings.TrimSpace(req.RepoURL)
+	req.Branch = strings.TrimSpace(req.Branch)
+	req.DockerfilePath = strings.TrimSpace(req.DockerfilePath)
+
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
 	}
+
+	if req.SourceType == "" {
+		req.SourceType = existing.SourceType
+	}
+	if req.RepoURL == "" {
+		req.RepoURL = existing.RepoURL
+	}
+	if req.Branch == "" {
+		req.Branch = existing.Branch
+	}
+	if req.DockerfilePath == "" {
+		req.DockerfilePath = existing.DockerfilePath
+	}
+	if req.Branch == "" {
+		req.Branch = "main"
+	}
+	if req.DockerfilePath == "" {
+		req.DockerfilePath = "Dockerfile"
+	}
+
+	if err := validateSourceFields(req.SourceType, req.RepoURL); err != nil {
+		return req, err
+	}
 	return req, nil
+}
+
+func validateSourceFields(sourceType, repoURL string) error {
+	switch sourceType {
+	case "scaffold", "git":
+	default:
+		return fmt.Errorf("%w: invalid source_type %q", ErrInvalid, sourceType)
+	}
+	if sourceType == "git" && repoURL == "" {
+		return fmt.Errorf("%w: repo_url is required for source_type=git", ErrInvalid)
+	}
+	return nil
 }
 
 func mapRepoErr(err error) error {

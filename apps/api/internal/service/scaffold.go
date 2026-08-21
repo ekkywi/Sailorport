@@ -105,6 +105,10 @@ func (s *Scaffold) Run(ctx context.Context, req ScaffoldRequest, actorID, actorE
 		Owner:         req.Owner,
 		TemplateID:    manifest.ID,
 		WorkspacePath: cleanTarget,
+		SourceType:    "scaffold",
+		RepoURL:       "",
+		Branch:        "main",
+		DockerfilePath: "Dockerfile",
 	}, actorID, actorEmail)
 	if err != nil {
 		return ScaffoldResult{}, err

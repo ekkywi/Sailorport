@@ -1,4 +1,4 @@
-import { Boxes, FolderGit2, History, Pencil, Play, Rocket, ScrollText, Square, Trash2 } from "lucide-react";
+import { Boxes, History, Pencil, Play, Rocket, ScrollText, Square, Trash2 } from "lucide-react";
 import {
   DataPanel,
   EmptyState,
@@ -9,7 +9,7 @@ import {
 } from "@/components/app";
 import { Button } from "@/components/ui/button";
 import type { Environment } from "../environments/types";
-import type { Service } from "./types";
+import { canDeployService, type Service } from "./types";
 
 type ServiceListProps = {
   services: Service[];
@@ -19,6 +19,7 @@ type ServiceListProps = {
   onEdit: (svc: Service) => void;
   onDelete: (svc: Service) => void;
   onCreate?: () => void;
+  onCreateFromGit?: () => void;
   onDeploy: (svc: Service) => void;
   onOpenHistory: (svc: Service) => void;
   onStop: (svc: Service, environment: string) => void;
@@ -46,6 +47,69 @@ function deployBadgeClass(status: string) {
     return "bg-muted text-muted-foreground";
   }
   return undefined;
+}
+
+function shortRepoName(repoURL: string): string {
+  const cleaned = repoURL.replace(/\.git$/i, "").replace(/\/$/, "");
+  const parts = cleaned.split("/").filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+  }
+  return truncateMiddle(repoURL, 32);
+}
+
+function OriginCell({ svc }: { svc: Service }) {
+  if (svc.source_type === "git") {
+    return (
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="inline-flex max-w-full items-center gap-1.5">
+          <span className="rounded-md bg-sky-500/12 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-sky-700 uppercase dark:text-sky-400">
+            Git
+          </span>
+          <span className="truncate text-[11px] text-muted-foreground">
+            {svc.branch || "main"}
+          </span>
+        </span>
+        {svc.repo_url ? (
+          <span
+            className="block truncate font-mono text-[11px] text-muted-foreground"
+            title={svc.repo_url}
+          >
+            {shortRepoName(svc.repo_url)}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (svc.template_id) {
+    return (
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="inline-flex max-w-full items-center gap-1.5">
+          <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-emerald-700 uppercase dark:text-emerald-400">
+            Template
+          </span>
+          <span className="truncate text-[11px] text-muted-foreground">
+            {svc.template_id}
+          </span>
+        </span>
+        {svc.workspace_path ? (
+          <span
+            className="block truncate font-mono text-[11px] text-muted-foreground"
+            title={svc.workspace_path}
+          >
+            {truncateMiddle(svc.workspace_path, 28)}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+      Registered
+    </span>
+  );
 }
 
 function ServiceGlyph({ name }: { name: string }) {
@@ -187,7 +251,7 @@ function RowActions({
       </Button>
       {canWrite ? (
         <>
-          {svc.workspace_path ? (
+          {canDeployService(svc) ? (
             <Button
               type="button"
               variant="ghost"
@@ -238,6 +302,7 @@ export function ServiceList({
   onStart,
   onLogs,
   onCreate,
+  onCreateFromGit,
 }: ServiceListProps) {
   if (loading && services.length === 0) {
     return (
@@ -262,22 +327,37 @@ export function ServiceList({
       <DataPanel>
         <EmptyState
           icon={Boxes}
-          title="No services in catalog"
+          title="No services yet"
           description={
             canWrite
-              ? "Create a service from a template to generate a workspace and register it here."
-              : "No services yet. Ask an admin or developer to create one."
+              ? "Add a service from Git to deploy your repo, or start from a template."
+              : "No services yet. Ask an admin or developer to add one."
           }
           action={
-            onCreate ? (
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 text-[13px]"
-                onClick={onCreate}
-              >
-                Create service
-              </Button>
+            canWrite && (onCreateFromGit || onCreate) ? (
+              <div className="flex flex-wrap justify-center gap-2">
+                {onCreateFromGit ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-[13px]"
+                    onClick={onCreateFromGit}
+                  >
+                    Add from Git
+                  </Button>
+                ) : null}
+                {onCreate ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[13px]"
+                    onClick={onCreate}
+                  >
+                    More options
+                  </Button>
+                ) : null}
+              </div>
             ) : undefined
           }
           className="py-16"
@@ -341,26 +421,7 @@ export function ServiceList({
                   />
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    {svc.template_id ? (
-                      <span className="inline-flex max-w-full items-center gap-1 truncate rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                        <FolderGit2 className="size-3 shrink-0" />
-                        <span className="truncate">{svc.template_id}</span>
-                      </span>
-                    ) : (
-                      <span className="text-[12px] text-muted-foreground">
-                        Registered only
-                      </span>
-                    )}
-                    {svc.workspace_path ? (
-                      <span
-                        className="block truncate font-mono text-[11px] text-muted-foreground"
-                        title={svc.workspace_path}
-                      >
-                        {svc.workspace_path}
-                      </span>
-                    ) : null}
-                  </div>
+                  <OriginCell svc={svc} />
                 </td>
                 <td className="px-4 py-3">
                   <RowActions
@@ -414,14 +475,9 @@ export function ServiceList({
                     onLogs={onLogs}
                   />
                 </div>
-                {(svc.template_id || svc.workspace_path) && (
-                  <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">
-                    {svc.template_id || "registered"}
-                    {svc.workspace_path
-                      ? ` · ${truncateMiddle(svc.workspace_path, 24)}`
-                      : ""}
-                  </p>
-                )}
+                <div className="mt-2">
+                  <OriginCell svc={svc} />
+                </div>
               </div>
             </div>
           </li>

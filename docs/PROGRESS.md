@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 18c — worker capabilities (labels + deploy policy + portal filter)
+- **Step selesai:** 19d — portal Add from Git
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** 19 — Git-backed custom app deploy (`repo_url` + clone + build)
-- **Terakhir dikerjakan:** 2026-08-20 — Step 18b–18c + checkpoint product vision (lihat `docs/PRODUCT.md`)
+- **Step berikutnya:** 20 — webhook auto-deploy (opsional); atau polish edit Git fields
+- **Terakhir dikerjakan:** 2026-08-21 — Step 19a–19d (Git-backed deploy end-to-end UI)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -48,6 +48,10 @@
 - [x] Step 16 — audit log (16a–16e: record + list API + portal)
 - [x] Step 17 — Multi-agent targeting (17a–17e)
 - [x] Step 18 — Worker capabilities (18a–18c: labels + deploy policy + portal filter)
+- [x] Step 19a — Service Git fields (migration + model + store)
+- [x] Step 19b — API create/update Git source + deploy gate
+- [x] Step 19c — Agent git clone/pull + docker build
+- [x] Step 19d — Portal Add from Git
 
 ## Yang sudah jalan
 
@@ -519,13 +523,16 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** `repo_url`, `git pull` di agent, catalog apps manifest, webhook.
+**Yang belum di kode:** webhook, rollback, catalog apps, private Git credentials.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| 19 | Git-backed deploy | `source_type`, `repo_url`, `branch`, `dockerfile_path`; agent clone/pull → build → run |
+| 19a | Model + migrasi Git fields | ✅ `source_type`, `repo_url`, `branch`, `dockerfile_path` |
+| 19b | API create/update Git | ✅ validasi `git`+`repo_url`; Update merge; deploy allow git atau workspace |
+| 19c | Agent git sync | ✅ clone/pull → build → run |
+| 19d | Portal Add from Git | ✅ `GitServiceForm`; Origin git di list; deploy button untuk git |
 | 20 | Webhook auto-deploy | POST webhook → validasi signature → create deployment |
 | 21 | Rollback / redeploy | Pin commit/tag; redeploy versi sebelumnya dari UI/API |
 | 22 | Catalog apps | Manifest app (image, env, volume); deploy tanpa Git |
@@ -533,9 +540,10 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 
 ## Next action
 
-1. **Step 19** — service model + agent git sync + deploy dari repo (baca `docs/PRODUCT.md` Jalur 1)
-2. Setelah 19 stabil → webhook (20), rollback (21)
-3. Catalog apps (22) — setelah custom path jalan
+1. **Step 20** — webhook auto-deploy (setelah Git path dipakai)
+2. **Step 21** — rollback / redeploy
+3. Catalog apps (22) — setelah custom path matang
+4. Opsional: edit Git fields di portal; private repo credentials
 
 ## Cara lanjut di mesin lain
 

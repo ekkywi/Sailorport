@@ -27,9 +27,11 @@ import {
   listServices,
   updateService,
 } from "./api";
+import { AddServiceChooser } from "./AddServiceChooser";
+import { GitServiceForm } from "./GitServiceForm";
 import { ServiceForm } from "./ServiceForm";
 import { ServiceList } from "./ServiceList";
-import type { Service, ServiceFormValues } from "./types";
+import type { GitServiceFormValues, Service, ServiceFormValues } from "./types";
 import { DeployDialog } from "../deployments/DeployDialog";
 import { DeploymentsDialog } from "../deployments/DeploymentsDialog";
 import { LogsDialog } from "./LogsDialog";
@@ -45,7 +47,16 @@ const emptyForm: ServiceFormValues = {
   owner: "",
 };
 
-type DialogMode = "none" | "create" | "register" | "edit";
+const emptyGitForm: GitServiceFormValues = {
+  name: "",
+  description: "",
+  owner: "",
+  repo_url: "",
+  branch: "main",
+  dockerfile_path: "Dockerfile",
+};
+
+type DialogMode = "none" | "choose" | "create" | "register" | "git" | "edit";
 
 export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const canWrite = canWriteCatalog(currentUser.role);
@@ -55,12 +66,14 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [listError, setListError] = useState("");
   const [formError, setFormError] = useState("");
   const [values, setValues] = useState<ServiceFormValues>(emptyForm);
+  const [gitValues, setGitValues] = useState<GitServiceFormValues>(emptyGitForm);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogMode>("none");
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
   const [createdPath, setCreatedPath] = useState("");
+  const [gitCreated, setGitCreated] = useState<Service | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Service | null>(null);
   const [deployDialogTarget, setDeployDialogTarget] = useState<Service | null>(null);
   const [runtimeTarget, setRuntimeTarget] = useState<{
@@ -170,17 +183,31 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function closeDialog() {
     setValues(emptyForm);
+    setGitValues(emptyGitForm);
     setEditingId(null);
     setFormError("");
     setCreatedPath("");
+    setGitCreated(null);
     setDialog("none");
+  }
+
+  function startAdd() {
+    setEditingId(null);
+    setValues(emptyForm);
+    setGitValues(emptyGitForm);
+    setFormError("");
+    setCreatedPath("");
+    setGitCreated(null);
+    setDialog("choose");
   }
 
   function startCreate() {
     setEditingId(null);
     setValues(emptyForm);
+    setGitValues(emptyGitForm);
     setFormError("");
     setCreatedPath("");
+    setGitCreated(null);
     setDialog("create");
   }
 
@@ -189,7 +216,17 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setValues(emptyForm);
     setFormError("");
     setCreatedPath("");
+    setGitCreated(null);
     setDialog("register");
+  }
+
+  function startGit() {
+    setEditingId(null);
+    setGitValues(emptyGitForm);
+    setFormError("");
+    setCreatedPath("");
+    setGitCreated(null);
+    setDialog("git");
   }
 
   function startEdit(svc: Service) {
@@ -205,6 +242,10 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function onChange(field: keyof ServiceFormValues, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function onGitChange(field: keyof GitServiceFormValues, value: string) {
+    setGitValues((prev) => ({ ...prev, [field]: value }));
   }
 
   async function onSubmitMetadata(e: FormEvent) {
@@ -228,6 +269,32 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
           : editingId
             ? "Failed to update service"
             : "Failed to register service",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onSubmitGit(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setFormError("");
+    try {
+      const created = await createService({
+        name: gitValues.name.trim(),
+        description: gitValues.description.trim(),
+        owner: gitValues.owner.trim(),
+        source_type: "git",
+        repo_url: gitValues.repo_url.trim(),
+        branch: gitValues.branch.trim() || "main",
+        dockerfile_path: gitValues.dockerfile_path.trim() || "Dockerfile",
+      });
+      toast("Service added from Git");
+      setGitCreated(created);
+      await load();
+    } catch (err) {
+      setFormError(
+        err instanceof Error ? err.message : "Failed to add service from Git",
       );
     } finally {
       setSaving(false);
@@ -301,10 +368,10 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 type="button"
                 size="sm"
                 className="h-8 gap-1.5 text-[13px]"
-                onClick={startCreate}
+                onClick={startAdd}
               >
                 <Plus className="size-3.5" />
-                Create service
+                Add service
               </Button>
             ) : null}
           </>
@@ -331,7 +398,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
           setRuntimeTarget({ service: svc, environment, action: "start" })
         }
         onLogs={(svc, environment) => setLogsTarget({ service: svc, environment })}
-        onCreate={canWrite ? startCreate : undefined}
+        onCreate={canWrite ? startAdd : undefined}
+        onCreateFromGit={canWrite ? startGit : undefined}
       />
 
       <Dialog
@@ -341,16 +409,32 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         }}
       >
         <DialogContent className="sm:max-w-lg" showCloseButton={!saving}>
+          {dialog === "choose" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Add service</DialogTitle>
+                <DialogDescription>
+                  Choose how this service enters the catalog.
+                </DialogDescription>
+              </DialogHeader>
+              <AddServiceChooser
+                onGit={startGit}
+                onTemplate={startCreate}
+                onRegister={startRegister}
+              />
+            </>
+          ) : null}
+
           {dialog === "create" ? (
             <>
               <DialogHeader>
                 <DialogTitle>
-                  {createdPath ? "Service created" : "Create service"}
+                  {createdPath ? "Service created" : "From template"}
                 </DialogTitle>
                 <DialogDescription>
                   {createdPath
                     ? "Workspace generated and registered in the catalog."
-                    : "Generate a workspace from a template and register it in the catalog."}
+                    : "Generate a workspace from a golden-path template."}
                 </DialogDescription>
               </DialogHeader>
               {createdPath ? (
@@ -380,7 +464,68 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                     toast("Service created");
                     void load();
                   }}
-                  onRegisterExisting={startRegister}
+                  onBack={startAdd}
+                />
+              )}
+            </>
+          ) : null}
+
+          {dialog === "git" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {gitCreated ? "Service added" : "From Git"}
+                </DialogTitle>
+                <DialogDescription>
+                  {gitCreated
+                    ? "Linked in the catalog. Deploy when you are ready — the agent will clone and build."
+                    : "Link a public repository with a Dockerfile."}
+                </DialogDescription>
+              </DialogHeader>
+              {gitCreated ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+                    <p className="text-[13px] font-medium">{gitCreated.name}</p>
+                    <p
+                      className="mt-1 truncate font-mono text-[11px] text-muted-foreground"
+                      title={gitCreated.repo_url}
+                    >
+                      {gitCreated.repo_url}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 text-[13px]"
+                      onClick={() => {
+                        const svc = gitCreated;
+                        closeDialog();
+                        setDeployDialogTarget(svc);
+                      }}
+                    >
+                      Deploy now
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-[13px]"
+                      onClick={closeDialog}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <GitServiceForm
+                  values={gitValues}
+                  saving={saving}
+                  error={formError}
+                  onChange={onGitChange}
+                  onSubmit={onSubmitGit}
+                  onCancel={closeDialog}
+                  onBack={startAdd}
                 />
               )}
             </>
@@ -389,10 +534,9 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
           {dialog === "register" ? (
             <>
               <DialogHeader>
-                <DialogTitle>Register existing service</DialogTitle>
+                <DialogTitle>Register only</DialogTitle>
                 <DialogDescription>
-                  Catalog only — no workspace is generated. Use this for services
-                  that already exist elsewhere.
+                  Catalog metadata only — no workspace is generated.
                 </DialogDescription>
               </DialogHeader>
               <ServiceForm
@@ -403,7 +547,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 onChange={onChange}
                 onSubmit={onSubmitMetadata}
                 onCancel={closeDialog}
-                onCreateInstead={startCreate}
+                onCreateInstead={startAdd}
               />
             </>
           ) : null}

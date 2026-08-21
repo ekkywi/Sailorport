@@ -85,7 +85,7 @@ Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
 |--------------------|--------|--------|
 | Scaffold template (`go-api`) | ✅ ada | Build `workspace_path` lokal |
 | Register existing (metadata) | ✅ ada | Belum auto-deploy |
-| Git repo + Dockerfile | ⬜ Step 19 | clone/pull → build → run |
+| Git repo + Dockerfile | ✅ Step 19 | clone/pull → build → run |
 | Catalog app (Postgres, Redis, …) | ⬜ Step 22+ | pull image → run |
 
 Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sama.
@@ -119,4 +119,4 @@ Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sa
 
 `docker compose up` → agent → worker online → service di catalog → deploy → status/logs.
 
-**Selesai:** MVP core + Step 18. **Next:** Step 19 Git-backed deploy (`docs/PRODUCT.md`, `docs/ROADMAP.md`).
+**Selesai:** MVP core + Step 18 + Step 19 Git-backed deploy. **Next:** Step 20 webhook (`docs/PRODUCT.md`, `docs/ROADMAP.md`).

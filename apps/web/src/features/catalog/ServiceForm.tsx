@@ -98,7 +98,7 @@ export function ServiceForm({
             onClick={onCreateInstead}
             disabled={saving}
           >
-            Create from template instead
+            Back to options
           </button>
         ) : null}
       </div>

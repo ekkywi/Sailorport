@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -17,6 +18,7 @@ type Config struct {
 	PortBase          int
 	PortCount         int
 	AgentToken        string
+	WorkspaceDir      string
 }
 
 func Load() Config {
@@ -62,6 +64,11 @@ func Load() Config {
 		agentToken = "dev-agent-token"
 	}
 
+	workspaceDir := strings.TrimSpace(os.Getenv("SAILORPORT_WORKSPACE"))
+	if workspaceDir == "" {
+		workspaceDir = filepath.Join(".", "workspaces")
+	}
+
 	return Config{
 		APIURL:            apiURL,
 		WorkerName:        name,
@@ -71,6 +78,7 @@ func Load() Config {
 		PortCount:         portCount,
 		AgentToken:        agentToken,
 		Labels:            parseWorkerLabels(),
+		WorkspaceDir:      workspaceDir,
 	}
 }
 

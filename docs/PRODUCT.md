@@ -35,7 +35,7 @@ Developer: repo + Dockerfile (syarat wajib)
 | Kontrak deploy | **Dockerfile** di repo (platform tidak tebak stack) |
 | Source of truth | Git repo tim |
 | Build | `docker build` di agent |
-| Status implementasi | **Belum** — rencana Step 19+ |
+| Status implementasi | ✅ Step 19 (19a–19d) |
 
 Ini selaras industri (Render, Railway, internal IDP + Git).
 
@@ -99,8 +99,9 @@ Berlaku untuk **semua jalur** deploy ke depan.
 | Agent docker build/run (workspace lokal) | ✅ |
 | Environments, runtime stop/start, logs | ✅ |
 | Multi-agent targeting + worker labels/policy | ✅ |
-| Git clone/pull sebelum deploy | ⬜ Step 19 |
-| Service fields `repo_url`, `source_type` | ⬜ Step 19 |
+| Git clone/pull sebelum deploy | ✅ Step 19c |
+| Service fields `repo_url`, `source_type` | ✅ Step 19a–19b |
+| Portal Add from Git | ✅ Step 19d |
 | Webhook auto-deploy | ⬜ Step 20 |
 | Rollback / redeploy commit | ⬜ Step 21 |
 | Catalog apps (Postgres, Redis, …) | ⬜ Step 22+ |
@@ -112,7 +113,7 @@ Berlaku untuk **semua jalur** deploy ke depan.
 2. **Jangan** wajibkan scaffold dari IDP — developer nyata mulai dari Git.
 3. **Jangan** campur “template go-api” dengan “catalog app Postgres” — beda jalur, beda agent flow.
 4. **Do** pertahankan satu catalog sebagai inventory.
-5. **Do** build Git path dulu, catalog apps kemudian.
+5. **Do** webhook/rollback setelah Git path (Step 19 ✅) — lanjut Step 20+.
 
 ## Referensi industri
 

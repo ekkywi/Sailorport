@@ -19,6 +19,10 @@ export type Service = {
   owner: string;
   template_id: string;
   workspace_path: string;
+  source_type: string;
+  repo_url: string;
+  branch: string;
+  dockerfile_path: string;
   created_at: string;
   updated_at: string;
   latest_deployment?: LatestDeployment | null;
@@ -29,12 +33,20 @@ export type CreateServiceInput = {
   name: string;
   description: string;
   owner: string;
+  source_type?: string;
+  repo_url?: string;
+  branch?: string;
+  dockerfile_path?: string;
 };
 
 export type UpdateServiceInput = {
   name: string;
   description: string;
   owner: string;
+  source_type?: string;
+  repo_url?: string;
+  branch?: string;
+  dockerfile_path?: string;
 };
 
 export type ServiceFormValues = {
@@ -42,3 +54,18 @@ export type ServiceFormValues = {
   description: string;
   owner: string;
 };
+
+export type GitServiceFormValues = {
+  name: string;
+  description: string;
+  owner: string;
+  repo_url: string;
+  branch: string;
+  dockerfile_path: string;
+};
+
+/** True if the service can be deployed (scaffold workspace or linked Git repo). */
+export function canDeployService(svc: Pick<Service, "workspace_path" | "source_type" | "repo_url">): boolean {
+  if (svc.workspace_path?.trim()) return true;
+  return svc.source_type === "git" && Boolean(svc.repo_url?.trim());
+}

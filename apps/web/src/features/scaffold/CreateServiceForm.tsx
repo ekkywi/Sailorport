@@ -8,12 +8,12 @@ import type { TemplateManifest } from "./types";
 
 type CreateServiceFormProps = {
   onSuccess: (workspacePath: string) => void;
-  onRegisterExisting?: () => void;
+  onBack?: () => void;
 };
 
 export function CreateServiceForm({
   onSuccess,
-  onRegisterExisting,
+  onBack,
 }: CreateServiceFormProps) {
   const [templates, setTemplates] = useState<TemplateManifest[]>([]);
   const [templateId, setTemplateId] = useState("");
@@ -74,19 +74,19 @@ export function CreateServiceForm({
     return (
       <div className="space-y-4 py-2">
         <p className="text-[13px] text-muted-foreground">
-          No templates configured. You can register an existing service without
-          generating a workspace.
+          No templates configured. Go back and add a service from Git, or
+          register metadata only.
         </p>
         {error ? <p className="text-[13px] text-destructive">{error}</p> : null}
-        {onRegisterExisting ? (
+        {onBack ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
             className="h-8 text-[13px]"
-            onClick={onRegisterExisting}
+            onClick={onBack}
           >
-            Register existing
+            Back
           </Button>
         ) : null}
       </div>
@@ -163,16 +163,16 @@ export function CreateServiceForm({
 
       <div className="flex flex-wrap items-center gap-3 pt-1 sm:col-span-2">
         <Button type="submit" size="sm" className="h-8 text-[13px]" disabled={saving}>
-          {saving ? "Creating…" : "Create service"}
+          {saving ? "Creating…" : "Create from template"}
         </Button>
-        {onRegisterExisting ? (
+        {onBack ? (
           <button
             type="button"
             className="text-[12px] text-muted-foreground transition-colors hover:text-foreground"
-            onClick={onRegisterExisting}
+            onClick={onBack}
             disabled={saving}
           >
-            Register existing instead
+            Back
           </button>
         ) : null}
       </div>

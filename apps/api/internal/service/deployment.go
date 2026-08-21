@@ -32,8 +32,13 @@ func (d *Deployments) Create(ctx context.Context, serviceID string, req model.Cr
 	if err != nil {
 		return model.Deployment{}, err
 	}
-	if strings.TrimSpace(svc.WorkspacePath) == "" {
-		return model.Deployment{}, fmt.Errorf("%w: service has no workspace (scaffold first)", ErrInvalid)
+	hasWorkspace := strings.TrimSpace(svc.WorkspacePath) != ""
+	isGit := svc.SourceType == "git" && strings.TrimSpace(svc.RepoURL) != ""
+	if !hasWorkspace && !isGit {
+		return model.Deployment{}, fmt.Errorf(
+			"%w: service needs a workspace (scaffold) or git repo_url",
+			ErrInvalid,
+		)
 	}
 
 	slug := strings.ToLower(strings.TrimSpace(req.Environment))

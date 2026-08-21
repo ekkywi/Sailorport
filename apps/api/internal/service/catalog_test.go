@@ -34,4 +34,79 @@ func TestNormalizeCreate_TrimsFields(t *testing.T) {
 	if req.Name != "payments-api" || req.Description != "desc" || req.Owner != "team" {
 		t.Fatalf("fields not trimmed: %+v", req)
 	}
+	if req.SourceType != "scaffold" || req.Branch != "main" || req.DockerfilePath != "Dockerfile" {
+		t.Fatalf("defaults not applied: source=%q branch=%q dockerfile=%q",
+			req.SourceType, req.Branch, req.DockerfilePath)
+	}
+}
+
+func TestNormalizeCreate_GitRequiresRepoURL(t *testing.T) {
+	_, err := normalizeCreate(model.CreateServiceRequest{
+		Name:       "from-git",
+		SourceType: "git",
+	})
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "repo_url") {
+		t.Fatalf("unexpected message: %v", err)
+	}
+}
+
+func TestNormalizeCreate_GitOK(t *testing.T) {
+	req, err := normalizeCreate(model.CreateServiceRequest{
+		Name:       "from-git",
+		SourceType: "git",
+		RepoURL:    "https://github.com/example/hello.git",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.SourceType != "git" || req.RepoURL == "" || req.Branch != "main" {
+		t.Fatalf("unexpected: %+v", req)
+	}
+}
+
+func TestNormalizeCreate_InvalidSourceType(t *testing.T) {
+	_, err := normalizeCreate(model.CreateServiceRequest{
+		Name:       "x",
+		SourceType: "ftp",
+	})
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}
+
+func TestNormalizeUpdate_MergesGitFields(t *testing.T) {
+	existing := model.Service{
+		SourceType:     "git",
+		RepoURL:        "https://github.com/example/hello.git",
+		Branch:         "develop",
+		DockerfilePath: "deploy/Dockerfile",
+	}
+	req, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name:        "from-git",
+		Description: "updated",
+		Owner:       "team",
+	}, existing)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.SourceType != "git" || req.RepoURL != existing.RepoURL {
+		t.Fatalf("merge failed: %+v", req)
+	}
+	if req.Branch != "develop" || req.DockerfilePath != "deploy/Dockerfile" {
+		t.Fatalf("branch/dockerfile merge failed: %+v", req)
+	}
+}
+
+func TestNormalizeUpdate_SwitchToGitRequiresRepo(t *testing.T) {
+	existing := model.Service{SourceType: "scaffold"}
+	_, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name:       "x",
+		SourceType: "git",
+	}, existing)
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
 }

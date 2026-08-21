@@ -77,10 +77,10 @@ Lihat **`docs/PRODUCT.md`** untuk dua jalur deploy (Git+Dockerfile vs catalog ap
 
 ## Service sources (evolusi model)
 
-| `source_type` (rencana) | Artifact | Agent flow |
-|-------------------------|----------|------------|
-| `scaffold` (sekarang) | `workspace_path` lokal | `docker build` folder |
-| `git` (Step 19) | repo + Dockerfile | `git pull` → `docker build` |
+| `source_type` | Artifact | Agent flow |
+|---------------|----------|------------|
+| `scaffold` | `workspace_path` lokal | `docker build` folder |
+| `git` ✅ | repo + Dockerfile | `git clone`/`pull` → `docker build` |
 | `catalog_app` (Step 22) | image manifest platform | `docker pull` → `run` |
 
 Satu tabel `services` + UI catalog untuk semua; perbedaan hanya di cara resolve artifact sebelum deploy.

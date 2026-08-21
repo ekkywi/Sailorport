@@ -33,6 +33,10 @@ type UpdateDeploymentRequest struct {
 
 type DeploymentJob struct {
 	Deployment
-	ServiceName   string `json:"service_name"`
-	WorkspacePath string `json:"workspace_path"`
+	ServiceName    string `json:"service_name"`
+	WorkspacePath  string `json:"workspace_path"`
+	SourceType     string `json:"source_type"`
+	RepoURL        string `json:"repo_url"`
+	Branch         string `json:"branch"`
+	DockerfilePath string `json:"dockerfile_path"`
 }

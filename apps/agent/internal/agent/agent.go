@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ekkywi/sailorport/apps/agent/internal/client"
 	"github.com/ekkywi/sailorport/apps/agent/internal/config"
 	"github.com/ekkywi/sailorport/apps/agent/internal/docker"
+	"github.com/ekkywi/sailorport/apps/agent/internal/git"
 )
 
 type Agent struct {
@@ -95,7 +98,15 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 	}
 	log.Printf("host port=%d container=%s", port, containerName)
 
-	if err := docker.Build(job.WorkspacePath, imageTag); err != nil {
+	workDir, err := a.resolveWorkDir(job)
+	if err != nil {
+		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+			Status: "failed", ErrorMessage: err.Error(),
+		})
+		return err
+	}
+	log.Printf("work dir=%s source=%s", workDir, job.SourceType)
+	if err := docker.Build(workDir, imageTag, job.DockerfilePath); err != nil {
 		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
 			Status: "failed", ErrorMessage: err.Error(),
 		})
@@ -118,6 +129,36 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 	})
 }
 
+func (a *Agent) resolveWorkDir(job *client.DeploymentJob) (string, error) {
+	source := strings.TrimSpace(job.SourceType)
+	if source == "" {
+		source = "scaffold"
+	}
+	switch source {
+	case "scaffold":
+		path := strings.TrimSpace(job.WorkspacePath)
+		if path == "" {
+			return "", fmt.Errorf("scaffold service has empty workspace_path")
+		}
+		return path, nil
+	case "git":
+		if strings.TrimSpace(job.RepoURL) == "" {
+			return "", fmt.Errorf("git service has empty repo_url")
+		}
+		dir := filepath.Join(a.cfg.WorkspaceDir, job.ServiceName)
+		branch := strings.TrimSpace(job.Branch)
+		if branch == "" {
+			branch = "main"
+		}
+		log.Printf("git sync repo=%s branch=%s dir=%s", job.RepoURL, branch, dir)
+		if err := git.Sync(job.RepoURL, branch, dir); err != nil {
+			return "", err
+		}
+		return dir, nil
+	default:
+		return "", fmt.Errorf("unsupported source_type %q", source)
+	}
+}
 func (a *Agent) handleRuntime(workerID string) error {
 	job, err := a.client.ClaimRuntimeNext(workerID)
 	if err != nil {

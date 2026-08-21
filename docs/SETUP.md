@@ -267,6 +267,7 @@ Agent (`apps/agent`):
 |----------|---------|------------|
 | `SAILORPORT_API_URL` | `http://localhost:8080` | base URL API |
 | `SAILORPORT_AGENT_TOKEN` | `dev-agent-token` | harus sama dengan API |
+| `SAILORPORT_WORKSPACE` | `./workspaces` | root clone Git (`{dir}/{serviceName}`); samakan dengan API di mesin yang sama |
 | `SAILORPORT_WORKER_NAME` | hostname | nama worker |
 | `SAILORPORT_WORKER_TIER` | — | label `tier` (`nonprod`, `prod`) |
 | `SAILORPORT_WORKER_ENVIRONMENTS` | — | label `environments` (`dev,staging`) |

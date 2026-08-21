@@ -6,8 +6,13 @@ import (
 	"strings"
 )
 
-func Build(workspace, imageTag string) error {
-	cmd := exec.Command("docker", "build", "-t", imageTag, ".")
+func Build(workspace, imageTag, dockerfilePath string) error {
+	dockerfilePath = strings.TrimSpace(dockerfilePath)
+	if dockerfilePath == "" {
+		dockerfilePath = "Dockerfile"
+	}
+
+	cmd := exec.Command("docker", "build", "-t", imageTag, "-f", dockerfilePath, ".")
 	cmd.Dir = workspace
 	out, err := cmd.CombinedOutput()
 	if err != nil {

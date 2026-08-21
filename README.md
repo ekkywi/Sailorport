@@ -10,9 +10,9 @@ Sailorport adalah **IDP self-hosted** untuk mendaftar, deploy, dan mengoperasika
 - **Deploy via agent** — build/run container di worker node (Docker)
 - **Environments** — dev / staging / prod, worker policy, logs, audit, RBAC
 
-Dua jalur deploy (rencana — detail di [`docs/PRODUCT.md`](docs/PRODUCT.md)):
+Dua jalur deploy (detail di [`docs/PRODUCT.md`](docs/PRODUCT.md)):
 
-1. **Custom app** — repo developer + Dockerfile → git pull → build → deploy *(Step 19+)*
+1. **Custom app** — repo developer + Dockerfile → git pull → build → deploy *(✅ Step 19)*
 2. **Catalog apps** — Postgres, Redis, Gitea, … one-click *(Step 22+)*
 3. **Scaffold** (opsional) — starter dari template `go-api` *(sudah ada)*
 
@@ -21,7 +21,7 @@ Dua jalur deploy (rencana — detail di [`docs/PRODUCT.md`](docs/PRODUCT.md)):
 ```text
 apps/web          portal — catalog, deploy, workers, users, audit
 apps/api          control plane — layered API
-apps/agent        agent di node — register, heartbeat, docker build/run
+apps/agent        agent di node — register, heartbeat, git sync, docker build/run
 apps/worker       background jobs — belum
 templates/        golden path go-api (opsional)
 deploy/compose    Docker Compose (Postgres :5433)
@@ -66,8 +66,8 @@ Chat Cursor tidak ikut pindah antar device. Yang ikut: **repo Git + folder `docs
 
 ## Status
 
-**MVP core selesai** (Step 0–18): catalog, scaffold, deploy agent, environments, runtime, logs, audit, multi-agent, worker labels/policy.
+**MVP core selesai** (Step 0–18) + **Step 19 Git-backed deploy** (model, API, agent sync, portal Add from Git).
 
-**Berikutnya:** Step 19 — Git-backed deploy (`repo_url` + Dockerfile). Lihat [`docs/ROADMAP.md`](docs/ROADMAP.md).
+**Berikutnya:** Step 20 — webhook auto-deploy. Lihat [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 Arsitektur: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)

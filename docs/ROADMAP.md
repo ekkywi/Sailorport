@@ -11,7 +11,7 @@ Dua jalur deploy (keduanya masuk catalog yang sama):
 
 | Jalur | Siapa | Kontrak | Status |
 |-------|-------|---------|--------|
-| **Custom app** | Developer (repo sendiri) | Git + **Dockerfile** | Rencana Step 19+ |
+| **Custom app** | Developer (repo sendiri) | Git + **Dockerfile** | ✅ Step 19 (19a–19d) |
 | **Catalog app** | Platform (Postgres, Redis, …) | Image/manifest platform | Rencana Step 22+ |
 | **Scaffold** (opsional) | Golden path demo | Template `go-api` → workspace | ✅ Ada |
 
@@ -21,8 +21,8 @@ Flow yang sudah jalan:
 
 1. `docker compose up` control plane (atau dev mode: Postgres + go run)
 2. Agent di node Docker → register worker
-3. Create service (scaffold **atau** register metadata)
-4. Deploy ke environment (worker policy Step 18)
+3. Create service (scaffold, **From Git**, atau register metadata)
+4. Deploy ke environment (worker policy Step 18; Git → agent clone/build)
 5. Runtime stop/start, logs, audit
 
 ## Stack
@@ -54,12 +54,12 @@ Flow yang sudah jalan:
 
 | Step | Topik | Status |
 |------|-------|--------|
-| 19 | Git-backed service (`repo_url`, clone/pull, Dockerfile path) | ⬜ planned |
+| 19 | Git-backed service (19a–19d: model, API, agent sync, portal) | ✅ selesai |
 | 20 | Webhook auto-deploy (push → deployment) | ⬜ planned |
 | 21 | Rollback / redeploy commit or tag | ⬜ planned |
 | 22 | Catalog apps (Postgres, Redis, Gitea, …) | ⬜ planned |
 
-Urutan: **19 → 20 → 21 → 22** (webhook butuh Git path; catalog apps jalur terpisah).
+Urutan: **20 → 21 → 22** (Git path sudah ada).
 
 ## Fase 3 — Ops & polish
 
@@ -88,6 +88,7 @@ Urutan: **19 → 20 → 21 → 22** (webhook butuh Git path; catalog apps jalur 
 | 13–16 | Environments, runtime, logs, audit |
 | 17 | Multi-agent targeting |
 | 18 | Worker labels + deploy policy + portal filter |
+| 19 | Git-backed deploy (19a–19d) |
 
 Lihat checklist lengkap di `docs/PROGRESS.md`.
 
