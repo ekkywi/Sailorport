@@ -24,7 +24,10 @@ func NewServicesStore(db *sql.DB) *ServicesStore {
 
 func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 	const q = `
-	SELECT id, name, description, owner, template_id, workspace_path, source_type, repo_url, branch, dockerfile_path, created_at, updated_at
+	SELECT id, name, description, owner, template_id, workspace_path,
+       source_type, repo_url, branch, dockerfile_path,
+       webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+       created_at, updated_at
 	FROM services
 	ORDER BY created_at DESC`
 
@@ -48,6 +51,9 @@ func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 			&svc.RepoURL,
 			&svc.Branch,
 			&svc.DockerfilePath,
+			&svc.WebhookSecret,
+			&svc.AutoDeployEnabled,
+			&svc.AutoDeployEnvironment,
 			&svc.CreatedAt,
 			&svc.UpdatedAt,
 		); err != nil {
@@ -63,7 +69,10 @@ func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 
 func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, error) {
 	const q = `
-		SELECT id, name, description, owner, template_id, workspace_path, source_type, repo_url, branch, dockerfile_path, created_at, updated_at
+		SELECT id, name, description, owner, template_id, workspace_path,
+		       source_type, repo_url, branch, dockerfile_path,
+		       webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+		       created_at, updated_at
 		FROM services
 		WHERE id = $1`
 
@@ -79,6 +88,9 @@ func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, erro
 		&svc.RepoURL,
 		&svc.Branch,
 		&svc.DockerfilePath,
+		&svc.WebhookSecret,
+		&svc.AutoDeployEnabled,
+		&svc.AutoDeployEnvironment,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)
@@ -93,9 +105,16 @@ func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, erro
 
 func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceRequest) (model.Service, error) {
 	const q = `
-		INSERT INTO services (name, description, owner, template_id, workspace_path, source_type, repo_url, branch, dockerfile_path)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id, name, description, owner, template_id, workspace_path, source_type, repo_url, branch, dockerfile_path, created_at, updated_at`
+		INSERT INTO services (
+			name, description, owner, template_id, workspace_path,
+			source_type, repo_url, branch, dockerfile_path,
+			webhook_secret, auto_deploy_enabled, auto_deploy_environment
+		) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		RETURNING id, name, description, owner, template_id, workspace_path,
+		source_type, repo_url, branch, dockerfile_path,
+		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+		created_at, updated_at`
 
 	var svc model.Service
 	err := s.db.QueryRowContext(ctx, q,
@@ -108,6 +127,9 @@ func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceReque
 		req.RepoURL,
 		req.Branch,
 		req.DockerfilePath,
+		req.WebhookSecret,
+		req.AutoDeployEnabled,
+		req.AutoDeployEnvironment,
 	).Scan(
 		&svc.ID,
 		&svc.Name,
@@ -119,6 +141,9 @@ func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceReque
 		&svc.RepoURL,
 		&svc.Branch,
 		&svc.DockerfilePath,
+		&svc.WebhookSecret,
+		&svc.AutoDeployEnabled,
+		&svc.AutoDeployEnvironment,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)
@@ -135,15 +160,21 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 	const q = `
 		UPDATE services
 		SET name = $1,
-		    description = $2,
-		    owner = $3,
-		    source_type = $4,
-		    repo_url = $5,
-		    branch = $6,
-		    dockerfile_path = $7,
-		    updated_at = NOW()
-		WHERE id = $8
-		RETURNING id, name, description, owner, template_id, workspace_path, source_type, repo_url, branch, dockerfile_path, created_at, updated_at`
+			description = $2,
+			owner = $3,
+			source_type = $4,
+			repo_url = $5,
+			branch = $6,
+			dockerfile_path = $7,
+			webhook_secret = $8,
+			auto_deploy_enabled = $9,
+			auto_deploy_environment = $10,
+			updated_at = NOW()
+		WHERE id = $11
+		RETURNING id, name, description, owner, template_id, workspace_path,
+		source_type, repo_url, branch, dockerfile_path,
+		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+		created_at, updated_at`
 
 	var svc model.Service
 	err := s.db.QueryRowContext(ctx, q,
@@ -154,6 +185,9 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 		req.RepoURL,
 		req.Branch,
 		req.DockerfilePath,
+		req.WebhookSecret,
+		req.AutoDeployEnabled,
+		req.AutoDeployEnvironment,
 		id,
 	).Scan(
 		&svc.ID,
@@ -166,6 +200,9 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 		&svc.RepoURL,
 		&svc.Branch,
 		&svc.DockerfilePath,
+		&svc.WebhookSecret,
+		&svc.AutoDeployEnabled,
+		&svc.AutoDeployEnvironment,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)

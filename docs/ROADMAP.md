@@ -55,11 +55,11 @@ Flow yang sudah jalan:
 | Step | Topik | Status |
 |------|-------|--------|
 | 19 | Git-backed service (19a–19d: model, API, agent sync, portal) | ✅ selesai |
-| 20 | Webhook auto-deploy (push → deployment) | ⬜ planned |
+| 20 | Webhook auto-deploy (20a–20e) | 🔄 20a–20b ✅; next 20c signature |
 | 21 | Rollback / redeploy commit or tag | ⬜ planned |
 | 22 | Catalog apps (Postgres, Redis, Gitea, …) | ⬜ planned |
 
-Urutan: **20 → 21 → 22** (Git path sudah ada).
+Urutan: **20c → 20d → 20e → 21 → 22**.
 
 ## Fase 3 — Ops & polish
 
@@ -89,6 +89,7 @@ Urutan: **20 → 21 → 22** (Git path sudah ada).
 | 17 | Multi-agent targeting |
 | 18 | Worker labels + deploy policy + portal filter |
 | 19 | Git-backed deploy (19a–19d) |
+| 20 | Webhook (20a–20b done; 20c–20e next) |
 
 Lihat checklist lengkap di `docs/PROGRESS.md`.
 

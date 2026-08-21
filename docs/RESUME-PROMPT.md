@@ -16,13 +16,11 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **19 (19a–19d)** — Git-backed deploy end-to-end:
-- 19a: migrasi `source_type`, `repo_url`, `branch`, `dockerfile_path`
-- 19b: API create/update Git + deploy gate
-- 19c: agent `git clone`/`pull` lalu `docker build`
-- 19d: portal Add service chooser + form From Git + Deploy now
+**Step terakhir selesai:** **20b** — public GitHub webhook endpoint:
+- 20a: migrasi `webhook_secret`, `auto_deploy_enabled`, `auto_deploy_environment` + catalog/store/types
+- 20b: `POST /api/v1/webhooks/github` parse push + ack (belum signature, belum create deployment)
 
-**Step berikutnya:** **20 — webhook auto-deploy** (push → create deployment). Alternatif: rollback (21), polish edit Git fields di UI, private repo credentials.
+**Step berikutnya:** **20c** — validasi `X-Hub-Signature-256` (HMAC-SHA256). Lalu 20d match repo→deploy, 20e portal secret/toggle.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -33,11 +31,12 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 **Yang sudah jalan (jangan ulang):**
 - MVP core Step 0–18 (auth, catalog, env, deploy, runtime, logs, audit, multi-agent, worker policy)
 - Step 19 Git path: API fields, agent sync, portal Add from Git
+- Step 20a–20b webhook fields + public parse endpoint
 - Agent workspace: `SAILORPORT_WORKSPACE` (clone ke `{workspace}/{serviceName}`)
-- Migrasi `00017_service_git_source.sql` — pastikan kolom ada di DB
+- Migrasi `00017` (Git) + `00018` (webhook) — pastikan kolom ada di DB
 
 **Yang belum:**
-- Webhook auto-deploy (20)
+- Webhook signature + auto-deploy match (20c–20e)
 - Rollback / redeploy by commit (21)
 - Catalog apps (22)
 - Private Git credentials; edit Git fields di dialog Edit
@@ -45,12 +44,13 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 **Catatan teknis:**
 - Deploy body: `{"environment":"staging","worker_id":"<uuid>"}` opsional
 - Agent token: `Authorization: Bearer $SAILORPORT_AGENT_TOKEN`
+- Webhook route **tanpa JWT** (GitHub tidak punya portal token)
 - Repo Git publik dulu (belum SSH/token)
 - Agent env: lihat `apps/agent/.env.example`
 
 **Cara jalankan lokal:** `docs/SETUP.md` + `docs/PROGRESS.md` (mode development).
 
-Tolong lanjutkan **Step 20** (webhook auto-deploy) dengan gaya panduan detail seperti sebelumnya. Baca `docs/PRODUCT.md`.
+Tolong lanjutkan **Step 20c** (signature validation) dengan gaya panduan detail seperti sebelumnya. Baca `docs/PRODUCT.md`.
 
 ---
 

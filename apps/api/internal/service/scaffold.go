@@ -100,15 +100,18 @@ func (s *Scaffold) Run(ctx context.Context, req ScaffoldRequest, actorID, actorE
 	}
 
 	svc, err := s.catalog.Create(ctx, model.CreateServiceRequest{
-		Name:          req.Name,
-		Description:   req.Description,
-		Owner:         req.Owner,
-		TemplateID:    manifest.ID,
-		WorkspacePath: cleanTarget,
-		SourceType:    "scaffold",
-		RepoURL:       "",
-		Branch:        "main",
-		DockerfilePath: "Dockerfile",
+		Name:                    req.Name,
+		Description:             req.Description,
+		Owner:                   req.Owner,
+		TemplateID:              manifest.ID,
+		WorkspacePath:           cleanTarget,
+		SourceType:              "scaffold",
+		RepoURL:                 "",
+		Branch:                  "main",
+		DockerfilePath:          "Dockerfile",
+		WebhookSecret:           "",
+		AutoDeployEnabled:       false,
+		AutoDeployEnvironment:   "staging",
 	}, actorID, actorEmail)
 	if err != nil {
 		return ScaffoldResult{}, err

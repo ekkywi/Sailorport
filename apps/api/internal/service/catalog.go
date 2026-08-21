@@ -275,6 +275,8 @@ func normalizeCreate(req model.CreateServiceRequest) (model.CreateServiceRequest
 	req.RepoURL = strings.TrimSpace(req.RepoURL)
 	req.Branch = strings.TrimSpace(req.Branch)
 	req.DockerfilePath = strings.TrimSpace(req.DockerfilePath)
+	req.WebhookSecret = strings.TrimSpace(req.WebhookSecret)
+	req.AutoDeployEnvironment = strings.TrimSpace(req.AutoDeployEnvironment)
 
 	if req.SourceType == "" {
 		req.SourceType = "scaffold"
@@ -285,11 +287,17 @@ func normalizeCreate(req model.CreateServiceRequest) (model.CreateServiceRequest
 	if req.DockerfilePath == "" {
 		req.DockerfilePath = "Dockerfile"
 	}
+	if req.AutoDeployEnvironment == "" {
+		req.AutoDeployEnvironment = "staging"
+	}
 
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
 	}
 	if err := validateSourceFields(req.SourceType, req.RepoURL); err != nil {
+		return req, err
+	}
+	if err := validateAutoDeployEnvironment(req.AutoDeployEnvironment); err != nil {
 		return req, err
 	}
 	return req, nil
@@ -303,6 +311,8 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 	req.RepoURL = strings.TrimSpace(req.RepoURL)
 	req.Branch = strings.TrimSpace(req.Branch)
 	req.DockerfilePath = strings.TrimSpace(req.DockerfilePath)
+	req.WebhookSecret = strings.TrimSpace(req.WebhookSecret)
+	req.AutoDeployEnvironment = strings.TrimSpace(req.AutoDeployEnvironment)
 
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
@@ -326,8 +336,21 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 	if req.DockerfilePath == "" {
 		req.DockerfilePath = "Dockerfile"
 	}
+	if req.WebhookSecret == "" {
+		req.WebhookSecret = existing.WebhookSecret
+	}
+	if req.AutoDeployEnvironment == "" {
+		req.AutoDeployEnvironment = existing.AutoDeployEnvironment
+	}
+	if req.AutoDeployEnvironment == "" {
+		req.AutoDeployEnvironment = "staging"
+	}
+	req.AutoDeployEnabled = existing.AutoDeployEnabled
 
 	if err := validateSourceFields(req.SourceType, req.RepoURL); err != nil {
+		return req, err
+	}
+	if err := validateAutoDeployEnvironment(req.AutoDeployEnvironment); err != nil {
 		return req, err
 	}
 	return req, nil
@@ -353,4 +376,13 @@ func mapRepoErr(err error) error {
 		return ErrConflict
 	}
 	return err
+}
+
+func validateAutoDeployEnvironment(env string) error {
+	switch env {
+	case "dev", "staging", "prod":
+		return nil
+	default:
+		return fmt.Errorf("%w: invalid auto_deploy_environment %q (want dev, staging, or prod)", ErrInvalid, env)
+	}
 }

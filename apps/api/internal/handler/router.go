@@ -19,6 +19,7 @@ type API struct {
 	AgentToken   string
 	Environments *service.Environments
 	Audit        *service.Audit
+	Webhooks     *service.Webhook
 }
 
 func NewRouter(api API) http.Handler {
@@ -34,12 +35,16 @@ func NewRouter(api API) http.Handler {
 	deploymentsH := NewDeploymentsHandler(api.Deployments)
 	runtimeH := NewRuntimeHandler(api.Runtime)
 	envsH := NewEnvironmentsHandler(api.Environments)
+	webhooksH := NewWebhookHandler(api.Webhooks)
 
 	writer := []string{"developer", "admin"}
 	reader := []string{"viewer", "developer", "admin"}
 	admin := []string{"admin"}
 
 	mux.Handle("/healthz", health)
+
+	// Public: GitHub cannot send a portal JWT (signature check in Step 20c).
+	mux.HandleFunc("POST /api/v1/webhooks/github", webhooksH.GitHub)
 
 	mux.HandleFunc("POST /api/v1/auth/register", authH.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authH.Login)

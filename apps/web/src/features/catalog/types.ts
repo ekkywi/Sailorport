@@ -23,6 +23,9 @@ export type Service = {
   repo_url: string;
   branch: string;
   dockerfile_path: string;
+  webhook_secret: string;
+  auto_deploy_enabled: boolean;
+  auto_deploy_environment: string;
   created_at: string;
   updated_at: string;
   latest_deployment?: LatestDeployment | null;
@@ -37,8 +40,10 @@ export type CreateServiceInput = {
   repo_url?: string;
   branch?: string;
   dockerfile_path?: string;
+  webhook_secret?: string;
+  auto_deploy_enabled?: boolean;
+  auto_deploy_environment?: string;
 };
-
 export type UpdateServiceInput = {
   name: string;
   description: string;
@@ -47,6 +52,9 @@ export type UpdateServiceInput = {
   repo_url?: string;
   branch?: string;
   dockerfile_path?: string;
+  webhook_secret?: string;
+  auto_deploy_enabled?: boolean;
+  auto_deploy_environment?: string;
 };
 
 export type ServiceFormValues = {

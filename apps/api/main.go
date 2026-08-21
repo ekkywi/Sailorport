@@ -63,6 +63,7 @@ func main() {
 	auditSvc := service.NewAudit(auditStore)
 	catalog.SetAudit(auditSvc)
 	usersSvc.SetAudit(auditSvc)
+	webhookSvc := service.NewWebhook()
 
 	router := handler.NewRouter(handler.API{
 		Version:      cfg.Version,
@@ -77,6 +78,7 @@ func main() {
 		Environments: envsSvc,
 		AgentToken:   cfg.AgentToken,
 		Audit:        auditSvc,
+		Webhooks:     webhookSvc,
 	})
 
 	addr := ":" + cfg.Port

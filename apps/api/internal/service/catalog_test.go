@@ -77,6 +77,34 @@ func TestNormalizeCreate_InvalidSourceType(t *testing.T) {
 	}
 }
 
+func TestNormalizeCreate_WebhookDefaults(t *testing.T) {
+	req, err := normalizeCreate(model.CreateServiceRequest{
+		Name: "payments-api",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.AutoDeployEnvironment != "staging" {
+		t.Fatalf("want staging, got %q", req.AutoDeployEnvironment)
+	}
+	if req.AutoDeployEnabled {
+		t.Fatal("enabled should default false")
+	}
+	if req.WebhookSecret != "" {
+		t.Fatalf("secret should default empty, got %q", req.WebhookSecret)
+	}
+}
+
+func TestNormalizeCreate_InvalidAutoDeployEnv(t *testing.T) {
+	_, err := normalizeCreate(model.CreateServiceRequest{
+		Name:                  "x",
+		AutoDeployEnvironment: "qa",
+	})
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}
+
 func TestNormalizeUpdate_MergesGitFields(t *testing.T) {
 	existing := model.Service{
 		SourceType:     "git",
@@ -105,6 +133,46 @@ func TestNormalizeUpdate_SwitchToGitRequiresRepo(t *testing.T) {
 	_, err := normalizeUpdate(model.UpdateServiceRequest{
 		Name:       "x",
 		SourceType: "git",
+	}, existing)
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}
+
+func TestNormalizeUpdate_MergesWebhookFields(t *testing.T) {
+	existing := model.Service{
+		SourceType:            "scaffold",
+		WebhookSecret:         "super-secret",
+		AutoDeployEnabled:     true,
+		AutoDeployEnvironment: "prod",
+	}
+	req, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name:        "payments-api",
+		Description: "updated",
+		Owner:       "team",
+	}, existing)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.WebhookSecret != "super-secret" {
+		t.Fatalf("secret wiped: %q", req.WebhookSecret)
+	}
+	if !req.AutoDeployEnabled {
+		t.Fatal("enabled wiped")
+	}
+	if req.AutoDeployEnvironment != "prod" {
+		t.Fatalf("env wiped: %q", req.AutoDeployEnvironment)
+	}
+}
+
+func TestNormalizeUpdate_InvalidAutoDeployEnv(t *testing.T) {
+	existing := model.Service{
+		SourceType: "scaffold",
+		AutoDeployEnvironment: "staging",
+	}
+	_, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name: "x",
+		AutoDeployEnvironment: "qa",
 	}, existing)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
