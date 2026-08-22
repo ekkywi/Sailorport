@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 20c — validasi `X-Hub-Signature-256` (HMAC-SHA256)
+- **Step selesai:** 20d — webhook match branch + auto-deploy → create deployment
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** 20d — match repo/branch → create deployment; lalu 20e portal secret/toggle
-- **Terakhir dikerjakan:** 2026-08-22 — Step 20c (webhook signature validation)
+- **Step berikutnya:** 20e — portal webhook secret + auto-deploy toggle
+- **Terakhir dikerjakan:** 2026-08-22 — Step 20d (webhook auto-deploy create)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -55,7 +55,7 @@
 - [x] Step 20a — Webhook fields on services (migration + catalog defaults)
 - [x] Step 20b — Public `POST /api/v1/webhooks/github` (parse push, ack)
 - [x] Step 20c — Validate `X-Hub-Signature-256`
-- [ ] Step 20d — Match repo/branch → create deployment
+- [x] Step 20d — Match repo/branch → create deployment
 - [ ] Step 20e — Portal webhook secret + auto-deploy toggle
 
 ## Yang sudah jalan
@@ -525,7 +525,7 @@ curl -s -o /tmp/out -w "%{http_code}\n" \
 | 20a Data model | ✅ | Migrasi `00018_service_webhook_autodeploy.sql`; model/store; catalog default `staging` + merge secret; web types; scaffold defaults |
 | 20b Public endpoint | ✅ | `POST /api/v1/webhooks/github` — parse push (`repo`, `branch`, `commit`); ignore ping/tags; **no JWT** |
 | 20c Signature | ✅ | HMAC-SHA256 `X-Hub-Signature-256`; match service by `clone_url`; 401 jika secret/signature invalid |
-| 20d Match → deploy | ⬜ | Cari service by repo/branch; create deployment jika `auto_deploy_enabled` |
+| 20d Match → deploy | ✅ | Filter branch + `auto_deploy_enabled` → `Deployments.Create`; ack `service_id`/`deployment_id`/`environment` |
 | 20e Portal UI | ⬜ | Set secret + toggle + target environment |
 
 **Tes 20b:**
@@ -552,6 +552,8 @@ curl -sS -o /tmp/wh.json -w "%{http_code}\n" \
 # expect 200 when secret matches; 401 when signature wrong/missing
 ```
 
+**Tes 20d (auto-deploy create):** service git dengan `auto_deploy_enabled=true`, `branch` = branch push, secret terisi; signed curl seperti 20c → response berisi `deployment_id`; agent claim job seperti deploy manual.
+
 ### Checkpoint — Product vision (2026-08-20)
 
 Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
@@ -562,7 +564,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** webhook auto-deploy create (20d–20e), rollback, catalog apps, private Git credentials.
+**Yang belum di kode:** portal webhook UI (20e), rollback, catalog apps, private Git credentials.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
@@ -575,7 +577,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 | 20a | Webhook data model | ✅ `webhook_secret`, `auto_deploy_enabled`, `auto_deploy_environment` |
 | 20b | Webhook HTTP endpoint | ✅ `POST /api/v1/webhooks/github` parse + ack (belum signature/deploy) |
 | 20c | Signature validation | ✅ HMAC-SHA256 `X-Hub-Signature-256` + match by clone_url |
-| 20d | Match → deploy | Match branch + `auto_deploy_enabled` → create deployment |
+| 20d | Match → deploy | ✅ branch + auto_deploy → `Deployments.Create` |
 | 20e | Portal webhook UI | Set secret + toggle auto-deploy + target env |
 | 21 | Rollback / redeploy | Pin commit/tag; redeploy versi sebelumnya dari UI/API |
 | 22 | Catalog apps | Manifest app (image, env, volume); deploy tanpa Git |
@@ -583,11 +585,10 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 
 ## Next action
 
-1. **Step 20d** — match service + create deployment on push
-2. **Step 20e** — portal webhook secret + auto-deploy UI
-3. **Step 21** — rollback / redeploy
-4. Catalog apps (22) — setelah custom path matang
-5. Opsional: edit Git fields di portal; private repo credentials
+1. **Step 20e** — portal webhook secret + auto-deploy UI
+2. **Step 21** — rollback / redeploy
+3. Catalog apps (22) — setelah custom path matang
+4. Opsional: edit Git fields di portal; private repo credentials
 
 ## Cara lanjut di mesin lain
 

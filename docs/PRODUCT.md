@@ -102,7 +102,7 @@ Berlaku untuk **semua jalur** deploy ke depan.
 | Git clone/pull sebelum deploy | ✅ Step 19c |
 | Service fields `repo_url`, `source_type` | ✅ Step 19a–19b |
 | Portal Add from Git | ✅ Step 19d |
-| Webhook auto-deploy | 🔄 Step 20 (20a–20c ✅; 20d–20e next) |
+| Webhook auto-deploy | 🔄 Step 20 (20a–20d ✅; 20e portal next) |
 | Rollback / redeploy commit | ⬜ Step 21 |
 | Catalog apps (Postgres, Redis, …) | ⬜ Step 22+ |
 | Admin edit worker labels | ⬜ post-MVP |

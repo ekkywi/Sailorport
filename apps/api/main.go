@@ -63,7 +63,7 @@ func main() {
 	auditSvc := service.NewAudit(auditStore)
 	catalog.SetAudit(auditSvc)
 	usersSvc.SetAudit(auditSvc)
-	webhookSvc := service.NewWebhook(catalog)
+	webhookSvc := service.NewWebhook(catalog, deploymentsSvc)
 
 	router := handler.NewRouter(handler.API{
 		Version:      cfg.Version,

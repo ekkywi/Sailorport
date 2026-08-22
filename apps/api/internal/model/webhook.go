@@ -20,13 +20,16 @@ type GitHubPushPayload struct {
 
 // WebhookAck is returned to GitHub (and for local curl smoke tests).
 type WebhookAck struct {
-	Received  bool   `json:"received"`
-	Event     string `json:"event"`
-	Ignored   bool   `json:"ignored,omitempty"`
-	Reason    string `json:"reason,omitempty"`
-	Repo      string `json:"repo,omitempty"`
-	CloneURL  string `json:"clone_url,omitempty"`
-	Branch    string `json:"branch,omitempty"`
-	CommitSHA string `json:"commit_sha,omitempty"`
-	Pusher    string `json:"pusher,omitempty"`
+	Received     bool   `json:"received"`
+	Event        string `json:"event"`
+	Ignored      bool   `json:"ignored,omitempty"`
+	Reason       string `json:"reason,omitempty"`
+	Repo         string `json:"repo,omitempty"`
+	CloneURL     string `json:"clone_url,omitempty"`
+	Branch       string `json:"branch,omitempty"`
+	CommitSHA    string `json:"commit_sha,omitempty"`
+	Pusher       string `json:"pusher,omitempty"`
+	ServiceID    string `json:"service_id,omitempty"`
+	DeploymentID string `json:"deployment_id,omitempty"`
+	Environment  string `json:"environment,omitempty"`
 }

@@ -14,16 +14,23 @@ type webhookCatalog interface {
 	List(ctx context.Context) ([]model.Service, error)
 }
 
+type webhookDeployer interface {
+	Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest) (model.Deployment, error)
+}
+
 type Webhook struct {
-	catalog webhookCatalog
+	catalog     webhookCatalog
+	deployments webhookDeployer
 }
 
-func NewWebhook(catalog webhookCatalog) *Webhook {
-	return &Webhook{catalog: catalog}
+func NewWebhook(catalog webhookCatalog, deployments webhookDeployer) *Webhook {
+	return &Webhook{
+		catalog:     catalog,
+		deployments: deployments,
+	}
 }
 
-// HandleGitHub acknowledges a GitHub webhook after matching a service and verifying HMAC.
-// Creating a deployment is Step 20d.
+// HandleGitHub verifies a GitHub push webhook and may create a deployment when auto-deploy is on.
 func (w *Webhook) HandleGitHub(
 	ctx context.Context,
 	event string,
@@ -86,6 +93,33 @@ func (w *Webhook) HandleGitHub(
 		return model.WebhookAck{}, err
 	}
 
+	eligible := filterAutoDeployServices(matches, branch)
+	if len(eligible) == 0 {
+		ack.Ignored = true
+		ack.Reason = "no service with auto-deploy enabled for this branch"
+		return ack, nil
+	}
+
+	target := eligible[0]
+	env := strings.TrimSpace(target.AutoDeployEnvironment)
+	if env == "" {
+		env = "staging"
+	}
+
+	if w.deployments == nil {
+		return model.WebhookAck{}, fmt.Errorf("webhook deployer not configured")
+	}
+
+	dep, err := w.deployments.Create(ctx, target.ID, model.CreateDeploymentRequest{
+		Environment: env,
+	})
+	if err != nil {
+		return model.WebhookAck{}, err
+	}
+
+	ack.ServiceID = target.ID
+	ack.DeploymentID = dep.ID
+	ack.Environment = env
 	return ack, nil
 }
 
@@ -123,4 +157,23 @@ func (w *Webhook) findServicesByCloneURL(ctx context.Context, cloneURL string) (
 		}
 	}
 	return out, nil
+}
+
+func filterAutoDeployServices(services []model.Service, pushBranch string) []model.Service {
+	pushBranch = strings.TrimSpace(pushBranch)
+	var out []model.Service
+	for _, svc := range services {
+		if !svc.AutoDeployEnabled {
+			continue
+		}
+		svcBranch := strings.TrimSpace(svc.Branch)
+		if svcBranch == "" {
+			svcBranch = "main"
+		}
+		if svcBranch != pushBranch {
+			continue
+		}
+		out = append(out, svc)
+	}
+	return out
 }
