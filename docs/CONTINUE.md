@@ -38,7 +38,7 @@ Lalu:
 2. Baca `docs/PRODUCT.md` (visi) lalu `docs/PROGRESS.md` (step)
 3. Buka chat baru
 4. Paste isi `docs/RESUME-PROMPT.md`
-5. Lanjut step berikutnya (saat ini: **Step 20c — webhook signature validation**)
+5. Lanjut step berikutnya (saat ini: **Step 20d — webhook match → create deployment**)
 
 ## Setup remote pertama kali (sekali saja)
 
