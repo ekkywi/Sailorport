@@ -58,11 +58,45 @@ func (d *Deployments) Create(ctx context.Context, serviceID string, req model.Cr
 	if err != nil {
 		return model.Deployment{}, err
 	}
-	out, err := d.store.Create(ctx, serviceID, env.ID, targetWorkerID)
+
+	gitSHA := strings.TrimSpace(req.GitSHA)
+	if gitSHA != "" && svc.SourceType != "git" {
+		return model.Deployment{}, fmt.Errorf(
+			"%w: git_sha is only valid for git services",
+			ErrInvalid,
+		)
+	}
+
+	out, err := d.store.Create(ctx, serviceID, env.ID, targetWorkerID, gitSHA)
 	if err != nil {
 		return model.Deployment{}, fmt.Errorf("Create deployment: %w", err)
 	}
 	return out, nil
+}
+
+func (d *Deployments) Redeploy(ctx context.Context, deploymentID string) (model.Deployment, error) {
+	deploymentID = strings.TrimSpace(deploymentID)
+	if deploymentID == "" {
+		return model.Deployment{}, fmt.Errorf("%w: id is required", ErrInvalid)
+	}
+
+	src, err := d.store.Get(ctx, deploymentID)
+	if err != nil {
+		return model.Deployment{}, mapRepoErr(err)
+	}
+
+	sha := strings.TrimSpace(src.GitSHA)
+	if sha == "" {
+		return model.Deployment{}, fmt.Errorf(
+			"%w: deployment has no git_sha to redeploy",
+			ErrInvalid,
+		)
+	}
+
+	return d.Create(ctx, src.ServiceID, model.CreateDeploymentRequest{
+		Environment: src.EnvironmentSlug,
+		GitSHA:      sha,
+	})
 }
 
 func (d *Deployments) Get(ctx context.Context, id string) (model.Deployment, error) {
@@ -116,6 +150,7 @@ func (d *Deployments) Update(ctx context.Context, id string, req model.UpdateDep
 
 	req.Status = strings.TrimSpace(req.Status)
 	req.ImageTag = strings.TrimSpace(req.ImageTag)
+	req.GitSHA = strings.TrimSpace(req.GitSHA)
 	req.ContainerID = strings.TrimSpace(req.ContainerID)
 	req.ErrorMessage = strings.TrimSpace(req.ErrorMessage)
 	req.WorkerID = strings.TrimSpace(req.WorkerID)

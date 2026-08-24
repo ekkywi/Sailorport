@@ -33,3 +33,15 @@ export async function listDeploymentsByService(
     }
     return res.json();
 }
+
+export async function redeployDeployment(deploymentId: string): Promise<Deployment> {
+    const res = await apiFetch(`/api/v1/deployments/${deploymentId}/redeploy`, {
+        method: "POST",
+    });
+    if (!res.ok) {
+        throw new Error(
+            await readErrorMessage(res, `Redeploy failed: ${res.status}`)
+        );
+    }
+    return res.json();
+}

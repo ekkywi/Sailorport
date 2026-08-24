@@ -119,4 +119,4 @@ Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sa
 
 `docker compose up` → agent → worker online → service di catalog → deploy → status/logs.
 
-**Selesai:** MVP core + Step 18–20 (Git + webhook auto-deploy). **Next:** Step 21 rollback (`docs/PRODUCT.md`, `docs/ROADMAP.md`).
+**Selesai:** MVP core + Step 18–21 (Git + webhook + redeploy by SHA). **Next:** Step 22 catalog apps (`docs/PRODUCT.md`, `docs/ROADMAP.md`).

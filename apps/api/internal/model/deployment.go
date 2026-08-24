@@ -11,6 +11,7 @@ type Deployment struct {
 	WorkerID        *string   `json:"worker_id"`
 	Status          string    `json:"status"`
 	ImageTag        string    `json:"image_tag"`
+	GitSHA          string    `json:"git_sha"`
 	ContainerID     string    `json:"container_id"`
 	Port            *int      `json:"port"`
 	ErrorMessage    string    `json:"error_message"`
@@ -20,11 +21,13 @@ type Deployment struct {
 type CreateDeploymentRequest struct {
 	Environment string `json:"environment"`
 	WorkerID    string `json:"worker_id"`
+	GitSHA      string `json:"git_sha"`
 }
 
 type UpdateDeploymentRequest struct {
 	Status       string `json:"status"`
 	ImageTag     string `json:"image_tag"`
+	GitSHA       string `json:"git_sha"`
 	ContainerID  string `json:"container_id"`
 	Port         *int   `json:"port"`
 	ErrorMessage string `json:"error_message"`

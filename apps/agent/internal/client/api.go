@@ -29,6 +29,7 @@ type DeploymentJob struct {
 	EnvironmentSlug string  `json:"environment_slug"`
 	WorkerID        *string `json:"worker_id"`
 	Status          string  `json:"status"`
+	GitSHA          string  `json:"git_sha"`
 	ServiceName     string  `json:"service_name"`
 	WorkspacePath   string  `json:"workspace_path"`
 	SourceType      string  `json:"source_type"`
@@ -40,6 +41,7 @@ type DeploymentJob struct {
 type UpdateDeploymentRequest struct {
 	Status       string `json:"status"`
 	ImageTag     string `json:"image_tag"`
+	GitSHA       string `json:"git_sha"`
 	ContainerID  string `json:"container_id"`
 	Port         *int   `json:"port"`
 	ErrorMessage string `json:"error_message"`

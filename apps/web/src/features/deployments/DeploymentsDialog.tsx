@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw, RotateCcw } from "lucide-react";
 import {
   EmptyState,
   ErrorBanner,
@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { listDeploymentsByService } from "./api";
+import { listDeploymentsByService, redeployDeployment } from "./api";
 import type { Deployment } from "./types";
 
 type DeploymentsDialogProps = {
@@ -44,6 +44,12 @@ function deployBadgeClass(status: string) {
   return undefined;
 }
 
+function shortSHA(sha: string) {
+  const s = sha.trim();
+  if (!s) return "";
+  return s.length > 7 ? s.slice(0, 7) : s;
+}
+
 export function DeploymentsDialog({
   serviceId,
   serviceName,
@@ -55,6 +61,7 @@ export function DeploymentsDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [loadedOnce, setLoadedOnce] = useState(false);
+  const [redeployingId, setRedeployingId] = useState<string | null>(null);
 
   // Avoid putting parent inline callbacks in load deps (causes refresh loops / flicker).
   const onRefreshCatalogRef = useRef(onRefreshCatalog);
@@ -90,6 +97,7 @@ export function DeploymentsDialog({
     setItems([]);
     setLoadedOnce(false);
     setError("");
+    setRedeployingId(null);
     void load({ silent: false });
   }, [open, serviceId, load]);
 
@@ -103,6 +111,20 @@ export function DeploymentsDialog({
     }, 3000);
     return () => window.clearInterval(id);
   }, [open, serviceId, items, load]);
+
+  async function onRedeploy(deploymentId: string) {
+    setRedeployingId(deploymentId);
+    setError("");
+    try {
+      await redeployDeployment(deploymentId);
+      onRefreshCatalogRef.current?.();
+      await load({ silent: false });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Redeploy failed");
+    } finally {
+      setRedeployingId(null);
+    }
+  }
 
   const showEmpty = !error && loadedOnce && !loading && items.length === 0;
   const showList = items.length > 0;
@@ -160,44 +182,74 @@ export function DeploymentsDialog({
 
         {showList ? (
           <ul className="max-h-[360px] space-y-0 divide-y divide-border overflow-y-auto rounded-lg border border-border">
-            {items.map((d) => (
-              <li key={d.id} className="px-3 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <EnvironmentBadge slug={d.environment_slug} />
-                      <StatusBadge
-                        status={d.status}
-                        className={deployBadgeClass(d.status)}
-                      />
-                      <span className="font-mono text-[11px] text-muted-foreground">
-                        {d.id.slice(0, 8)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[12px] text-muted-foreground">
-                      {formatRelativeTime(d.created_at)}
-                      {d.image_tag ? ` · ${d.image_tag}` : ""}
-                    </p>
-                    {d.error_message ? (
-                      <p className="mt-1 line-clamp-2 text-[12px] text-red-600 dark:text-red-400">
-                        {d.error_message}
+            {items.map((d) => {
+              const sha = shortSHA(d.git_sha);
+              const canRedeploy = Boolean(d.git_sha?.trim());
+              const busy = redeployingId === d.id;
+              return (
+                <li key={d.id} className="px-3 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <EnvironmentBadge slug={d.environment_slug} />
+                        <StatusBadge
+                          status={d.status}
+                          className={deployBadgeClass(d.status)}
+                        />
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {d.id.slice(0, 8)}
+                        </span>
+                        {sha ? (
+                          <span
+                            className="font-mono text-[11px] text-muted-foreground"
+                            title={d.git_sha}
+                          >
+                            {sha}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-[12px] text-muted-foreground">
+                        {formatRelativeTime(d.created_at)}
+                        {d.image_tag ? ` · ${d.image_tag}` : ""}
                       </p>
-                    ) : null}
+                      {d.error_message ? (
+                        <p className="mt-1 line-clamp-2 text-[12px] text-red-600 dark:text-red-400">
+                          {d.error_message}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      {d.status === "running" && d.port != null ? (
+                        <a
+                          href={`http://localhost:${d.port}/healthz`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[12px] text-foreground underline-offset-2 hover:underline"
+                        >
+                          healthz
+                          <ExternalLink className="size-3" />
+                        </a>
+                      ) : null}
+                      {canRedeploy ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 px-2 text-[12px]"
+                          disabled={busy || redeployingId != null}
+                          onClick={() => void onRedeploy(d.id)}
+                        >
+                          <RotateCcw
+                            className={cn("size-3", busy && "animate-spin")}
+                          />
+                          Redeploy
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
-                  {d.status === "running" && d.port != null ? (
-                    <a
-                      href={`http://localhost:${d.port}/healthz`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex shrink-0 items-center gap-1 text-[12px] text-foreground underline-offset-2 hover:underline"
-                    >
-                      healthz
-                      <ExternalLink className="size-3" />
-                    </a>
-                  ) : null}
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         ) : null}
       </DialogContent>

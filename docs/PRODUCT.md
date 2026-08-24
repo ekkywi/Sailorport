@@ -103,7 +103,7 @@ Berlaku untuk **semua jalur** deploy ke depan.
 | Service fields `repo_url`, `source_type` | ✅ Step 19a–19b |
 | Portal Add from Git | ✅ Step 19d |
 | Webhook auto-deploy | ✅ Step 20 (20a–20e) |
-| Rollback / redeploy commit | ⬜ Step 21 |
+| Rollback / redeploy commit | ✅ Step 21 |
 | Catalog apps (Postgres, Redis, …) | ⬜ Step 22+ |
 | Admin edit worker labels | ⬜ post-MVP |
 
@@ -113,7 +113,7 @@ Berlaku untuk **semua jalur** deploy ke depan.
 2. **Jangan** wajibkan scaffold dari IDP — developer nyata mulai dari Git.
 3. **Jangan** campur “template go-api” dengan “catalog app Postgres” — beda jalur, beda agent flow.
 4. **Do** pertahankan satu catalog sebagai inventory.
-5. **Do** webhook/rollback setelah Git path (Step 19 ✅) — lanjut Step 20+.
+5. **Do** webhook/rollback setelah Git path — Step 19–21 ✅; lanjut catalog apps (22).
 
 ## Referensi industri
 

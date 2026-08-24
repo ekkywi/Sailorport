@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 20e — portal webhook secret + auto-deploy (Step 20 lengkap)
+- **Step selesai:** 21 — rollback / redeploy by `git_sha` (21a–21f)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** 21 — rollback / redeploy; atau polish edit Git fields / private credentials
-- **Terakhir dikerjakan:** 2026-08-24 — Step 20e (portal webhook UI + secret redact)
+- **Step berikutnya:** 22 — catalog apps; atau polish edit Git fields / private credentials
+- **Terakhir dikerjakan:** 2026-08-24 — Step 21 (git_sha, agent checkout, API redeploy, portal Redeploy)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -57,6 +57,12 @@
 - [x] Step 20c — Validate `X-Hub-Signature-256`
 - [x] Step 20d — Match repo/branch → create deployment
 - [x] Step 20e — Portal webhook secret + auto-deploy toggle
+- [x] Step 21a — `git_sha` on deployments (migration + model/store)
+- [x] Step 21b — Agent records HEAD SHA after sync
+- [x] Step 21c — Agent checkout specific SHA from job
+- [x] Step 21d — API create with `git_sha` + `POST .../redeploy`
+- [x] Step 21e — Portal Redeploy button in deployment history
+- [x] Step 21f — Docs + smoke notes
 
 ## Yang sudah jalan
 
@@ -556,6 +562,41 @@ curl -sS -o /tmp/wh.json -w "%{http_code}\n" \
 
 **Tes 20e (portal):** Catalog → Edit service **Git** → Generate secret → Copy → enable auto-deploy → pilih env → Save. List Origin menampilkan badge **Auto**. Response GET/list: `webhook_secret` kosong, `webhook_secret_set: true`.
 
+### Step 21 — Rollback / redeploy by `git_sha` ✅
+
+MVP = **redeploy commit lama** (rebuild + run), bukan restore container instan.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 21a Data model | ✅ | Migrasi `00019_deployment_git_sha.sql`; model/store/web `git_sha` |
+| 21b Agent record SHA | ✅ | `git.HeadSHA` setelah sync → PATCH `git_sha` saat `running` |
+| 21c Agent checkout SHA | ✅ | Job `git_sha` → `Sync(..., sha)` + `checkout --detach`; kosong = tip branch |
+| 21d API redeploy | ✅ | `CreateDeploymentRequest.git_sha`; store INSERT; `POST /api/v1/deployments/{id}/redeploy` |
+| 21e Portal UI | ✅ | History: short SHA + tombol **Redeploy** (hanya jika `git_sha` terisi) |
+| 21f Docs | ✅ | Progress / product / resume updated |
+
+**Alur:**
+
+```text
+Deploy / webhook     → git_sha ""      → agent tip branch → catat SHA
+Redeploy (UI/API)    → git_sha "<sha>" → agent checkout → build → run
+```
+
+**Tes 21d (API):**
+
+```bash
+# Pin SHA saat create
+curl -sS -X POST "http://localhost:8080/api/v1/services/$SVC_ID/deployments" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"environment":"staging","git_sha":"<full-40-char-sha>"}'
+
+# Redeploy dari history
+curl -sS -X POST "http://localhost:8080/api/v1/deployments/$OLD_DEP_ID/redeploy" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Tes 21e (portal):** Deploy service git → History tampil short SHA → Redeploy pada baris lama → job baru `pending` dengan SHA yang sama → agent log `sha="..."`.
+
 ### Checkpoint — Product vision (2026-08-20)
 
 Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
@@ -566,30 +607,22 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** rollback, catalog apps, private Git credentials; edit Git fields di dialog Edit.
+**Yang belum di kode:** catalog apps, private Git credentials; polish edit Git fields di dialog Edit.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| 19a | Model + migrasi Git fields | ✅ `source_type`, `repo_url`, `branch`, `dockerfile_path` |
-| 19b | API create/update Git | ✅ validasi `git`+`repo_url`; Update merge; deploy allow git atau workspace |
-| 19c | Agent git sync | ✅ clone/pull → build → run |
-| 19d | Portal Add from Git | ✅ `GitServiceForm`; Origin git di list; deploy button untuk git |
-| 20a | Webhook data model | ✅ `webhook_secret`, `auto_deploy_enabled`, `auto_deploy_environment` |
-| 20b | Webhook HTTP endpoint | ✅ `POST /api/v1/webhooks/github` parse + ack (belum signature/deploy) |
-| 20c | Signature validation | ✅ HMAC-SHA256 `X-Hub-Signature-256` + match by clone_url |
-| 20d | Match → deploy | ✅ branch + auto_deploy → `Deployments.Create` |
-| 20e | Portal webhook UI | ✅ secret generate + auto-deploy toggle + env; redact secret in API JSON |
-| 21 | Rollback / redeploy | Pin commit/tag; redeploy versi sebelumnya dari UI/API |
+| 19a–19d | Git path | ✅ selesai |
+| 20a–20e | Webhook auto-deploy | ✅ selesai |
+| 21a–21f | Rollback / redeploy | ✅ `git_sha` + agent checkout + API/UI Redeploy |
 | 22 | Catalog apps | Manifest app (image, env, volume); deploy tanpa Git |
 | — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
 
 ## Next action
 
-1. **Step 21** — rollback / redeploy
-2. Catalog apps (22) — setelah custom path matang
-3. Opsional: edit Git fields di portal; private repo credentials
+1. **Step 22** — catalog apps (opsional setelah custom path matang)
+2. Opsional: edit Git fields di portal; private repo credentials
 
 ## Cara lanjut di mesin lain
 

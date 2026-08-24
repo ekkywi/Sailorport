@@ -38,7 +38,7 @@ Lalu:
 2. Baca `docs/PRODUCT.md` (visi) lalu `docs/PROGRESS.md` (step)
 3. Buka chat baru
 4. Paste isi `docs/RESUME-PROMPT.md`
-5. Lanjut step berikutnya (saat ini: **Step 21 — rollback / redeploy**)
+5. Lanjut step berikutnya (saat ini: **Step 22 — catalog apps**)
 
 ## Setup remote pertama kali (sekali saja)
 

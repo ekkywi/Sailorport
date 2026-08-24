@@ -7,6 +7,7 @@ export type Deployment = {
     worker_id: string | null;
     status: string;
     image_tag: string;
+    git_sha: string;
     container_id: string;
     port: number | null;
     error_message: string;

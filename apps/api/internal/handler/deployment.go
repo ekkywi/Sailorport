@@ -106,6 +106,15 @@ func (h *DeploymentsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
+func (h *DeploymentsHandler) Redeploy(w http.ResponseWriter, r *http.Request) {
+	out, err := h.deployments.Redeploy(r.Context(), r.PathValue("id"))
+	if err != nil {
+		writeDeploymentError(w, "Redeploy", err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, out)
+}
+
 func writeDeploymentError(w http.ResponseWriter, op string, err error) {
 	switch {
 	case errors.Is(err, service.ErrInvalid):

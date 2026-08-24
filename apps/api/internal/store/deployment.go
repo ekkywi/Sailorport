@@ -17,28 +17,28 @@ func NewDeploymentsStore(db *sql.DB) *DeploymentsStore {
 	return &DeploymentsStore{db: db}
 }
 
-func (s *DeploymentsStore) Create(ctx context.Context, serviceID, environmentID string, targetWorkerID *string) (model.Deployment, error) {
+func (s *DeploymentsStore) Create(ctx context.Context, serviceID, environmentID string, targetWorkerID *string, gitSHA string) (model.Deployment, error) {
 	const q = `
 		WITH inserted AS (
-			INSERT INTO deployments (service_id, environment_id, status, target_worker_id)
-			VALUES ($1, $2, 'pending', $3)
+			INSERT INTO deployments (service_id, environment_id, status, target_worker_id, git_sha)
+			VALUES ($1, $2, 'pending', $3, $4)
 			RETURNING *
 		)
 		SELECT
 			i.id, i.service_id, i.environment_id, e.slug,
-			i.target_worker_id, i.worker_id, i.status, i.image_tag, i.container_id, i.port,
+			i.target_worker_id, i.worker_id, i.status, i.image_tag, i.git_sha, i.container_id, i.port,
 			i.error_message, i.created_at, i.updated_at
 		FROM inserted i
 		JOIN environments e ON e.id = i.environment_id`
 
-	return scanDeployment(s.db.QueryRowContext(ctx, q, serviceID, environmentID, targetWorkerID))
+	return scanDeployment(s.db.QueryRowContext(ctx, q, serviceID, environmentID, targetWorkerID, gitSHA))
 }
 
 func (s *DeploymentsStore) Get(ctx context.Context, id string) (model.Deployment, error) {
 	const q = `
 		SELECT
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id
@@ -58,7 +58,7 @@ func (s *DeploymentsStore) List(ctx context.Context) ([]model.Deployment, error)
 	const q = `
 		SELECT
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id
@@ -85,7 +85,7 @@ func (s *DeploymentsStore) ListByService(ctx context.Context, serviceID string) 
 	const q = `
 		SELECT
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id
@@ -127,7 +127,7 @@ func (s *DeploymentsStore) ClaimNext(ctx context.Context, workerID string) (mode
 			AND e.id = d.environment_id
 		RETURNING
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id,
 			d.port, d.error_message, d.created_at, d.updated_at,
 			s.name, s.workspace_path,
 			s.source_type, s.repo_url, s.branch, s.dockerfile_path`
@@ -141,21 +141,22 @@ func (s *DeploymentsStore) Update(ctx context.Context, id string, req model.Upda
 			SET
 				status = COALESCE(NULLIF($2, ''), status),
 				image_tag = COALESCE(NULLIF($3, ''), image_tag),
-				container_id = COALESCE(NULLIF($4, ''), container_id),
-				port = COALESCE($5, port),
-				error_message = COALESCE(NULLIF($6, ''), error_message),
+				git_sha = COALESCE(NULLIF($4, ''), git_sha),
+				container_id = COALESCE(NULLIF($5, ''), container_id),
+				port = COALESCE($6, port),
+				error_message = COALESCE(NULLIF($7, ''), error_message),
 				updated_at = NOW()
 			WHERE id = $1
 			RETURNING *
 		)
 		SELECT
 			u.id, u.service_id, u.environment_id, e.slug,
-			u.target_worker_id, u.worker_id, u.status, u.image_tag, u.container_id, u.port,
+			u.target_worker_id, u.worker_id, u.status, u.image_tag, u.git_sha, u.container_id, u.port,
 			u.error_message, u.created_at, u.updated_at
 		FROM updated u
 		JOIN environments e ON e.id = u.environment_id`
 
-	d, err := scanDeployment(s.db.QueryRowContext(ctx, q, id, req.Status, req.ImageTag, req.ContainerID, req.Port, req.ErrorMessage))
+	d, err := scanDeployment(s.db.QueryRowContext(ctx, q, id, req.Status, req.ImageTag, req.GitSHA, req.ContainerID, req.Port, req.ErrorMessage))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.Deployment{}, ErrNotFound
 	}
@@ -181,6 +182,7 @@ func scanDeployment(row rowScanner) (model.Deployment, error) {
 		&workerID,
 		&d.Status,
 		&d.ImageTag,
+		&d.GitSHA,
 		&d.ContainerID,
 		&port,
 		&d.ErrorMessage,
@@ -221,6 +223,7 @@ func scanDeploymentJob(row rowScanner) (model.DeploymentJob, error) {
 		&workerID,
 		&job.Status,
 		&job.ImageTag,
+		&job.GitSHA,
 		&job.ContainerID,
 		&port,
 		&job.ErrorMessage,
@@ -255,7 +258,7 @@ func (s *DeploymentsStore) LatestByServices(ctx context.Context) (map[string]mod
 	const q = `
 		SELECT DISTINCT ON (d.service_id)
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id
@@ -285,7 +288,7 @@ func (s *DeploymentsStore) LatestPerEnvByServices(ctx context.Context) (map[stri
 	const q = `
 		SELECT DISTINCT ON (d.service_id, d.environment_id)
 			d.id, d.service_id, d.environment_id, e.slug,
-			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.container_id, d.port,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id, d.port,
 			d.error_message, d.created_at, d.updated_at
 		FROM deployments d
 		JOIN environments e ON e.id = d.environment_id

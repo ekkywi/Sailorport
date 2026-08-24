@@ -98,14 +98,14 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 	}
 	log.Printf("host port=%d container=%s", port, containerName)
 
-	workDir, err := a.resolveWorkDir(job)
+	workDir, gitSHA, err := a.resolveWorkDir(job)
 	if err != nil {
 		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
 			Status: "failed", ErrorMessage: err.Error(),
 		})
 		return err
 	}
-	log.Printf("work dir=%s source=%s", workDir, job.SourceType)
+	log.Printf("work dir=%s source=%s git_sha=%s", workDir, job.SourceType, gitSHA)
 	if err := docker.Build(workDir, imageTag, job.DockerfilePath); err != nil {
 		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
 			Status: "failed", ErrorMessage: err.Error(),
@@ -124,12 +124,13 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 	return a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
 		Status:      "running",
 		ImageTag:    imageTag,
+		GitSHA:      gitSHA,
 		ContainerID: cid,
 		Port:        &port,
 	})
 }
 
-func (a *Agent) resolveWorkDir(job *client.DeploymentJob) (string, error) {
+func (a *Agent) resolveWorkDir(job *client.DeploymentJob) (workDir string, gitSHA string, err error) {
 	source := strings.TrimSpace(job.SourceType)
 	if source == "" {
 		source = "scaffold"
@@ -138,27 +139,37 @@ func (a *Agent) resolveWorkDir(job *client.DeploymentJob) (string, error) {
 	case "scaffold":
 		path := strings.TrimSpace(job.WorkspacePath)
 		if path == "" {
-			return "", fmt.Errorf("scaffold service has empty workspace_path")
+			return "", "", fmt.Errorf("scaffold service has empty workspace_path")
 		}
-		return path, nil
+		return path, "", nil
 	case "git":
 		if strings.TrimSpace(job.RepoURL) == "" {
-			return "", fmt.Errorf("git service has empty repo_url")
+			return "", "", fmt.Errorf("git service has empty repo_url")
 		}
 		dir := filepath.Join(a.cfg.WorkspaceDir, job.ServiceName)
 		branch := strings.TrimSpace(job.Branch)
 		if branch == "" {
 			branch = "main"
 		}
-		log.Printf("git sync repo=%s branch=%s dir=%s", job.RepoURL, branch, dir)
-		if err := git.Sync(job.RepoURL, branch, dir); err != nil {
-			return "", err
+		wantSHA := strings.TrimSpace(job.GitSHA)
+		log.Printf("git sync repo=%s branch=%s dir=%s sha=%q", job.RepoURL, branch, dir, wantSHA)
+		if err := git.Sync(job.RepoURL, branch, dir, wantSHA); err != nil {
+			return "", "", err
 		}
-		return dir, nil
+		gotSHA, err := git.HeadSHA(dir)
+		if err != nil {
+			return "", "", err
+		}
+		if wantSHA != "" && gotSHA != wantSHA {
+			return "", "", fmt.Errorf("requested sha %s but HEAD is %s", wantSHA, gotSHA)
+		}
+		log.Printf("git sha=%s", gotSHA)
+		return dir, gotSHA, nil
 	default:
-		return "", fmt.Errorf("unsupported source_type %q", source)
+		return "", "", fmt.Errorf("unsupported source_type %q", source)
 	}
 }
+
 func (a *Agent) handleRuntime(workerID string) error {
 	job, err := a.client.ClaimRuntimeNext(workerID)
 	if err != nil {

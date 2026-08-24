@@ -16,12 +16,14 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **20 (20a–20e)** — webhook auto-deploy end-to-end:
-- 20a: migrasi webhook fields + catalog/store
-- 20b–20d: public endpoint, HMAC, match → create deployment
-- 20e: portal edit git (secret generate, auto-deploy toggle/env); API redact secret (`webhook_secret_set`)
+**Step terakhir selesai:** **21 (21a–21f)** — rollback / redeploy by `git_sha`:
+- 21a: migrasi `deployments.git_sha`
+- 21b–21c: agent catat HEAD + checkout SHA dari job
+- 21d: `Create` optional `git_sha` + `POST /api/v1/deployments/{id}/redeploy`
+- 21e: portal History → short SHA + tombol Redeploy
+- 21f: docs
 
-**Step berikutnya:** **21 — rollback / redeploy**. Alternatif: polish edit Git fields di UI, private repo credentials, catalog apps (22).
+**Step berikutnya:** **22 — catalog apps**. Alternatif: polish edit Git fields di UI, private repo credentials.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -32,23 +34,24 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 **Yang sudah jalan (jangan ulang):**
 - MVP core Step 0–18
 - Step 19 Git path
-- Step 20 webhook auto-deploy lengkap (API + portal)
-- Migrasi `00017` (Git) + `00018` (webhook)
+- Step 20 webhook auto-deploy
+- Step 21 redeploy by SHA
+- Migrasi `00017`–`00019`
 
 **Yang belum:**
-- Rollback / redeploy by commit (21)
 - Catalog apps (22)
-- Private Git credentials; edit Git fields di dialog Edit
+- Private Git credentials; polish edit Git fields di dialog Edit
 
 **Catatan teknis:**
-- Webhook: `POST /api/v1/webhooks/github` (no JWT); `X-Hub-Signature-256`
-- Portal: Edit git service → webhook section
-- List/Get JSON: `webhook_secret` always empty; use `webhook_secret_set`
+- Redeploy = rebuild at old SHA (bukan restore container)
+- Webhook tip branch: `git_sha` kosong; Redeploy pin SHA
+- Agent: `Sync(repo, branch, dir, sha)` + `checkout --detach`
+- Portal: Redeploy hanya jika history punya `git_sha`
 - Agent token: `Authorization: Bearer $SAILORPORT_AGENT_TOKEN`
 
 **Cara jalankan lokal:** `docs/SETUP.md` + `docs/PROGRESS.md` (mode development).
 
-Tolong lanjutkan **Step 21** (rollback / redeploy) dengan gaya panduan detail seperti sebelumnya. Baca `docs/PRODUCT.md`.
+Tolong lanjutkan **Step 22** (catalog apps) dengan gaya panduan detail seperti sebelumnya. Baca `docs/PRODUCT.md`.
 
 ---
 
