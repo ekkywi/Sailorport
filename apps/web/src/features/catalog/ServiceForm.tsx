@@ -2,14 +2,19 @@ import type { FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Environment } from "../environments/types";
 import type { ServiceFormValues } from "./types";
+import { WebhookSettingsFields } from "./WebhookSettingsFields";
 
 type ServiceFormProps = {
   mode: "register" | "edit";
   values: ServiceFormValues;
   saving: boolean;
   error?: string;
-  onChange: (field: keyof ServiceFormValues, value: string) => void;
+  /** Show GitHub webhook controls (edit + git services). */
+  showWebhookSettings?: boolean;
+  environments?: Environment[];
+  onChange: (field: keyof ServiceFormValues, value: string | boolean) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
   onCreateInstead?: () => void;
@@ -20,6 +25,8 @@ export function ServiceForm({
   values,
   saving,
   error,
+  showWebhookSettings = false,
+  environments = [],
   onChange,
   onSubmit,
   onCancel,
@@ -73,6 +80,16 @@ export function ServiceForm({
           className="h-9 text-[13px]"
         />
       </div>
+
+      {showWebhookSettings ? (
+        <WebhookSettingsFields
+          values={values}
+          environments={environments}
+          disabled={saving}
+          onChange={onChange}
+        />
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3 pt-1 sm:col-span-2">
         <Button type="submit" size="sm" className="h-8 text-[13px]" disabled={saving}>
           {saving

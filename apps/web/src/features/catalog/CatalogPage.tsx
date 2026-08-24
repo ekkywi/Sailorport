@@ -32,6 +32,11 @@ import { GitServiceForm } from "./GitServiceForm";
 import { ServiceForm } from "./ServiceForm";
 import { ServiceList } from "./ServiceList";
 import type { GitServiceFormValues, Service, ServiceFormValues } from "./types";
+import {
+  emptyServiceForm,
+  formValuesToUpdateInput,
+  serviceToFormValues,
+} from "./types";
 import { DeployDialog } from "../deployments/DeployDialog";
 import { DeploymentsDialog } from "../deployments/DeploymentsDialog";
 import { LogsDialog } from "./LogsDialog";
@@ -40,12 +45,6 @@ import type { AuthUser } from "@/features/auth/types";
 import { canWriteCatalog } from "@/lib/rbac";
 import { listEnvironments } from "../environments/api";
 import type { Environment } from "../environments/types";
-
-const emptyForm: ServiceFormValues = {
-  name: "",
-  description: "",
-  owner: "",
-};
 
 const emptyGitForm: GitServiceFormValues = {
   name: "",
@@ -65,11 +64,12 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [formError, setFormError] = useState("");
-  const [values, setValues] = useState<ServiceFormValues>(emptyForm);
+  const [values, setValues] = useState<ServiceFormValues>(emptyServiceForm);
   const [gitValues, setGitValues] = useState<GitServiceFormValues>(emptyGitForm);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSourceType, setEditingSourceType] = useState("");
   const [dialog, setDialog] = useState<DialogMode>("none");
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
   const [createdPath, setCreatedPath] = useState("");
@@ -182,9 +182,10 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   }, [services]);
 
   function closeDialog() {
-    setValues(emptyForm);
+    setValues(emptyServiceForm);
     setGitValues(emptyGitForm);
     setEditingId(null);
+    setEditingSourceType("");
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
@@ -193,7 +194,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function startAdd() {
     setEditingId(null);
-    setValues(emptyForm);
+    setEditingSourceType("");
+    setValues(emptyServiceForm);
     setGitValues(emptyGitForm);
     setFormError("");
     setCreatedPath("");
@@ -203,7 +205,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function startCreate() {
     setEditingId(null);
-    setValues(emptyForm);
+    setEditingSourceType("");
+    setValues(emptyServiceForm);
     setGitValues(emptyGitForm);
     setFormError("");
     setCreatedPath("");
@@ -213,7 +216,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function startRegister() {
     setEditingId(null);
-    setValues(emptyForm);
+    setEditingSourceType("");
+    setValues(emptyServiceForm);
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
@@ -222,6 +226,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function startGit() {
     setEditingId(null);
+    setEditingSourceType("");
     setGitValues(emptyGitForm);
     setFormError("");
     setCreatedPath("");
@@ -231,16 +236,16 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function startEdit(svc: Service) {
     setEditingId(svc.id);
-    setValues({
-      name: svc.name,
-      description: svc.description,
-      owner: svc.owner,
-    });
+    setEditingSourceType(svc.source_type);
+    setValues(serviceToFormValues(svc));
     setFormError("");
     setDialog("edit");
   }
 
-  function onChange(field: keyof ServiceFormValues, value: string) {
+  function onChange(
+    field: keyof ServiceFormValues,
+    value: string | boolean,
+  ) {
     setValues((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -254,10 +259,14 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setFormError("");
     try {
       if (editingId) {
-        await updateService(editingId, values);
+        await updateService(editingId, formValuesToUpdateInput(values));
         toast("Service updated");
       } else {
-        await createService(values);
+        await createService({
+          name: values.name,
+          description: values.description,
+          owner: values.owner,
+        });
         toast("Service registered");
       }
       closeDialog();
@@ -557,7 +566,9 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               <DialogHeader>
                 <DialogTitle>Edit service</DialogTitle>
                 <DialogDescription>
-                  Update catalog metadata for this service.
+                  {editingSourceType === "git"
+                    ? "Update catalog metadata and GitHub webhook auto-deploy."
+                    : "Update catalog metadata for this service."}
                 </DialogDescription>
               </DialogHeader>
               <ServiceForm
@@ -565,6 +576,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 values={values}
                 saving={saving}
                 error={formError}
+                showWebhookSettings={editingSourceType === "git"}
+                environments={environments}
                 onChange={onChange}
                 onSubmit={onSubmitMetadata}
                 onCancel={closeDialog}

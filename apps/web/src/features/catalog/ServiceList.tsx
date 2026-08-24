@@ -62,13 +62,21 @@ function OriginCell({ svc }: { svc: Service }) {
   if (svc.source_type === "git") {
     return (
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="inline-flex max-w-full items-center gap-1.5">
+        <span className="inline-flex max-w-full flex-wrap items-center gap-1.5">
           <span className="rounded-md bg-sky-500/12 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-sky-700 uppercase dark:text-sky-400">
             Git
           </span>
           <span className="truncate text-[11px] text-muted-foreground">
             {svc.branch || "main"}
           </span>
+          {svc.auto_deploy_enabled ? (
+            <span
+              className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-amber-800 uppercase dark:text-amber-400"
+              title={`Auto-deploy → ${svc.auto_deploy_environment || "staging"}`}
+            >
+              Auto
+            </span>
+          ) : null}
         </span>
         {svc.repo_url ? (
           <span

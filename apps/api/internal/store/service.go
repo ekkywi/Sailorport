@@ -186,7 +186,7 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 		req.Branch,
 		req.DockerfilePath,
 		req.WebhookSecret,
-		req.AutoDeployEnabled,
+		*req.AutoDeployEnabled,
 		req.AutoDeployEnvironment,
 		id,
 	).Scan(

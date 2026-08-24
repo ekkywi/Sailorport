@@ -345,7 +345,10 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 	if req.AutoDeployEnvironment == "" {
 		req.AutoDeployEnvironment = "staging"
 	}
-	req.AutoDeployEnabled = existing.AutoDeployEnabled
+	if req.AutoDeployEnabled == nil {
+		v := existing.AutoDeployEnabled
+		req.AutoDeployEnabled = &v
+	}
 
 	if err := validateSourceFields(req.SourceType, req.RepoURL); err != nil {
 		return req, err

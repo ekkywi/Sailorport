@@ -18,6 +18,7 @@ type Service struct {
 	Branch                string                `json:"branch"`
 	DockerfilePath        string                `json:"dockerfile_path"`
 	WebhookSecret         string                `json:"webhook_secret"`
+	WebhookSecretSet      bool                  `json:"webhook_secret_set"`
 	AutoDeployEnabled     bool                  `json:"auto_deploy_enabled"`
 	AutoDeployEnvironment string                `json:"auto_deploy_environment"`
 }
@@ -46,6 +47,6 @@ type UpdateServiceRequest struct {
 	Branch                string `json:"branch"`
 	DockerfilePath        string `json:"dockerfile_path"`
 	WebhookSecret         string `json:"webhook_secret"`
-	AutoDeployEnabled     bool   `json:"auto_deploy_enabled"`
+	AutoDeployEnabled     *bool  `json:"auto_deploy_enabled"`
 	AutoDeployEnvironment string `json:"auto_deploy_environment"`
 }

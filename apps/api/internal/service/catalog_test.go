@@ -157,7 +157,7 @@ func TestNormalizeUpdate_MergesWebhookFields(t *testing.T) {
 	if req.WebhookSecret != "super-secret" {
 		t.Fatalf("secret wiped: %q", req.WebhookSecret)
 	}
-	if !req.AutoDeployEnabled {
+	if req.AutoDeployEnabled == nil || !*req.AutoDeployEnabled {
 		t.Fatal("enabled wiped")
 	}
 	if req.AutoDeployEnvironment != "prod" {
@@ -167,14 +167,60 @@ func TestNormalizeUpdate_MergesWebhookFields(t *testing.T) {
 
 func TestNormalizeUpdate_InvalidAutoDeployEnv(t *testing.T) {
 	existing := model.Service{
-		SourceType: "scaffold",
+		SourceType:            "scaffold",
 		AutoDeployEnvironment: "staging",
 	}
 	_, err := normalizeUpdate(model.UpdateServiceRequest{
-		Name: "x",
+		Name:                  "x",
 		AutoDeployEnvironment: "qa",
 	}, existing)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}
+
+func TestNormalizeUpdate_SetsAutoDeployEnabled(t *testing.T) {
+	existing := model.Service{
+		SourceType:        "git",
+		RepoURL:           "http://github.com/acme/hello.git",
+		AutoDeployEnabled: false,
+	}
+	on := true
+	req, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name: "from-git",
+		Description: "x",
+		Owner: "team",
+		AutoDeployEnabled: &on,
+	}, existing)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.AutoDeployEnabled == nil || !*req.AutoDeployEnabled {
+		t.Fatal("exped enable true")
+	}
+}
+
+func TestNormalizeUpdate_ClearsAutoDeployEnabled(t *testing.T) {
+	existing := model.Service{
+		SourceType: "git",
+		RepoURL: "https://github.com/acme/hello.git",
+		WebhookSecret: "super-secret",
+		AutoDeployEnabled: true,
+	}
+	off := false
+	req, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name: "from-git",
+		Description: "x",
+		Owner: "team",
+		AutoDeployEnabled: &off,
+	}, existing)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.AutoDeployEnabled == nil || *req.AutoDeployEnabled {
+		t.Fatal("expected enabled false")
+	}
+	if req.WebhookSecret != "super-secret" {
+		t.Fatalf("secret wiped: %q", req.WebhookSecret)
 	}
 }

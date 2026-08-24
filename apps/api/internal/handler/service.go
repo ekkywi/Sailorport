@@ -26,7 +26,7 @@ func (h *ServicesHandler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal server error")
 		return
 	}
-	writeJSON(w, http.StatusOK, services)
+	writeJSON(w, http.StatusOK, service.PublicServices(services))
 }
 
 func (h *ServicesHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +47,7 @@ func (h *ServicesHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeCatalogError(w, "create service", err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, svc)
+	writeJSON(w, http.StatusCreated, service.PublicService(svc))
 }
 
 func (h *ServicesHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +56,7 @@ func (h *ServicesHandler) Get(w http.ResponseWriter, r *http.Request) {
 		writeCatalogError(w, "get service", err)
 		return
 	}
-	writeJSON(w, http.StatusOK, svc)
+	writeJSON(w, http.StatusOK, service.PublicService(svc))
 }
 
 func (h *ServicesHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +77,7 @@ func (h *ServicesHandler) Update(w http.ResponseWriter, r *http.Request) {
 		writeCatalogError(w, "update service", err)
 		return
 	}
-	writeJSON(w, http.StatusOK, svc)
+	writeJSON(w, http.StatusOK, service.PublicService(svc))
 }
 
 func (h *ServicesHandler) Delete(w http.ResponseWriter, r *http.Request) {
