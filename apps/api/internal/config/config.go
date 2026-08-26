@@ -16,14 +16,15 @@ const (
 )
 
 type Config struct {
-	Port         string
-	AppEnv       string
-	Version      string
-	DatabaseURL  string
-	WorkspaceDir string
-	TemplatesDir string
-	JWTSecret    string
-	AgentToken   string
+	Port          string
+	AppEnv        string
+	Version       string
+	DatabaseURL   string
+	WorkspaceDir  string
+	TemplatesDir  string
+	JWTSecret     string
+	AgentToken    string
+	CatalogAppDir string
 }
 
 func Load() Config {
@@ -38,16 +39,18 @@ func Load() Config {
 	templatesDir := getenv("SAILORPORT_TEMPLATES", defaultTemplatesDir())
 	jwtSecret := getenv("AUTH_JWT_SECRET", devJWTSecret)
 	agentToken := getenv("SAILORPORT_AGENT_TOKEN", devAgentToken)
+	catalogAppsDir := getenv("SAILORPORT_CATALOG_APPS", defaultCatalogAppsDir())
 
 	return Config{
-		Port:         port,
-		AppEnv:       appEnv,
-		Version:      version,
-		DatabaseURL:  databaseURL,
-		WorkspaceDir: workspaceDir,
-		TemplatesDir: templatesDir,
-		JWTSecret:    jwtSecret,
-		AgentToken:   agentToken,
+		Port:          port,
+		AppEnv:        appEnv,
+		Version:       version,
+		DatabaseURL:   databaseURL,
+		WorkspaceDir:  workspaceDir,
+		TemplatesDir:  templatesDir,
+		JWTSecret:     jwtSecret,
+		AgentToken:    agentToken,
+		CatalogAppDir: catalogAppsDir,
 	}
 }
 
@@ -92,6 +95,23 @@ func defaultTemplatesDir() string {
 		}
 	}
 	return "templates"
+}
+
+func defaultCatalogAppsDir() string {
+	candidates := []string{
+		"catalog-apps",
+		filepath.Join("..", "..", "catalog-apps"),
+		filepath.Join("..", "catalog-apps"),
+	}
+	for _, c := range candidates {
+		if info, err := os.Stat(c); err == nil && info.IsDir() {
+			if abs, err := filepath.Abs(c); err == nil {
+				return abs
+			}
+			return c
+		}
+	}
+	return "catalog-apps"
 }
 
 func defaultWorkspaceDir() string {

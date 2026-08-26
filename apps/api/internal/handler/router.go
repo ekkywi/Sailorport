@@ -10,6 +10,7 @@ type API struct {
 	Version      string
 	JWTSecret    string
 	Catalog      *service.Catalog
+	CatalogApps  *service.CatalogApps
 	Scaffold     *service.Scaffold
 	Auth         *service.Auth
 	Users        *service.Users
@@ -32,6 +33,7 @@ func NewRouter(api API) http.Handler {
 	authH := NewAuthHandler(api.Auth)
 	services := NewServicesHandler(api.Catalog)
 	scaffold := NewScaffoldHandler(api.Scaffold)
+	catalogAppsH := NewCatalogAppsHandler(api.CatalogApps)
 	workersH := NewWorkersHandler(api.Workers)
 	deploymentsH := NewDeploymentsHandler(api.Deployments)
 	runtimeH := NewRuntimeHandler(api.Runtime)
@@ -68,6 +70,9 @@ func NewRouter(api API) http.Handler {
 
 	mux.Handle("GET /api/v1/templates", withRole(secret, currentUser, reader, scaffold.ListTemplates))
 	mux.Handle("POST /api/v1/scaffold", withRole(secret, currentUser, writer, scaffold.Create))
+
+	mux.Handle("GET /api/v1/catalog-apps", withRole(secret, currentUser, reader, catalogAppsH.List))
+	mux.Handle("GET /api/v1/catalog-apps/{id}", withRole(secret, currentUser, reader, catalogAppsH.Get))
 
 	mux.Handle("POST /api/v1/workers/register", withAgentToken(token, workersH.Register))
 	mux.Handle("POST /api/v1/workers/{id}/heartbeat", withAgentToken(token, workersH.Heartbeat))

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ekkywi/sailorport/apps/api/internal/catalogapp"
 	"github.com/ekkywi/sailorport/apps/api/internal/config"
 	"github.com/ekkywi/sailorport/apps/api/internal/db"
 	"github.com/ekkywi/sailorport/apps/api/internal/handler"
@@ -40,6 +41,7 @@ func main() {
 	log.Printf("Database migrations OK")
 	log.Printf("Templates dir: %s", cfg.TemplatesDir)
 	log.Printf("Workspace dir: %s", cfg.WorkspaceDir)
+	log.Printf("Catalog apps dir: %s", cfg.CatalogAppDir)
 	if err := config.EnsureWorkspaceDir(cfg.WorkspaceDir); err != nil {
 		log.Fatalf("Workspace setup failed: %v", err)
 	}
@@ -51,6 +53,8 @@ func main() {
 	catalog := service.NewCatalog(serviceStore, deploymentsStore, cfg.WorkspaceDir)
 	templates := template.NewRegistry(cfg.TemplatesDir)
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
+	catalogAppsReg := catalogapp.NewRegistry(cfg.CatalogAppDir)
+	catalogApps := service.NewCatalogApps(catalogAppsReg)
 	usersStore := store.NewUsersStore(sqlDB)
 	authSvc := service.NewAuth(usersStore, cfg.JWTSecret)
 	usersSvc := service.NewUsers(usersStore)
@@ -72,6 +76,7 @@ func main() {
 		Version:      cfg.Version,
 		JWTSecret:    cfg.JWTSecret,
 		Catalog:      catalog,
+		CatalogApps:  catalogApps,
 		Scaffold:     scaffold,
 		Auth:         authSvc,
 		Users:        usersSvc,

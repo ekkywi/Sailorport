@@ -1,0 +1,8 @@
+{
+  "id": "postgres",
+  "name": "PostgreSQL",
+  "description": "Managed Postgres container from a public image. No git clone or docker build.",
+  "image": "postgres:16-alpine",
+  "container_port": 5432,
+  "tags": ["database", "postgres"]
+}
