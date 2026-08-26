@@ -117,7 +117,6 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 \
 | `GET /api/v1/services/{id}/deployments` | viewer+ | list per service |
 | `GET /api/v1/deployments` | viewer+ | list semua |
 | `GET /api/v1/deployments/{id}` | viewer+ | detail |
-| `PATCH /api/v1/deployments/{id}` | developer+ | update status (portal/curl JWT) |
 | `POST /api/v1/services/{id}/runtime/stop` | developer+ | enqueue stop container (deployment harus `running`) → **202** |
 | `POST /api/v1/services/{id}/runtime/start` | developer+ | enqueue start container (deployment harus `stopped`) → **202** |
 | `POST /api/v1/services/{id}/runtime/logs` | viewer+ | enqueue logs job (deployment harus `running`/`stopped`) → **202** |

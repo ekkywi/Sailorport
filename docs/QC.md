@@ -44,6 +44,8 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 7. Stop / Start container dari portal → status ikut berubah
 8. GET `/api/v1/deployments/{id}` → mengembalikan **satu** deployment (bukan list) — regression check untuk bug di bawah
 9. Webhook tanpa/dengan signature salah, dan repo yang tidak terdaftar → **401** yang sama (tidak ada `no matching service`) — regression check A-H1
+10. Disable user di portal, lalu pakai token lama user itu ke `GET /api/v1/services` → **401** tanpa perlu tunggu token kedaluwarsa — regression check A-H3
+11. `PATCH /api/v1/deployments/{id}` dengan JWT developer → **405** (route portal sudah dihapus); `PATCH /api/v1/agent/deployments/{id}` dengan agent token tetap **200** — regression check A-H4
 
 ---
 
@@ -73,6 +75,8 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | Portal masih menampilkan form `/register` padahal register sudah tertutup | Rendah | Efek fix A-C2. Setelah admin pertama ada, submit selalu **403** dengan pesan jelas; menyembunyikan link/form = Pass C |
 | `model.RegisterRequest.Role` diabaikan | Rendah | Efek fix A-C2. Akun pertama selalu `admin`; field dibiarkan supaya kontrak web tidak pecah |
 | Dua register serentak di instalasi kosong bisa jadi dua admin | Rendah | Efek fix A-C2. Gate-nya `COUNT(*)` lalu INSERT (bukan atomik); praktis tidak relevan karena siapa pun yang duluan register tetap dapat admin |
+| Portal tidak auto-logout saat 401 di tengah sesi | Rendah | Efek fix A-H3. Token user yang di-disable langsung ditolak API, tapi portal baru menghapus token saat `me()` gagal (refresh / buka ulang); interceptor 401 global = Pass C |
+| Satu query user tambahan per request ber-JWT | Rendah (by design) | Efek fix A-H3. Alternatif `token_version`/cache sengaja tidak dipakai supaya disable & ganti role langsung berlaku |
 
 ---
 
@@ -85,13 +89,15 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | 2026-08-26 | **A-C2** `POST /api/v1/auth/register` publik tanpa gate dan memberi role `developer` (boleh create service + deploy) | Register jadi jalur bootstrap saja: `UsersStore.Count` (termasuk soft-deleted) → kalau sudah ada user, **403** `registration is closed`; akun pertama otomatis role `admin` dan `role` dari request diabaikan. User berikutnya lewat `POST /api/v1/users` (admin) |
 | 2026-08-26 | **A-H1** Webhook membalas beda-beda sebelum HMAC diverifikasi (`no matching service` / `secret not configured` / `no auto-deploy`) → oracle enumerasi repo bagi penyerang tanpa signature | `HandleGitHub` memverifikasi signature dulu; semua kegagalan auth jadi satu `ErrUnauthorized` (**401**) dan `ack` baru diisi setelah terverifikasi. Tes lama yang mengunci `no matching service` diganti `TestHandleGitHub_UnknownRepoIsUnauthorized` |
 | 2026-08-26 | **A-H2** Secret diambil dari service pertama yang punya secret, tapi yang di-deploy `eligible[0]` → secret service A bisa memicu deploy service B pada repo yang sama | `filterVerifiedServices` menyisakan service yang **secret-nya sendiri** cocok dengan body; auto-deploy dan target dipilih hanya dari himpunan itu. Tes baru: `TestHandleGitHub_OtherServiceSecretCannotDeploy`, `TestHandleGitHub_DeploysServiceOwningTheSecret` |
+| 2026-08-26 | **A-H4** `PATCH /api/v1/deployments/{id}` terbuka untuk role writer, padahal itu endpoint laporan status agent → developer bisa mengarang `status`/`git_sha`/`container_id` | Route portal dihapus dari `router.go`; laporan status hanya lewat `PATCH /api/v1/agent/deployments/{id}` (`withAgentToken`). Portal tidak pernah memakainya (`features/deployments/api.ts` hanya `POST …/redeploy`) |
+| 2026-08-26 | **A-H3** `RequireRole` percaya `role`/`disabled` dari klaim JWT (TTL 24 jam) → user yang di-disable, di-soft-delete, atau diturunkan role tetap punya akses sampai token kedaluwarsa | `RequireAuth(secret, currentUserLookup)` memuat user dari DB (`service.Auth.Me` → tolak disabled / `deleted_at`), lalu menimpa `claims.Role` + `claims.Email` dengan nilai DB sebelum `RequireRole` berjalan. Biaya: satu query user per request ber-JWT |
 
 ---
 
 ## Hasil Production review — Pass A (2026-08-26)
 
 Scope: API auth, webhook, deploy, secret. Diff `ce88e2b^..HEAD` + uncommitted (Step 19–21). Evidence: build/vet/test API hijau.
-Status: **Critical clear** dan **A-H1 + A-H2 clear** (semua difix 2026-08-26, lihat tabel **Fixed**). **Sisa terbuka: A-H3 dan A-H4.** Medium/Low ada di **Known debt**.
+Status: **Critical clear, High clear** — A-C1, A-C2, A-H1, A-H2, A-H4, A-H3 semua difix 2026-08-26 (lihat tabel **Fixed**). Sisa Pass A hanya Medium/Low di **Known debt**. Pass B (agent) dan Pass C (web) belum pernah dijalankan.
 
 ### Blocker sebelum expose publik (Critical)
 
@@ -108,10 +114,12 @@ Catatan pilihan desain A-C2 (jangan diubah tanpa diskusi): akun pertama **otomat
 |---|--------|---------|--------|------------------------|
 | A-H1 | `internal/service/webhook.go` | HMAC diverifikasi **setelah** payload dipakai query catalog dan setelah handler memutuskan balasan | Oracle enumerasi repo terdaftar tanpa signature | ✅ Fixed 2026-08-26 — verifikasi dulu, satu `401` generic. **Sisa:** tiap request tetap memicu `Catalog.List` tanpa auth (rate limit ada di Known debt) |
 | A-H2 | `internal/service/webhook.go` | Secret diambil dari service pertama yang punya secret, tapi yang di-deploy `eligible[0]` (bisa service lain) | Pemilik secret service A bisa memicu deploy service B pada repo sama, termasuk ke `prod` | ✅ Fixed 2026-08-26 — target hanya dari service yang secret-nya memverifikasi body |
-| A-H3 | `internal/handler/middleware.go:41-60`, `internal/service/auth.go:32` | `RequireRole` percaya `role` dari klaim JWT; TTL 24 jam; tanpa cek DB / token version (`/auth/me` cek `disabled`, middleware tidak) | User yang di-disable, di-soft-delete, atau diturunkan ke `viewer` tetap bisa deploy/hapus service sampai 24 jam — fitur disable user jadi kosmetik | ⬜ Terbuka — `RequireAuth` ambil user dari DB, tolak kalau disabled/terhapus, pakai role dari DB |
-| A-H4 | `internal/handler/router.go:82` | `PATCH /api/v1/deployments/{id}` dibuka untuk role writer, padahal endpoint laporan status agent sudah ada di `router.go:90` (`withAgentToken`) | Developer bisa mengarang `status`/`image_tag`/`git_sha`/`container_id` deployment mana pun → riwayat dan `git_sha` (dasar Redeploy Step 21) tidak bisa dipercaya, audit menyesatkan | ⬜ Terbuka — hapus route portal tersebut; portal tidak butuh PATCH deployment |
+| A-H3 | `internal/handler/middleware.go` | `RequireRole` percaya `role` dari klaim JWT; TTL 24 jam; tanpa cek DB / token version | User yang di-disable, di-soft-delete, atau diturunkan ke `viewer` tetap bisa deploy/hapus service sampai 24 jam | ✅ Fixed 2026-08-26 — `RequireAuth` memuat user dari DB dan memakai role DB |
+| A-H4 | `internal/handler/router.go` | `PATCH /api/v1/deployments/{id}` dibuka untuk role writer, padahal endpoint laporan status agent sudah ada (`withAgentToken`) | Developer bisa mengarang `status`/`image_tag`/`git_sha`/`container_id` → riwayat dan `git_sha` (dasar Redeploy Step 21) tidak bisa dipercaya | ✅ Fixed 2026-08-26 — route portal dihapus |
 
 Catatan pilihan desain A-H1/A-H2 (jangan diubah tanpa diskusi): push ke repo terdaftar yang auto-deploy-nya **off** tetap dijawab **200 ignored** (bukan 401) supaya delivery GitHub tidak merah untuk pemilik secret yang sah; kalau beberapa service satu repo sama-sama eligible, tetap hanya **satu** yang di-deploy (`eligible[0]`) seperti perilaku sebelumnya; event non-`push` dan ref non-branch masih dijawab tanpa verifikasi karena isinya cuma memantulkan input pengirim.
+
+Catatan pilihan desain A-H3 (jangan diubah tanpa diskusi): otorisasi dibaca dari DB tiap request (bukan token version / cache), jadi disable dan ganti role langsung berlaku dengan biaya satu query per request ber-JWT; `service.Auth.Me` dipakai sebagai satu-satunya sumber (`deleted_at IS NULL` + tolak `disabled`), dan `GET /api/v1/auth/me` memang jadi dua query — dibiarkan supaya lapisan handler tetap tipis.
 
 ### Yang sudah solid (jangan diutak-atik saat fix)
 
