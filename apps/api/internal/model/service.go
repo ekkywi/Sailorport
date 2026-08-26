@@ -21,6 +21,9 @@ type Service struct {
 	WebhookSecretSet      bool                  `json:"webhook_secret_set"`
 	AutoDeployEnabled     bool                  `json:"auto_deploy_enabled"`
 	AutoDeployEnvironment string                `json:"auto_deploy_environment"`
+	CatalogAppID          string                `json:"catalog_app_id"`
+	Image                 string                `json:"image"`
+	ContainerPort         int                   `json:"container_port"`
 }
 
 type CreateServiceRequest struct {
@@ -36,6 +39,9 @@ type CreateServiceRequest struct {
 	WebhookSecret         string `json:"webhook_secret"`
 	AutoDeployEnabled     bool   `json:"auto_deploy_enabled"`
 	AutoDeployEnvironment string `json:"auto_deploy_environment"`
+	CatalogAppID          string `json:"catalog_app_id"`
+	Image                 string `json:"image"`
+	ContainerPort         int    `json:"container_port"`
 }
 
 type UpdateServiceRequest struct {
@@ -49,4 +55,7 @@ type UpdateServiceRequest struct {
 	WebhookSecret         string `json:"webhook_secret"`
 	AutoDeployEnabled     *bool  `json:"auto_deploy_enabled"`
 	AutoDeployEnvironment string `json:"auto_deploy_environment"`
+	CatalogAppID          string `json:"catalog_app_id"`
+	Image                 string `json:"image"`
+	ContainerPort         int    `json:"container_port"`
 }

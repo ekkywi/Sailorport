@@ -105,6 +105,37 @@ func TestNormalizeCreate_InvalidAutoDeployEnv(t *testing.T) {
 	}
 }
 
+func TestNormalizeCreate_TrimsCatalogFields(t *testing.T) {
+	req, err := normalizeCreate(model.CreateServiceRequest{
+		Name:         "demo",
+		CatalogAppID: "  postgres  ",
+		Image:        "  postgres:16-alpine  ",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.CatalogAppID != "postgres" {
+		t.Fatalf("CatalogAppID: want postgres, got %q", req.CatalogAppID)
+	}
+	if req.Image != "postgres:16-alpine" {
+		t.Fatalf("Image: want postgres:16-alpine, got %q", req.Image)
+	}
+	if req.SourceType != "scaffold" {
+		t.Fatalf("SourceType: want scaffold, got %q", req.SourceType)
+	}
+}
+
+func TestNormalizeCreate_RejectsCatalogAppSourceType(t *testing.T) {
+	_, err := normalizeCreate(model.CreateServiceRequest{
+		Name:       "pg",
+		SourceType: "catalog_app",
+		Image:      "postgres:16-alpine",
+	})
+	if err == nil {
+		t.Fatal("expected error for catalog_app")
+	}
+}
+
 func TestNormalizeUpdate_MergesGitFields(t *testing.T) {
 	existing := model.Service{
 		SourceType:     "git",
@@ -187,9 +218,9 @@ func TestNormalizeUpdate_SetsAutoDeployEnabled(t *testing.T) {
 	}
 	on := true
 	req, err := normalizeUpdate(model.UpdateServiceRequest{
-		Name: "from-git",
-		Description: "x",
-		Owner: "team",
+		Name:              "from-git",
+		Description:       "x",
+		Owner:             "team",
 		AutoDeployEnabled: &on,
 	}, existing)
 	if err != nil {
@@ -202,16 +233,16 @@ func TestNormalizeUpdate_SetsAutoDeployEnabled(t *testing.T) {
 
 func TestNormalizeUpdate_ClearsAutoDeployEnabled(t *testing.T) {
 	existing := model.Service{
-		SourceType: "git",
-		RepoURL: "https://github.com/acme/hello.git",
-		WebhookSecret: "super-secret",
+		SourceType:        "git",
+		RepoURL:           "https://github.com/acme/hello.git",
+		WebhookSecret:     "super-secret",
 		AutoDeployEnabled: true,
 	}
 	off := false
 	req, err := normalizeUpdate(model.UpdateServiceRequest{
-		Name: "from-git",
-		Description: "x",
-		Owner: "team",
+		Name:              "from-git",
+		Description:       "x",
+		Owner:             "team",
 		AutoDeployEnabled: &off,
 	}, existing)
 	if err != nil {

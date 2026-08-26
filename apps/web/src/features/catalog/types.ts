@@ -27,6 +27,9 @@ export type Service = {
   webhook_secret_set: boolean;
   auto_deploy_enabled: boolean;
   auto_deploy_environment: string;
+  catalog_app_id: string;
+  image: string;
+  container_port: number;
   created_at: string;
   updated_at: string;
   latest_deployment?: LatestDeployment | null;
@@ -44,7 +47,11 @@ export type CreateServiceInput = {
   webhook_secret?: string;
   auto_deploy_enabled?: boolean;
   auto_deploy_environment?: string;
+  catalog_app_id?: string;
+  image?: string;
+  container_port?: number;
 };
+
 export type UpdateServiceInput = {
   name: string;
   description: string;
@@ -56,6 +63,9 @@ export type UpdateServiceInput = {
   webhook_secret?: string;
   auto_deploy_enabled?: boolean;
   auto_deploy_environment?: string;
+  catalog_app_id?: string;
+  image?: string;
+  container_port?: number;
 };
 
 export type ServiceFormValues = {

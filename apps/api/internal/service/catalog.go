@@ -277,6 +277,8 @@ func normalizeCreate(req model.CreateServiceRequest) (model.CreateServiceRequest
 	req.DockerfilePath = strings.TrimSpace(req.DockerfilePath)
 	req.WebhookSecret = strings.TrimSpace(req.WebhookSecret)
 	req.AutoDeployEnvironment = strings.TrimSpace(req.AutoDeployEnvironment)
+	req.CatalogAppID = strings.TrimSpace(req.CatalogAppID)
+	req.Image = strings.TrimSpace(req.Image)
 
 	if req.SourceType == "" {
 		req.SourceType = "scaffold"
@@ -313,6 +315,8 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 	req.DockerfilePath = strings.TrimSpace(req.DockerfilePath)
 	req.WebhookSecret = strings.TrimSpace(req.WebhookSecret)
 	req.AutoDeployEnvironment = strings.TrimSpace(req.AutoDeployEnvironment)
+	req.CatalogAppID = strings.TrimSpace(req.CatalogAppID)
+	req.Image = strings.TrimSpace(req.Image)
 
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
@@ -348,6 +352,15 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 	if req.AutoDeployEnabled == nil {
 		v := existing.AutoDeployEnabled
 		req.AutoDeployEnabled = &v
+	}
+	if req.CatalogAppID == "" {
+		req.CatalogAppID = existing.CatalogAppID
+	}
+	if req.Image == "" {
+		req.Image = existing.Image
+	}
+	if req.ContainerPort == 0 {
+		req.ContainerPort = existing.ContainerPort
 	}
 
 	if err := validateSourceFields(req.SourceType, req.RepoURL); err != nil {

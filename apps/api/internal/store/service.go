@@ -25,9 +25,10 @@ func NewServicesStore(db *sql.DB) *ServicesStore {
 func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 	const q = `
 	SELECT id, name, description, owner, template_id, workspace_path,
-       source_type, repo_url, branch, dockerfile_path,
-       webhook_secret, auto_deploy_enabled, auto_deploy_environment,
-       created_at, updated_at
+		source_type, repo_url, branch, dockerfile_path,
+		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+		catalog_app_id, image, container_port,
+		created_at, updated_at
 	FROM services
 	ORDER BY created_at DESC`
 
@@ -54,6 +55,9 @@ func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 			&svc.WebhookSecret,
 			&svc.AutoDeployEnabled,
 			&svc.AutoDeployEnvironment,
+			&svc.CatalogAppID,
+			&svc.Image,
+			&svc.ContainerPort,
 			&svc.CreatedAt,
 			&svc.UpdatedAt,
 		); err != nil {
@@ -69,12 +73,13 @@ func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 
 func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, error) {
 	const q = `
-		SELECT id, name, description, owner, template_id, workspace_path,
-		       source_type, repo_url, branch, dockerfile_path,
-		       webhook_secret, auto_deploy_enabled, auto_deploy_environment,
-		       created_at, updated_at
-		FROM services
-		WHERE id = $1`
+	SELECT id, name, description, owner, template_id, workspace_path,
+		source_type, repo_url, branch, dockerfile_path,
+		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+		catalog_app_id, image, container_port,
+		created_at, updated_at
+	FROM services
+	WHERE id = $1`
 
 	var svc model.Service
 	err := s.db.QueryRowContext(ctx, q, id).Scan(
@@ -91,6 +96,9 @@ func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, erro
 		&svc.WebhookSecret,
 		&svc.AutoDeployEnabled,
 		&svc.AutoDeployEnvironment,
+		&svc.CatalogAppID,
+		&svc.Image,
+		&svc.ContainerPort,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)
@@ -108,13 +116,15 @@ func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceReque
 		INSERT INTO services (
 			name, description, owner, template_id, workspace_path,
 			source_type, repo_url, branch, dockerfile_path,
-			webhook_secret, auto_deploy_enabled, auto_deploy_environment
-		) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+			catalog_app_id, image, container_port
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, name, description, owner, template_id, workspace_path,
-		source_type, repo_url, branch, dockerfile_path,
-		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
-		created_at, updated_at`
+			source_type, repo_url, branch, dockerfile_path,
+			webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+			catalog_app_id, image, container_port,
+			created_at, updated_at`
 
 	var svc model.Service
 	err := s.db.QueryRowContext(ctx, q,
@@ -130,6 +140,9 @@ func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceReque
 		req.WebhookSecret,
 		req.AutoDeployEnabled,
 		req.AutoDeployEnvironment,
+		req.CatalogAppID,
+		req.Image,
+		req.ContainerPort,
 	).Scan(
 		&svc.ID,
 		&svc.Name,
@@ -144,6 +157,9 @@ func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceReque
 		&svc.WebhookSecret,
 		&svc.AutoDeployEnabled,
 		&svc.AutoDeployEnvironment,
+		&svc.CatalogAppID,
+		&svc.Image,
+		&svc.ContainerPort,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)
@@ -169,12 +185,16 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 			webhook_secret = $8,
 			auto_deploy_enabled = $9,
 			auto_deploy_environment = $10,
+			catalog_app_id = $11,
+			image = $12,
+			container_port = $13,
 			updated_at = NOW()
-		WHERE id = $11
+		WHERE id = $14
 		RETURNING id, name, description, owner, template_id, workspace_path,
-		source_type, repo_url, branch, dockerfile_path,
-		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
-		created_at, updated_at`
+			source_type, repo_url, branch, dockerfile_path,
+			webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+			catalog_app_id, image, container_port,
+			created_at, updated_at`
 
 	var svc model.Service
 	err := s.db.QueryRowContext(ctx, q,
@@ -188,6 +208,9 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 		req.WebhookSecret,
 		*req.AutoDeployEnabled,
 		req.AutoDeployEnvironment,
+		req.CatalogAppID,
+		req.Image,
+		req.ContainerPort,
 		id,
 	).Scan(
 		&svc.ID,
@@ -203,6 +226,9 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 		&svc.WebhookSecret,
 		&svc.AutoDeployEnabled,
 		&svc.AutoDeployEnvironment,
+		&svc.CatalogAppID,
+		&svc.Image,
+		&svc.ContainerPort,
 		&svc.CreatedAt,
 		&svc.UpdatedAt,
 	)
