@@ -114,6 +114,7 @@ Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sa
 1. Baca `docs/PROGRESS.md` — cek "Step berikutnya"
 2. Lanjutkan dari step itu, jangan ulang step selesai
 3. Setelah step selesai, minta user update `docs/PROGRESS.md` + commit
+4. QC berkala / sebelum production review: `docs/QC.md` (automated + smoke + prompt model mahal)
 
 ## MVP v1 success criteria
 

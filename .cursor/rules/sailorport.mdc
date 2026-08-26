@@ -1,0 +1,42 @@
+---
+description: Core Sailorport project conventions and learning-mode guardrails
+alwaysApply: true
+---
+
+# Sailorport — Project Rules
+
+Baca `docs/AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/PROGRESS.md` sebelum kerja besar. Ini sumber kebenaran, bukan chat lama.
+
+## Learning mode
+
+User belajar coding manual — jangan asumsikan mahir Go/TS.
+
+- Satu step = satu hasil yang bisa dijalankan + ditest.
+- Jangan refactor besar atau tambah fitur di luar step yang diminta.
+- Kasih kode lengkap per file (bukan potongan acak) saat memandu.
+- Akhiri panduan step dengan: cara test + commit message.
+
+## Arsitektur (wajib, lihat `docs/ARCHITECTURE.md`)
+
+- API: `handler` (HTTP/JSON) → `service` (bisnis) → `store` (SQL) → `model` (struct).
+  Jangan taruh SQL di handler/service; jangan taruh `net/http` di store.
+- Error service: `ErrInvalid` → 400, `ErrNotFound` → 404, `ErrConflict` → 409, lainnya → log + 500.
+- Web: `features/<domain>/` (UI + api client + types); `main`/`App` tetap tipis.
+
+## Keputusan desain yang sudah dikunci — jangan ubah tanpa diskusi
+
+- Redact `webhook_secret` **hanya di handler** (`PublicService`), **jangan** di `Catalog.List`/`Get` — webhook HMAC butuh secret asli.
+- Redeploy (Step 21) = rebuild dari `git_sha` lama, **bukan** restore container instan.
+- `git_sha` kosong = deploy tip branch (perilaku default); terisi = checkout SHA spesifik.
+
+## QC
+
+Sebelum menganggap step/fitur selesai:
+
+```bash
+cd apps/api && go build ./... && go vet ./... && go test ./...
+cd apps/agent && go build ./... && go vet ./... && go test ./...
+cd apps/web && npm run build
+```
+
+Lihat `docs/QC.md` untuk checklist smoke, known debt, **Evidence pack**, dan **prompt Production review** (Pass A/B/C) saat memakai model mahal. Catat bug baru di sana.

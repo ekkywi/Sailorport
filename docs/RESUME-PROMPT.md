@@ -13,6 +13,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - `docs/PROGRESS.md` — step terakhir yang selesai + rencana berikutnya
 - `docs/ARCHITECTURE.md` — aturan lapisan (wajib diikuti)
 - `docs/AGENTS.md` — konvensi & konteks proyek
+- `docs/QC.md` — automated/smoke + **prompt Production review** (Pass A/B/C) untuk model mahal
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
