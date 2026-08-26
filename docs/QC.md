@@ -43,6 +43,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 6. Webhook (opsional): push GitHub → signature valid → auto-deploy sesuai `auto_deploy_environment`
 7. Stop / Start container dari portal → status ikut berubah
 8. GET `/api/v1/deployments/{id}` → mengembalikan **satu** deployment (bukan list) — regression check untuk bug di bawah
+9. Webhook tanpa/dengan signature salah, dan repo yang tidak terdaftar → **401** yang sama (tidak ada `no matching service`) — regression check A-H1
 
 ---
 
@@ -69,6 +70,9 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | `UpdateDeploymentRequest.WorkerID` diabaikan store | Rendah | Pass A. `service/deployment.go:156` — di-trim lalu tidak pernah dipakai `store.Update` |
 | JWT tanpa validasi `iss` / `aud` | Rendah | Pass A. `internal/auth/jwt.go:32` — aman karena `SigningMethodHS256` dipaksa dan secret tunggal |
 | Compose: password Postgres default + port 5433 dipublish | Rendah | Pass A. `deploy/compose/docker-compose.yml:6` — dev convenience; jangan dipakai apa adanya di host publik |
+| Portal masih menampilkan form `/register` padahal register sudah tertutup | Rendah | Efek fix A-C2. Setelah admin pertama ada, submit selalu **403** dengan pesan jelas; menyembunyikan link/form = Pass C |
+| `model.RegisterRequest.Role` diabaikan | Rendah | Efek fix A-C2. Akun pertama selalu `admin`; field dibiarkan supaya kontrak web tidak pecah |
+| Dua register serentak di instalasi kosong bisa jadi dua admin | Rendah | Efek fix A-C2. Gate-nya `COUNT(*)` lalu INSERT (bukan atomik); praktis tidak relevan karena siapa pun yang duluan register tetap dapat admin |
 
 ---
 
@@ -77,29 +81,37 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | Tanggal | Bug | Fix |
 |---------|-----|-----|
 | 2026-08-26 | `GET /api/v1/deployments/{id}` memanggil `deployments.List` (semua deployment) bukan `deployments.Get(id)` | `DeploymentsHandler.Get` sekarang panggil `h.deployments.Get(ctx, r.PathValue("id"))` + `writeDeploymentError` |
+| 2026-08-26 | **A-C1** Secret bawaan repo dipakai apa adanya: `AUTH_JWT_SECRET=dev-only-change-me`, `SAILORPORT_AGENT_TOKEN=dev-agent-token`, termasuk di compose | `config.Config.Validate()` menolak start kalau `APP_ENV != development` dan secret masih kosong/nilai dev (dipanggil dari `main.go`); compose wajib `${AUTH_JWT_SECRET:?…}` + `${SAILORPORT_AGENT_TOKEN:?…}` dari `deploy/compose/.env` (`.env.example` baru; `APP_ENV` bisa di-override) |
+| 2026-08-26 | **A-C2** `POST /api/v1/auth/register` publik tanpa gate dan memberi role `developer` (boleh create service + deploy) | Register jadi jalur bootstrap saja: `UsersStore.Count` (termasuk soft-deleted) → kalau sudah ada user, **403** `registration is closed`; akun pertama otomatis role `admin` dan `role` dari request diabaikan. User berikutnya lewat `POST /api/v1/users` (admin) |
+| 2026-08-26 | **A-H1** Webhook membalas beda-beda sebelum HMAC diverifikasi (`no matching service` / `secret not configured` / `no auto-deploy`) → oracle enumerasi repo bagi penyerang tanpa signature | `HandleGitHub` memverifikasi signature dulu; semua kegagalan auth jadi satu `ErrUnauthorized` (**401**) dan `ack` baru diisi setelah terverifikasi. Tes lama yang mengunci `no matching service` diganti `TestHandleGitHub_UnknownRepoIsUnauthorized` |
+| 2026-08-26 | **A-H2** Secret diambil dari service pertama yang punya secret, tapi yang di-deploy `eligible[0]` → secret service A bisa memicu deploy service B pada repo yang sama | `filterVerifiedServices` menyisakan service yang **secret-nya sendiri** cocok dengan body; auto-deploy dan target dipilih hanya dari himpunan itu. Tes baru: `TestHandleGitHub_OtherServiceSecretCannotDeploy`, `TestHandleGitHub_DeploysServiceOwningTheSecret` |
 
 ---
 
 ## Hasil Production review — Pass A (2026-08-26)
 
 Scope: API auth, webhook, deploy, secret. Diff `ce88e2b^..HEAD` + uncommitted (Step 19–21). Evidence: build/vet/test API hijau.
-Status: **temuan dicatat, belum ada fix.** Medium/Low sudah masuk **Known debt** di atas.
+Status: **Critical clear** dan **A-H1 + A-H2 clear** (semua difix 2026-08-26, lihat tabel **Fixed**). **Sisa terbuka: A-H3 dan A-H4.** Medium/Low ada di **Known debt**.
 
 ### Blocker sebelum expose publik (Critical)
 
-| # | Lokasi | Masalah | Dampak | Fix disarankan |
-|---|--------|---------|--------|----------------|
-| A-C1 | `internal/config/config.go:31-32`, `deploy/compose/docker-compose.yml:27-28` | `AUTH_JWT_SECRET` default `dev-only-change-me`, `SAILORPORT_AGENT_TOKEN` default `dev-agent-token`, dan compose memakainya apa adanya | Siapa pun yang membaca repo bisa menandatangani JWT `role:"admin"` sendiri (akses penuh users/audit/catalog) dan memakai agent token untuk claim job + PATCH deployment | `config.Load` fail-fast kalau env kosong atau masih nilai dev sementara `APP_ENV != development`; compose ambil dari `.env` |
-| A-C2 | `internal/handler/router.go:49`, `internal/service/auth.go:56-58` | `POST /api/v1/auth/register` publik tanpa gate; role default `developer` = boleh create service + deploy + redeploy + stop/start | Orang asing daftar sendiri → tambah service `source_type=git` ke repo miliknya → deploy → `git clone` + `docker build` + `docker run` di worker node (eksekusi kode arbitrer di infra) | Env `SAILORPORT_ALLOW_OPEN_REGISTRATION` (default `false`); saat off hanya boleh kalau tabel `users` kosong (bootstrap admin), sisanya lewat `POST /api/v1/users` |
+| # | Lokasi | Masalah | Status |
+|---|--------|---------|--------|
+| A-C1 | `internal/config/config.go`, `deploy/compose/docker-compose.yml` | Secret bawaan repo (`dev-only-change-me` / `dev-agent-token`) bisa dipakai memalsukan JWT admin dan agent token | ✅ Fixed 2026-08-26 — `Config.Validate()` + compose wajib `.env` |
+| A-C2 | `internal/handler/router.go:49`, `internal/service/auth.go` | Register publik memberi role `developer` → orang luar bisa deploy container arbitrer di worker node | ✅ Fixed 2026-08-26 — register = bootstrap admin pertama saja, sesudahnya 403 |
 
-### High (fix setelah Critical clear)
+Catatan pilihan desain A-C2 (jangan diubah tanpa diskusi): akun pertama **otomatis `admin`** (menghapus langkah promote lewat SQL), gate-nya `COUNT(*)` semua baris `users` termasuk soft-deleted, dan tidak ada env `ALLOW_OPEN_REGISTRATION` — jalur satu-satunya untuk user tambahan adalah `POST /api/v1/users`.
 
-| # | Lokasi | Masalah | Dampak | Fix disarankan |
-|---|--------|---------|--------|----------------|
-| A-H1 | `internal/service/webhook.go:71-94` | HMAC diverifikasi **setelah** payload dipakai query catalog dan setelah handler memutuskan balasan | Tanpa signature pun penyerang bisa membedakan `200 no matching service` / `401 secret not configured` / `200 no auto-deploy` → enumerasi repo terdaftar; tiap request juga memicu `Catalog.List` (full scan `services`) tanpa auth | Tentukan target dulu, verifikasi signature, baru boleh membalas detail; semua kegagalan auth jadi satu `401` generic. Catatan: `webhook_test.go:153-170` mengunci perilaku lama, tes ikut berubah |
-| A-H2 | `internal/service/webhook.go:81-103` | Secret diambil dari service pertama yang punya secret, tapi yang di-deploy `eligible[0]` (bisa service lain) | Dua service menunjuk repo sama (mis. `api-staging` + `api-prod`) → pemilik secret service A bisa memicu deploy service B, termasuk ke `prod` | Verifikasi signature terhadap `target.WebhookSecret`; kalau target tidak punya secret → 401 |
-| A-H3 | `internal/handler/middleware.go:41-60`, `internal/service/auth.go:32` | `RequireRole` percaya `role` dari klaim JWT; TTL 24 jam; tanpa cek DB / token version (`/auth/me` cek `disabled`, middleware tidak) | User yang di-disable, di-soft-delete, atau diturunkan ke `viewer` tetap bisa deploy/hapus service sampai 24 jam — fitur disable user jadi kosmetik | `RequireAuth` ambil user dari DB, tolak kalau disabled/terhapus, pakai role dari DB |
-| A-H4 | `internal/handler/router.go:82` | `PATCH /api/v1/deployments/{id}` dibuka untuk role writer, padahal endpoint laporan status agent sudah ada di `router.go:90` (`withAgentToken`) | Developer bisa mengarang `status`/`image_tag`/`git_sha`/`container_id` deployment mana pun → riwayat dan `git_sha` (dasar Redeploy Step 21) tidak bisa dipercaya, audit menyesatkan | Hapus route portal tersebut; portal tidak butuh PATCH deployment |
+### High
+
+| # | Lokasi | Masalah | Dampak | Status / fix disarankan |
+|---|--------|---------|--------|------------------------|
+| A-H1 | `internal/service/webhook.go` | HMAC diverifikasi **setelah** payload dipakai query catalog dan setelah handler memutuskan balasan | Oracle enumerasi repo terdaftar tanpa signature | ✅ Fixed 2026-08-26 — verifikasi dulu, satu `401` generic. **Sisa:** tiap request tetap memicu `Catalog.List` tanpa auth (rate limit ada di Known debt) |
+| A-H2 | `internal/service/webhook.go` | Secret diambil dari service pertama yang punya secret, tapi yang di-deploy `eligible[0]` (bisa service lain) | Pemilik secret service A bisa memicu deploy service B pada repo sama, termasuk ke `prod` | ✅ Fixed 2026-08-26 — target hanya dari service yang secret-nya memverifikasi body |
+| A-H3 | `internal/handler/middleware.go:41-60`, `internal/service/auth.go:32` | `RequireRole` percaya `role` dari klaim JWT; TTL 24 jam; tanpa cek DB / token version (`/auth/me` cek `disabled`, middleware tidak) | User yang di-disable, di-soft-delete, atau diturunkan ke `viewer` tetap bisa deploy/hapus service sampai 24 jam — fitur disable user jadi kosmetik | ⬜ Terbuka — `RequireAuth` ambil user dari DB, tolak kalau disabled/terhapus, pakai role dari DB |
+| A-H4 | `internal/handler/router.go:82` | `PATCH /api/v1/deployments/{id}` dibuka untuk role writer, padahal endpoint laporan status agent sudah ada di `router.go:90` (`withAgentToken`) | Developer bisa mengarang `status`/`image_tag`/`git_sha`/`container_id` deployment mana pun → riwayat dan `git_sha` (dasar Redeploy Step 21) tidak bisa dipercaya, audit menyesatkan | ⬜ Terbuka — hapus route portal tersebut; portal tidak butuh PATCH deployment |
+
+Catatan pilihan desain A-H1/A-H2 (jangan diubah tanpa diskusi): push ke repo terdaftar yang auto-deploy-nya **off** tetap dijawab **200 ignored** (bukan 401) supaya delivery GitHub tidak merah untuk pemilik secret yang sah; kalau beberapa service satu repo sama-sama eligible, tetap hanya **satu** yang di-deploy (`eligible[0]`) seperti perilaku sebelumnya; event non-`push` dan ref non-branch masih dijawab tanpa verifikasi karena isinya cuma memantulkan input pengirim.
 
 ### Yang sudah solid (jangan diutak-atik saat fix)
 

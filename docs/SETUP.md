@@ -45,6 +45,19 @@ cd Sailorport
 | **Development** | coding harian | Compose **hanya Postgres** + `go run` / `npm run dev` / agent host |
 | **Self-host / pack** | demo mesin baru, mirip produksi | `docker compose up -d --build` (postgres + api + web) + agent di host |
 
+### Sekali di awal: `.env` untuk Compose
+
+`docker-compose.yml` menolak start tanpa secret (tidak ada lagi nilai dev di dalam file). Wajib sekali per clone, bahkan untuk `up -d postgres`:
+
+```bash
+cd deploy/compose
+cp .env.example .env
+openssl rand -hex 32   # tempel ke AUTH_JWT_SECRET
+openssl rand -hex 32   # tempel ke SAILORPORT_AGENT_TOKEN
+```
+
+`.env` tidak ikut ter-commit. Kalau lupa, Compose berhenti dengan pesan `required variable AUTH_JWT_SECRET is missing a value`.
+
 ### Mode development (disarankan)
 
 ```bash
@@ -72,7 +85,7 @@ curl -s http://localhost:5173/healthz
 
 - Web (nginx) di host port **5173** → container `:80`, proxy `/api` + `/healthz` ke service `api`
 - API di **8080**; templates bind-mount `../../templates`; **workspaces = named volume** `sailorport_workspaces` (tidak perlu `chown` di host)
-- Agent **tidak** masuk compose — jalankan di host dengan `SAILORPORT_API_URL=http://localhost:8080`
+- Agent **tidak** masuk compose — jalankan di host dengan `SAILORPORT_API_URL=http://localhost:8080` dan `SAILORPORT_AGENT_TOKEN` yang **sama dengan `.env`** (kalau beda → **401**)
 - **Deploy via agent:** untuk E2E scaffold+deploy, pakai **mode development** (API `go run` di host) supaya `workspace_path` di DB adalah path host yang bisa dibaca agent. Self-host API menyimpan path container (`/data/workspaces/...`).
 
 File terkait: `apps/api/Dockerfile`, `apps/web/Dockerfile`, `apps/web/nginx.conf`.
@@ -148,14 +161,11 @@ Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** (badge 
 
 ## Admin user & user management (Step 12a + 12b)
 
-Register tidak bisa self-assign `admin`. Promote user pertama:
+`POST /api/v1/auth/register` hanya jalan selama tabel `users` **kosong**, dan akun pertama itu otomatis role `admin` — tidak perlu promote lewat SQL. Begitu admin pertama ada, register dijawab **403** (`registration is closed`) dan user berikutnya dibuat admin lewat `POST /api/v1/users` atau halaman **Users** di portal.
 
-```bash
-docker exec -it sailorport-postgres psql -U sailorport -d sailorport \
-  -c "UPDATE users SET role = 'admin' WHERE email = 'you@example.com';"
-```
+Karena register terbuka sampai akun pertama dibuat, **daftarkan akun admin segera setelah API pertama kali jalan** — jangan tinggalkan instalasi kosong yang bisa diakses orang lain.
 
-Login ulang, lalu (sebagai admin):
+Sebagai admin:
 
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
@@ -253,11 +263,11 @@ curl http://localhost:18080/healthz   # service pertama; service berikutnya 1808
 | Variable | Default | Keterangan |
 |----------|---------|------------|
 | `PORT` | `8080` | port HTTP API |
-| `APP_ENV` | `development` | environment label |
+| `APP_ENV` | `development` | environment label; selain `development` API menolak start dengan secret dev di bawah |
 | `APP_VERSION` | `0.1.0` | versi API di response health |
 | `DATABASE_URL` | lihat di atas (port **5433**) | koneksi Postgres |
-| `AUTH_JWT_SECRET` | `dev-only-change-me` | secret JWT (ganti di production) |
-| `SAILORPORT_AGENT_TOKEN` | `dev-agent-token` | shared secret agent↔API (ganti di production) |
+| `AUTH_JWT_SECRET` | `dev-only-change-me` (hanya dev) | secret JWT; **wajib** diganti kalau `APP_ENV != development`, kalau tidak API `log.Fatal` saat start |
+| `SAILORPORT_AGENT_TOKEN` | `dev-agent-token` (hanya dev) | shared secret agent↔API; aturan sama seperti di atas |
 | `SAILORPORT_WORKSPACE` | `<repo>/data/workspaces` (dev) / `/data/workspaces` (compose) | folder hasil scaffold; Compose pakai named volume |
 | `SAILORPORT_TEMPLATES` | `<repo>/templates` | template di disk |
 

@@ -71,6 +71,7 @@
 Hanya Postgres di Docker; API/web/agent di host untuk hot-reload:
 
 ```bash
+cd deploy/compose && cp .env.example .env   # sekali per clone (Compose butuh .env walau hanya postgres)
 cd deploy/compose && docker compose up -d postgres
 cd apps/api && go run .
 cd apps/web && npm run dev
@@ -86,16 +87,19 @@ Portal Vite: `http://localhost:5173` (proxy ke API `:8080`).
 Control plane penuh di Compose:
 
 ```bash
-cd deploy/compose && docker compose up -d --build
+cd deploy/compose
+cp .env.example .env   # sekali per clone; isi AUTH_JWT_SECRET + SAILORPORT_AGENT_TOKEN
+docker compose up -d --build
 # web http://localhost:5173  api http://localhost:8080  postgres :5433
 
-# agent tetap di host (butuh Docker CLI)
-cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN=dev-agent-token go run .
+# agent tetap di host (butuh Docker CLI); token harus sama dengan .env di atas
+cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 \
+  SAILORPORT_AGENT_TOKEN="$(grep ^SAILORPORT_AGENT_TOKEN ../../deploy/compose/.env | cut -d= -f2)" go run .
 ```
 
 | Endpoint / UI | Auth | Hasil |
 |---------------|------|-------|
-| `POST /api/v1/auth/register` | publik | buat user |
+| `POST /api/v1/auth/register` | publik, hanya saat tabel `users` kosong | bootstrap admin pertama (role dipaksa `admin`); sudah ada user → **403** |
 | `POST /api/v1/auth/login` | publik | JWT token |
 | `GET /api/v1/auth/me` | Bearer | profil user |
 | `GET /api/v1/users` | admin | list semua user |
@@ -126,7 +130,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 SAILORPORT_AGENT_TOKEN
 | Portal `/login`, `/register` | — | auth gate |
 | Portal `/overview`, `/catalog`, `/worker`, `/users`, `/audit` | JWT | app shell; `/users` dan `/audit` admin-only (redirect non-admin) |
 
-Env API: `AUTH_JWT_SECRET` (default `dev-only-change-me`), `SAILORPORT_AGENT_TOKEN` (default `dev-agent-token` — ganti di production)
+Env API: `AUTH_JWT_SECRET` dan `SAILORPORT_AGENT_TOKEN` — default dev (`dev-only-change-me` / `dev-agent-token`) hanya berlaku saat `APP_ENV=development`; selain itu `Config.Validate()` membuat API `log.Fatal` saat start. Compose wajib mengisinya dari `deploy/compose/.env`.
 
 Env agent:
 
@@ -145,14 +149,7 @@ Env agent:
 
 Role: `admin`, `developer`, `viewer`
 
-**Admin pertama:** register user biasa, lalu promote di Postgres:
-
-```bash
-docker exec -it sailorport-postgres psql -U sailorport -d sailorport \
-  -c "UPDATE users SET role = 'admin' WHERE email = 'you@example.com';"
-```
-
-Login ulang agar JWT berisi role baru.
+**Admin pertama:** register lewat portal/`POST /api/v1/auth/register` selama belum ada user — akun itu langsung role `admin` (tidak perlu promote SQL lagi). Sesudah itu register dijawab **403**; user baru dibuat admin lewat `POST /api/v1/users`.
 
 ### Soft-delete user (12f)
 

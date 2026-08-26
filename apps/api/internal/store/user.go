@@ -33,6 +33,18 @@ func (s *UsersStore) Create(ctx context.Context, email, name, passwordHash, role
 	return u, nil
 }
 
+// Count menghitung semua baris, termasuk yang soft-deleted, supaya menghapus
+// seluruh user tidak membuka kembali jalur register bootstrap.
+func (s *UsersStore) Count(ctx context.Context) (int, error) {
+	const q = `SELECT COUNT(*) FROM users`
+
+	var n int
+	if err := s.db.QueryRowContext(ctx, q).Scan(&n); err != nil {
+		return 0, fmt.Errorf("Count users: %w", err)
+	}
+	return n, nil
+}
+
 func (s *UsersStore) GetByEmail(ctx context.Context, email string) (model.UserRecord, error) {
 	const q = `
 		SELECT id, email, name, role, disabled, deleted_at, password_hash, created_at, updated_at

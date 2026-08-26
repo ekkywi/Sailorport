@@ -17,6 +17,9 @@ import (
 
 func main() {
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Config invalid: %v", err)
+	}
 
 	sqlDB, err := db.Open(cfg.DatabaseURL)
 	if err != nil {

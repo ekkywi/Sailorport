@@ -21,11 +21,12 @@ services:
     container_name: sailorport-api
     environment:
       PORT: "8080"
+      APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgres://sailorport:sailorport@postgres:5432/sailorport?sslmode=disable
       SAILORPORT_WORKSPACE: /data/workspaces
       SAILORPORT_TEMPLATES: /templates
-      AUTH_JWT_SECRET: dev-only-change-me
-      SAILORPORT_AGENT_TOKEN: dev-agent-token
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?copy deploy/compose/.env.example to deploy/compose/.env and set AUTH_JWT_SECRET}
+      SAILORPORT_AGENT_TOKEN: ${SAILORPORT_AGENT_TOKEN:?copy deploy/compose/.env.example to deploy/compose/.env and set SAILORPORT_AGENT_TOKEN}
     ports:
       - "8080:8080"
     volumes:

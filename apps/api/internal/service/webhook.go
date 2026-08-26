@@ -31,6 +31,11 @@ func NewWebhook(catalog webhookCatalog, deployments webhookDeployer) *Webhook {
 }
 
 // HandleGitHub verifies a GitHub push webhook and may create a deployment when auto-deploy is on.
+//
+// Signature diverifikasi sebelum apa pun yang bergantung isi catalog ikut terjawab,
+// dan semua kegagalan auth (repo tidak dikenal, service tanpa secret, signature
+// salah) memakai satu error yang sama — endpoint ini publik, jadi bedanya balasan
+// bisa dipakai orang luar untuk mengintip repo mana yang terdaftar.
 func (w *Webhook) HandleGitHub(
 	ctx context.Context,
 	event string,
@@ -62,38 +67,23 @@ func (w *Webhook) HandleGitHub(
 		return ack, nil
 	}
 
+	matches, err := w.findServicesByCloneURL(ctx, payload.Repository.CloneURL)
+	if err != nil {
+		return model.WebhookAck{}, err
+	}
+
+	authed := filterVerifiedServices(matches, body, signatureHeader)
+	if len(authed) == 0 {
+		return model.WebhookAck{}, fmt.Errorf("%w: invalid signature", ErrUnauthorized)
+	}
+
 	ack.Repo = payload.Repository.FullName
 	ack.CloneURL = payload.Repository.CloneURL
 	ack.Branch = branch
 	ack.CommitSHA = payload.After
 	ack.Pusher = payload.Pusher.Name
 
-	matches, err := w.findServicesByCloneURL(ctx, payload.Repository.CloneURL)
-	if err != nil {
-		return model.WebhookAck{}, err
-	}
-	if len(matches) == 0 {
-		ack.Ignored = true
-		ack.Reason = "no matching service"
-		return ack, nil
-	}
-
-	secret := ""
-	for _, svc := range matches {
-		if s := strings.TrimSpace(svc.WebhookSecret); s != "" {
-			secret = s
-			break
-		}
-	}
-	if secret == "" {
-		return model.WebhookAck{}, fmt.Errorf("%w: webhook secret not configured", ErrUnauthorized)
-	}
-
-	if err := verifyGitHubSignature(secret, body, signatureHeader); err != nil {
-		return model.WebhookAck{}, err
-	}
-
-	eligible := filterAutoDeployServices(matches, branch)
+	eligible := filterAutoDeployServices(authed, branch)
 	if len(eligible) == 0 {
 		ack.Ignored = true
 		ack.Reason = "no service with auto-deploy enabled for this branch"
@@ -157,6 +147,20 @@ func (w *Webhook) findServicesByCloneURL(ctx context.Context, cloneURL string) (
 		}
 	}
 	return out, nil
+}
+
+// filterVerifiedServices menyisakan service yang secret-nya sendiri cocok dengan
+// signature body ini. Deploy hanya boleh berjalan untuk service pemegang secret —
+// dua service yang menunjuk repo sama tidak boleh saling memicu deploy.
+func filterVerifiedServices(services []model.Service, body []byte, signatureHeader string) []model.Service {
+	var out []model.Service
+	for _, svc := range services {
+		if err := verifyGitHubSignature(svc.WebhookSecret, body, signatureHeader); err != nil {
+			continue
+		}
+		out = append(out, svc)
+	}
+	return out
 }
 
 func filterAutoDeployServices(services []model.Service, pushBranch string) []model.Service {

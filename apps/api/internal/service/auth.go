@@ -14,6 +14,7 @@ import (
 )
 
 type UserRepository interface {
+	Count(ctx context.Context) (int, error)
 	Create(ctx context.Context, email, name, passwordHash, role string) (model.User, error)
 	GetByEmail(ctx context.Context, email string) (model.UserRecord, error)
 	GetByID(ctx context.Context, id string) (model.User, error)
@@ -33,11 +34,24 @@ func NewAuth(users UserRepository, jwtSecret string) *Auth {
 	}
 }
 
+// Register hanya melayani bootstrap: akun pertama di instalasi baru, dan akun itu
+// jadi admin. Sesudah ada user, penambahan akun lewat POST /api/v1/users (admin)
+// supaya endpoint publik ini tidak bisa dipakai orang luar untuk dapat hak deploy.
 func (a *Auth) Register(ctx context.Context, req model.RegisterRequest) (model.User, error) {
+	count, err := a.users.Count(ctx)
+	if err != nil {
+		return model.User{}, fmt.Errorf("count users: %w", err)
+	}
+	if count > 0 {
+		return model.User{}, fmt.Errorf(
+			"%w: registration is closed — ask an admin to create your account",
+			ErrForbidden,
+		)
+	}
+
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.Name = strings.TrimSpace(req.Name)
 	req.Password = strings.TrimSpace(req.Password)
-	req.Role = strings.TrimSpace(req.Role)
 
 	if req.Email == "" || req.Password == "" {
 		return model.User{}, fmt.Errorf("%w: email and password are required", ErrInvalid)
@@ -52,16 +66,8 @@ func (a *Auth) Register(ctx context.Context, req model.RegisterRequest) (model.U
 		req.Name = strings.Split(req.Email, "@")[0]
 	}
 
-	role := req.Role
-	if role == "" {
-		role = "developer"
-	}
-	if role == "admin" {
-		return model.User{}, fmt.Errorf("%w: cannot self-assign admin role", ErrForbidden)
-	}
-	if role != "developer" && role != "viewer" {
-		return model.User{}, fmt.Errorf("%w: role must be developer or viewer", ErrInvalid)
-	}
+	// Akun pertama memiliki platform, jadi role dari request diabaikan.
+	const role = "admin"
 
 	hash, err := auth.HashPassword(req.Password)
 	if err != nil {

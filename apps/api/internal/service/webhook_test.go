@@ -150,7 +150,9 @@ func TestHandleGitHub_BadSignature(t *testing.T) {
 	}
 }
 
-func TestHandleGitHub_NoMatchingService(t *testing.T) {
+// Repo yang tidak terdaftar harus terlihat sama dengan signature salah, supaya
+// endpoint publik ini tidak bisa dipakai mengintip isi catalog.
+func TestHandleGitHub_UnknownRepoIsUnauthorized(t *testing.T) {
 	body := []byte(`{
 		"ref": "refs/heads/main",
 		"after": "abc123",
@@ -161,11 +163,105 @@ func TestHandleGitHub_NoMatchingService(t *testing.T) {
 		"pusher": {"name": "alice"}
 	}`)
 	ack, err := NewWebhook(&fakeWebhookCatalog{}, nil).HandleGitHub(context.Background(), "push", "", body)
+	if !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	}
+	if ack.Repo != "" || ack.Reason != "" {
+		t.Fatalf("ack should stay empty before auth: %+v", ack)
+	}
+}
+
+// Dua service satu repo: secret milik service lain tidak boleh memicu deploy.
+func TestHandleGitHub_OtherServiceSecretCannotDeploy(t *testing.T) {
+	body := []byte(`{
+		"ref": "refs/heads/main",
+		"after": "abc123",
+		"repository": {
+			"full_name": "acme/hello",
+			"clone_url": "https://github.com/acme/hello.git"
+		},
+		"pusher": {"name": "alice"}
+	}`)
+	cat := &fakeWebhookCatalog{
+		services: []model.Service{
+			{
+				ID:                "svc-a",
+				SourceType:        "git",
+				RepoURL:           "https://github.com/acme/hello.git",
+				Branch:            "main",
+				WebhookSecret:     "secret-a",
+				AutoDeployEnabled: false,
+			},
+			{
+				ID:                    "svc-b",
+				SourceType:            "git",
+				RepoURL:               "https://github.com/acme/hello.git",
+				Branch:                "main",
+				WebhookSecret:         "secret-b",
+				AutoDeployEnabled:     true,
+				AutoDeployEnvironment: "prod",
+			},
+		},
+	}
+	dep := &fakeWebhookDeployer{}
+	ack, err := NewWebhook(cat, dep).HandleGitHub(
+		context.Background(), "push", signBody("secret-a", body), body,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ack.Ignored || ack.Reason != "no matching service" {
-		t.Fatalf("%+v", ack)
+	if dep.called {
+		t.Fatalf("secret svc-a must not deploy svc-b (deployed %q)", dep.lastServiceID)
+	}
+	if !ack.Ignored {
+		t.Fatalf("expected ignored, got %+v", ack)
+	}
+}
+
+func TestHandleGitHub_DeploysServiceOwningTheSecret(t *testing.T) {
+	body := []byte(`{
+		"ref": "refs/heads/main",
+		"after": "abc123",
+		"repository": {
+			"full_name": "acme/hello",
+			"clone_url": "https://github.com/acme/hello.git"
+		},
+		"pusher": {"name": "alice"}
+	}`)
+	cat := &fakeWebhookCatalog{
+		services: []model.Service{
+			{
+				ID:                    "svc-a",
+				SourceType:            "git",
+				RepoURL:               "https://github.com/acme/hello.git",
+				Branch:                "main",
+				WebhookSecret:         "secret-a",
+				AutoDeployEnabled:     true,
+				AutoDeployEnvironment: "dev",
+			},
+			{
+				ID:                    "svc-b",
+				SourceType:            "git",
+				RepoURL:               "https://github.com/acme/hello.git",
+				Branch:                "main",
+				WebhookSecret:         "secret-b",
+				AutoDeployEnabled:     true,
+				AutoDeployEnvironment: "prod",
+			},
+		},
+	}
+	dep := &fakeWebhookDeployer{}
+	ack, err := NewWebhook(cat, dep).HandleGitHub(
+		context.Background(), "push", signBody("secret-b", body), body,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dep.lastServiceID != "svc-b" || dep.lastEnv != "prod" {
+		t.Fatalf("deployer: service=%q env=%q", dep.lastServiceID, dep.lastEnv)
+	}
+	if ack.ServiceID != "svc-b" || ack.Environment != "prod" {
+		t.Fatalf("ack: %+v", ack)
 	}
 }
 
