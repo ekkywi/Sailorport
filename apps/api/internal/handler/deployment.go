@@ -59,10 +59,9 @@ func (h *DeploymentsHandler) ListByService(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *DeploymentsHandler) Get(w http.ResponseWriter, r *http.Request) {
-	out, err := h.deployments.List(r.Context())
+	out, err := h.deployments.Get(r.Context(), r.PathValue("id"))
 	if err != nil {
-		log.Printf("List deployments: %v", err)
-		writeError(w, http.StatusInternalServerError, "Internal server error")
+		writeDeploymentError(w, "Get deployment", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, out)
