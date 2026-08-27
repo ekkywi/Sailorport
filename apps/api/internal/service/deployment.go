@@ -34,7 +34,8 @@ func (d *Deployments) Create(ctx context.Context, serviceID string, req model.Cr
 	}
 	hasWorkspace := strings.TrimSpace(svc.WorkspacePath) != ""
 	isGit := svc.SourceType == "git" && strings.TrimSpace(svc.RepoURL) != ""
-	if !hasWorkspace && !isGit {
+	isCatalogApp := svc.SourceType == "catalog_app" && strings.TrimSpace(svc.Image) != ""
+	if !hasWorkspace && !isGit && !isCatalogApp {
 		return model.Deployment{}, fmt.Errorf(
 			"%w: service needs a workspace (scaffold) or git repo_url",
 			ErrInvalid,

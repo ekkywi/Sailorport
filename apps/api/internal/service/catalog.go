@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/ekkywi/sailorport/apps/api/internal/catalogapp"
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
@@ -46,6 +47,7 @@ type Catalog struct {
 	workspaceDir string
 	cleanup      CleanupEnqueue
 	audit        *Audit
+	apps         *catalogapp.Registry
 }
 
 func (c *Catalog) SetCleanupEnqueue(e CleanupEnqueue) {
@@ -56,11 +58,17 @@ func (c *Catalog) SetAudit(a *Audit) {
 	c.audit = a
 }
 
-func NewCatalog(repo Repository, deployments DeploymentReader, workspaceDir string) *Catalog {
+func NewCatalog(
+	repo Repository,
+	deployments DeploymentReader,
+	workspaceDir string,
+	apps *catalogapp.Registry,
+) *Catalog {
 	return &Catalog{
 		repo:         repo,
 		deployments:  deployments,
 		workspaceDir: workspaceDir,
+		apps:         apps,
 	}
 }
 
@@ -106,6 +114,10 @@ func (c *Catalog) Get(ctx context.Context, id string) (model.Service, error) {
 
 func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest, actorID, actorEmail string) (model.Service, error) {
 	req, err := normalizeCreate(req)
+	if err != nil {
+		return model.Service{}, err
+	}
+	req, err = c.applyCatalogAppDefaults(req)
 	if err != nil {
 		return model.Service{}, err
 	}
@@ -296,7 +308,7 @@ func normalizeCreate(req model.CreateServiceRequest) (model.CreateServiceRequest
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
 	}
-	if err := validateSourceFields(req.SourceType, req.RepoURL); err != nil {
+	if err := validateSourceFields(req.SourceType, req.RepoURL, req.CatalogAppID); err != nil {
 		return req, err
 	}
 	if err := validateAutoDeployEnvironment(req.AutoDeployEnvironment); err != nil {
@@ -324,6 +336,9 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 
 	if req.SourceType == "" {
 		req.SourceType = existing.SourceType
+	}
+	if req.SourceType == "catalog_app" && existing.SourceType != "catalog_app" {
+		return req, fmt.Errorf("%w: create a new service for catalog_app (udpate source_type no supported yet)", ErrInvalid)
 	}
 	if req.RepoURL == "" {
 		req.RepoURL = existing.RepoURL
@@ -363,7 +378,7 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 		req.ContainerPort = existing.ContainerPort
 	}
 
-	if err := validateSourceFields(req.SourceType, req.RepoURL); err != nil {
+	if err := validateSourceFields(req.SourceType, req.RepoURL, req.CatalogAppID); err != nil {
 		return req, err
 	}
 	if err := validateAutoDeployEnvironment(req.AutoDeployEnvironment); err != nil {
@@ -372,14 +387,17 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 	return req, nil
 }
 
-func validateSourceFields(sourceType, repoURL string) error {
+func validateSourceFields(sourceType, repoURL, catalogAppID string) error {
 	switch sourceType {
-	case "scaffold", "git":
+	case "scaffold", "git", "catalog_app":
 	default:
 		return fmt.Errorf("%w: invalid source_type %q", ErrInvalid, sourceType)
 	}
 	if sourceType == "git" && repoURL == "" {
 		return fmt.Errorf("%w: repo_url is required for source_type=git", ErrInvalid)
+	}
+	if sourceType == "catalog_app" && catalogAppID == "" {
+		return fmt.Errorf("%w: catalog_app_id is required for source_type=catalog_app", ErrInvalid)
 	}
 	return nil
 }
@@ -401,4 +419,33 @@ func validateAutoDeployEnvironment(env string) error {
 	default:
 		return fmt.Errorf("%w: invalid auto_deploy_environment %q (want dev, staging, or prod)", ErrInvalid, env)
 	}
+}
+
+func (c *Catalog) applyCatalogAppDefaults(req model.CreateServiceRequest) (model.CreateServiceRequest, error) {
+	if req.SourceType != "catalog_app" {
+		return req, nil
+	}
+	if c.apps == nil {
+		return req, fmt.Errorf("%w: catalog apps registry not configured", ErrInvalid)
+	}
+	if req.CatalogAppID == "" {
+		return req, fmt.Errorf("%w: catalog_app_id is required for source_type=catalog_app", ErrInvalid)
+	}
+
+	m, err := c.apps.Get(req.CatalogAppID)
+	if err != nil {
+		return req, fmt.Errorf("%w: unknown catalog_app_id %q", ErrInvalid, req.CatalogAppID)
+	}
+
+	req.Image = m.Image
+	req.ContainerPort = m.ContainerPort
+	req.CatalogAppID = m.ID
+	req.RepoURL = ""
+	req.Branch = ""
+	req.DockerfilePath = ""
+	req.TemplateID = ""
+	req.WebhookSecret = ""
+	req.AutoDeployEnabled = false
+
+	return req, nil
 }

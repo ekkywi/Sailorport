@@ -125,14 +125,37 @@ func TestNormalizeCreate_TrimsCatalogFields(t *testing.T) {
 	}
 }
 
-func TestNormalizeCreate_RejectsCatalogAppSourceType(t *testing.T) {
+func TestNormalizeCreate_CatalogAppRequiresID(t *testing.T) {
 	_, err := normalizeCreate(model.CreateServiceRequest{
 		Name:       "pg",
 		SourceType: "catalog_app",
 		Image:      "postgres:16-alpine",
 	})
-	if err == nil {
-		t.Fatal("expected error for catalog_app")
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "catalog_app_id") {
+		t.Fatalf("unexpected message: %v", err)
+	}
+}
+
+func TestNormalizeCreate_CatalogAppOK(t *testing.T) {
+	req, err := normalizeCreate(model.CreateServiceRequest{
+		Name:         "  demo-pg  ",
+		SourceType:   "catalog_app",
+		CatalogAppID: "  postgres  ",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.SourceType != "catalog_app" {
+		t.Fatalf("SourceType: want catalog_app, got %q", req.SourceType)
+	}
+	if req.CatalogAppID != "postgres" {
+		t.Fatalf("CatalogAppID: want postgres, got %q", req.CatalogAppID)
+	}
+	if req.Name != "demo-pg" {
+		t.Fatalf("Name: want demo-pg, got %q", req.Name)
 	}
 }
 
@@ -253,5 +276,17 @@ func TestNormalizeUpdate_ClearsAutoDeployEnabled(t *testing.T) {
 	}
 	if req.WebhookSecret != "super-secret" {
 		t.Fatalf("secret wiped: %q", req.WebhookSecret)
+	}
+}
+
+func TestNormalizeUpdate_RejectsSwitchToCatalogApp(t *testing.T) {
+	existing := model.Service{SourceType: "scaffold"}
+	_, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name:         "x",
+		SourceType:   "catalog_app",
+		CatalogAppID: "postgres",
+	}, existing)
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
 	}
 }
