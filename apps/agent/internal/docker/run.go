@@ -21,18 +21,43 @@ func Build(workspace, imageTag, dockerfilePath string) error {
 	return nil
 }
 
-func Run(containerName, imageTag string, hostPort int) (containerID string, err error) {
+func Pull(image string) error {
+	image = strings.TrimSpace(image)
+	if image == "" {
+		return fmt.Errorf("pull: image is empty")
+	}
+	out, err := runDocker("pull", image)
+	if err != nil {
+		return fmt.Errorf("pull: %w\n%s", err, out)
+	}
+	return nil
+}
+
+func Run(containerName, imageTag string, hostPort, containerPort int, env []string) (containerID string, err error) {
 	if err := Remove(containerName); err != nil {
 		return "", err
 	}
 
-	out, err := runDocker(
+	if containerPort <= 0 {
+		containerPort = 8080
+	}
+
+	args := []string{
 		"run",
 		"-d",
 		"--name", containerName,
-		"-p", fmt.Sprintf("%d:8080", hostPort),
-		imageTag,
-	)
+		"-p", fmt.Sprintf("%d:%d", hostPort, containerPort),
+	}
+	for _, e := range env {
+		e = strings.TrimSpace(e)
+		if e == "" {
+			continue
+		}
+		args = append(args, "-e", e)
+	}
+	args = append(args, imageTag)
+
+	out, err := runDocker(args...)
 	if err != nil {
 		return "", err
 	}

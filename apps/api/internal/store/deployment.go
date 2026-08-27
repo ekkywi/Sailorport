@@ -130,7 +130,8 @@ func (s *DeploymentsStore) ClaimNext(ctx context.Context, workerID string) (mode
 			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id,
 			d.port, d.error_message, d.created_at, d.updated_at,
 			s.name, s.workspace_path,
-			s.source_type, s.repo_url, s.branch, s.dockerfile_path`
+			s.source_type, s.repo_url, s.branch, s.dockerfile_path,
+			s.image, s.container_port`
 	return scanDeploymentJob(s.db.QueryRowContext(ctx, claimQ, workerID))
 }
 
@@ -235,6 +236,8 @@ func scanDeploymentJob(row rowScanner) (model.DeploymentJob, error) {
 		&job.RepoURL,
 		&job.Branch,
 		&job.DockerfilePath,
+		&job.Image,
+		&job.ContainerPort,
 	)
 	if err != nil {
 		return model.DeploymentJob{}, err

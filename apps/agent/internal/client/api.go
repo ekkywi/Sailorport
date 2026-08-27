@@ -36,6 +36,8 @@ type DeploymentJob struct {
 	RepoURL         string  `json:"repo_url"`
 	Branch          string  `json:"branch"`
 	DockerfilePath  string  `json:"dockerfile_path"`
+	Image           string  `json:"image"`
+	ContainerPort   int     `json:"container_port"`
 }
 
 type UpdateDeploymentRequest struct {

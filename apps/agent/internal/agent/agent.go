@@ -98,6 +98,53 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 	}
 	log.Printf("host port=%d container=%s", port, containerName)
 
+	source := strings.TrimSpace(job.SourceType)
+	if source == "" {
+		source = "scaffold"
+	}
+
+	if source == "catalog_app" {
+		image := strings.TrimSpace(job.Image)
+		if image == "" {
+			err := fmt.Errorf("catalog_app job has empty image")
+			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+				Status: "failed", ErrorMessage: err.Error(),
+			})
+			return err
+		}
+
+		log.Printf("catalog_app pull image=%s container_port=%d", image, job.ContainerPort)
+		if err := docker.Pull(image); err != nil {
+			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+				Status: "failed", ErrorMessage: err.Error(),
+			})
+			return err
+		}
+
+		containerPort := job.ContainerPort
+		if containerPort <= 0 {
+			containerPort = 8080
+		}
+
+		env := []string{"POSTGRES_PASSWORD=changeme"}
+
+		cid, err := docker.Run(containerName, image, port, containerPort, env)
+		if err != nil {
+			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+				Status: "failed", ErrorMessage: err.Error(),
+			})
+			return err
+		}
+
+		return a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+			Status:      "running",
+			ImageTag:    image,
+			GitSHA:      "",
+			ContainerID: cid,
+			Port:        &port,
+		})
+	}
+
 	workDir, gitSHA, err := a.resolveWorkDir(job)
 	if err != nil {
 		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
@@ -113,7 +160,7 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 		return err
 	}
 
-	cid, err := docker.Run(containerName, imageTag, port)
+	cid, err := docker.Run(containerName, imageTag, port, 8080, nil)
 	if err != nil {
 		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
 			Status: "failed", ErrorMessage: err.Error(),
