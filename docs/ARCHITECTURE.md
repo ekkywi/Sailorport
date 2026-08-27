@@ -81,7 +81,7 @@ Lihat **`docs/PRODUCT.md`** untuk dua jalur deploy (Git+Dockerfile vs catalog ap
 |---------------|----------|------------|
 | `scaffold` | `workspace_path` lokal | `docker build` folder |
 | `git` ✅ | repo + Dockerfile | `git clone`/`pull` → `docker build` |
-| `catalog_app` (Step 22) | image manifest platform | `docker pull` → `run` |
+| `catalog_app` 🔄 | image manifest di `catalog-apps/` (22a–22b ✅) | `docker pull` → `run` (22d) |
 
 Satu tabel `services` + UI catalog untuk semua; perbedaan hanya di cara resolve artifact sebelum deploy.
 

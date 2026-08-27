@@ -53,7 +53,7 @@ User: pilih "PostgreSQL" / "Redis" / "Gitea" / … dari catalog apps
 |-------|--------|
 | Contoh | Postgres, Redis, Gitea, AdGuard, … |
 | Kontrak | Manifest platform (image, env, volumes, ports) |
-| Status implementasi | **Belum** — rencana setelah Git deploy stabil |
+| Status implementasi | **In progress** — 22a fields + 22b list manifests; create/deploy/UI menyusul |
 
 ### Jalur 3 — Golden path scaffold (opsional) — **sudah ada (MVP)**
 
@@ -104,7 +104,7 @@ Berlaku untuk **semua jalur** deploy ke depan.
 | Portal Add from Git | ✅ Step 19d |
 | Webhook auto-deploy | ✅ Step 20 (20a–20e) |
 | Rollback / redeploy commit | ✅ Step 21 |
-| Catalog apps (Postgres, Redis, …) | ⬜ Step 22+ |
+| Catalog apps (Postgres, Redis, …) | 🔄 Step 22 (22a–22b ✅; create/deploy/UI ⬜) |
 | Admin edit worker labels | ⬜ post-MVP |
 
 ## Keputusan produk (jangan dilanggar di MVP berikutnya)

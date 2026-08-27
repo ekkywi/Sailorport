@@ -12,7 +12,7 @@ Dua jalur deploy (keduanya masuk catalog yang sama):
 | Jalur | Siapa | Kontrak | Status |
 |-------|-------|---------|--------|
 | **Custom app** | Developer (repo sendiri) | Git + **Dockerfile** | ✅ Step 19 (19a–19d) |
-| **Catalog app** | Platform (Postgres, Redis, …) | Image/manifest platform | Rencana Step 22+ |
+| **Catalog app** | Platform (Postgres, Redis, …) | Image/manifest platform | Step 22 (22a–22b ✅) |
 | **Scaffold** (opsional) | Golden path demo | Template `go-api` → workspace | ✅ Ada |
 
 ## Visi v1 (MVP — selesai)
@@ -57,9 +57,9 @@ Flow yang sudah jalan:
 | 19 | Git-backed service (19a–19d: model, API, agent sync, portal) | ✅ selesai |
 | 20 | Webhook auto-deploy (20a–20e) | ✅ selesai |
 | 21 | Rollback / redeploy commit or tag | ✅ done |
-| 22 | Catalog apps (Postgres, Redis, Gitea, …) | ⬜ planned |
+| 22 | Catalog apps (Postgres, Redis, Gitea, …) | 🔄 22a–22b done; next 22c–22f |
 
-Urutan berikutnya: **22**.
+Urutan berikutnya: **22c → 22d → 22e → 22f**.
 
 ## Fase 3 — Ops & polish
 

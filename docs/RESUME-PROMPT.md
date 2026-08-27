@@ -17,42 +17,38 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **21 (21a–21f)** — rollback / redeploy by `git_sha`:
-- 21a: migrasi `deployments.git_sha`
-- 21b–21c: agent catat HEAD + checkout SHA dari job
-- 21d: `Create` optional `git_sha` + `POST /api/v1/deployments/{id}/redeploy`
-- 21e: portal History → short SHA + tombol Redeploy
-- 21f: docs
+**Step terakhir selesai:** **22a–22b** — fondasi catalog apps:
+- 22a: migrasi `catalog_app_id` / `image` / `container_port` + model/store/web types
+- 22b: `catalog-apps/postgres/manifest.json` + `GET /api/v1/catalog-apps` (+ `/{id}`)
 
-**Step berikutnya:** **22 — catalog apps**. Alternatif: polish edit Git fields di UI, private repo credentials.
+**Step berikutnya:** **22c** — API create/deploy `source_type=catalog_app` (isi image dari manifest). Lanjut 22d agent pull/run, 22e portal, 22f docs.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
 - **Jalur utama:** Git + Dockerfile → agent sync → build → run
 - **Scaffold** = opsional; **Register only** = metadata tanpa deploy
-- **Catalog apps** (Postgres/Redis) = Step 22+
+- **Catalog apps** (Postgres/Redis) = Step 22 (sedang dikerjakan; jangan campur dengan `templates/`)
 
 **Yang sudah jalan (jangan ulang):**
 - MVP core Step 0–18
-- Step 19 Git path
-- Step 20 webhook auto-deploy
-- Step 21 redeploy by SHA
-- Migrasi `00017`–`00019`
+- Step 19–21 Git + webhook + redeploy by SHA
+- Step 22a–22b catalog app fields + list manifests
+- Migrasi `00017`–`00020`
 
 **Yang belum:**
-- Catalog apps (22)
+- 22c create `catalog_app`; 22d agent `docker pull`/`run`; 22e portal; 22f docs
 - Private Git credentials; polish edit Git fields di dialog Edit
+- Pass B/C production review (opsional sebelum expose publik; Pass A sudah clear)
 
 **Catatan teknis:**
-- Redeploy = rebuild at old SHA (bukan restore container)
-- Webhook tip branch: `git_sha` kosong; Redeploy pin SHA
-- Agent: `Sync(repo, branch, dir, sha)` + `checkout --detach`
-- Portal: Redeploy hanya jika history punya `git_sha`
+- `catalog-apps/` ≠ `templates/` (manifest image vs scaffold kode)
+- `source_type=catalog_app` belum diizinkan di `validateSourceFields` sampai 22c
+- Env: `SAILORPORT_CATALOG_APPS` (default cari folder `catalog-apps`)
 - Agent token: `Authorization: Bearer $SAILORPORT_AGENT_TOKEN`
 
 **Cara jalankan lokal:** `docs/SETUP.md` + `docs/PROGRESS.md` (mode development).
 
-Tolong lanjutkan **Step 22** (catalog apps) dengan gaya panduan detail seperti sebelumnya. Baca `docs/PRODUCT.md`.
+Tolong lanjutkan **Step 22c** (API create catalog_app dari manifest) dengan gaya panduan detail seperti sebelumnya. Baca `docs/PRODUCT.md`.
 
 ---
 

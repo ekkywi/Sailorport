@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 21 — rollback / redeploy by `git_sha` (21a–21f)
+- **Step selesai:** 22b — catalog-apps manifests + list API (22a fields sudah ada)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** 22 — catalog apps; atau polish edit Git fields / private credentials
-- **Terakhir dikerjakan:** 2026-08-24 — Step 21 (git_sha, agent checkout, API redeploy, portal Redeploy)
+- **Step berikutnya:** 22c — API create/deploy `source_type=catalog_app`; lalu 22d agent pull/run, 22e portal
+- **Terakhir dikerjakan:** 2026-08-26 — Step 22a–22b (service catalog_app fields + `GET /api/v1/catalog-apps`)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -63,6 +63,12 @@
 - [x] Step 21d — API create with `git_sha` + `POST .../redeploy`
 - [x] Step 21e — Portal Redeploy button in deployment history
 - [x] Step 21f — Docs + smoke notes
+- [x] Step 22a — Service `catalog_app` fields (migration + model/store + web types)
+- [x] Step 22b — `catalog-apps/` manifests + `GET /api/v1/catalog-apps`
+- [ ] Step 22c — API create/deploy `source_type=catalog_app`
+- [ ] Step 22d — Agent `docker pull` + `run` (no git/build)
+- [ ] Step 22e — Portal Add from catalog
+- [ ] Step 22f — Docs + smoke end-to-end
 
 ## Yang sudah jalan
 
@@ -593,6 +599,26 @@ curl -sS -X POST "http://localhost:8080/api/v1/deployments/$OLD_DEP_ID/redeploy"
 
 **Tes 21e (portal):** Deploy service git → History tampil short SHA → Redeploy pada baris lama → job baru `pending` dengan SHA yang sama → agent log `sha="..."`.
 
+### Step 22 — Catalog apps (in progress)
+
+Jalur sekunder: app platform dari **manifest image** (bukan Git/scaffold). Folder `catalog-apps/` terpisah dari `templates/`.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 22a Data model | ✅ | Migrasi `00020_service_catalog_app.sql`; `catalog_app_id` / `image` / `container_port`; store + catalog trim/merge; web types |
+| 22b Manifests + list API | ✅ | `catalog-apps/postgres/manifest.json`; package `catalogapp`; `GET /api/v1/catalog-apps` (+ `/{id}`); env `SAILORPORT_CATALOG_APPS` |
+| 22c API create/deploy | ⬜ | Izinkan `source_type=catalog_app`; isi image dari manifest |
+| 22d Agent pull/run | ⬜ | Tanpa `git.Sync` / `docker build` |
+| 22e Portal UI | ⬜ | Add from catalog |
+| 22f Docs + smoke | ⬜ | Progress final + tes Postgres running |
+
+**Tes 22b:**
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/catalog-apps
+curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/catalog-apps/postgres
+```
+
 ### Checkpoint — Product vision (2026-08-20)
 
 Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
@@ -603,7 +629,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** catalog apps, private Git credentials; polish edit Git fields di dialog Edit.
+**Yang belum di kode:** create/deploy `catalog_app` (22c+), agent pull, portal picker; private Git credentials; polish edit Git fields.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
@@ -611,14 +637,16 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 |------|-------|-------------|
 | 19a–19d | Git path | ✅ selesai |
 | 20a–20e | Webhook auto-deploy | ✅ selesai |
-| 21a–21f | Rollback / redeploy | ✅ `git_sha` + agent checkout + API/UI Redeploy |
-| 22 | Catalog apps | Manifest app (image, env, volume); deploy tanpa Git |
+| 21a–21f | Rollback / redeploy | ✅ selesai |
+| 22a–22b | Catalog apps foundation | ✅ fields + manifests + list API |
+| 22c–22f | Catalog apps deploy path | create API → agent pull → portal → docs |
 | — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
 
 ## Next action
 
-1. **Step 22** — catalog apps (opsional setelah custom path matang)
-2. Opsional: edit Git fields di portal; private repo credentials
+1. **Step 22c** — API create service `source_type=catalog_app` (isi dari manifest)
+2. 22d agent pull/run → 22e portal → 22f docs
+3. Opsional: edit Git fields di portal; private repo credentials
 
 ## Cara lanjut di mesin lain
 
