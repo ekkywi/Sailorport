@@ -17,38 +17,42 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **22a–22b** — fondasi catalog apps:
-- 22a: migrasi `catalog_app_id` / `image` / `container_port` + model/store/web types
-- 22b: `catalog-apps/postgres/manifest.json` + `GET /api/v1/catalog-apps` (+ `/{id}`)
+**Step terakhir selesai:** **Step 22 (22a–22f)** — catalog apps end-to-end:
+- 22a–22b: fields + `catalog-apps/` manifests + list API
+- 22c: create `source_type=catalog_app` (image dari manifest)
+- 22d: agent `docker pull` + `run`
+- 22e: portal Add from catalog
+- 22f: docs + smoke
 
-**Step berikutnya:** **22c** — API create/deploy `source_type=catalog_app` (isi image dari manifest). Lanjut 22d agent pull/run, 22e portal, 22f docs.
+**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: env dari manifest, Redis manifest, Pass B/C).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
 - **Jalur utama:** Git + Dockerfile → agent sync → build → run
+- **Jalur sekunder:** catalog apps (Postgres, …) → pull image → run
 - **Scaffold** = opsional; **Register only** = metadata tanpa deploy
-- **Catalog apps** (Postgres/Redis) = Step 22 (sedang dikerjakan; jangan campur dengan `templates/`)
+- `catalog-apps/` ≠ `templates/`
 
 **Yang sudah jalan (jangan ulang):**
 - MVP core Step 0–18
 - Step 19–21 Git + webhook + redeploy by SHA
-- Step 22a–22b catalog app fields + list manifests
+- Step 22 catalog apps (API + agent + portal)
 - Migrasi `00017`–`00020`
 
-**Yang belum:**
-- 22c create `catalog_app`; 22d agent `docker pull`/`run`; 22e portal; 22f docs
-- Private Git credentials; polish edit Git fields di dialog Edit
-- Pass B/C production review (opsional sebelum expose publik; Pass A sudah clear)
+**Yang belum / opsional:**
+- Env/volume catalog_app dari manifest (agent saat ini hardcode `POSTGRES_PASSWORD` untuk smoke)
+- Manifest app tambahan (Redis, …)
+- Private Git credentials; polish edit Git fields
+- Pass B/C production review sebelum expose publik
 
 **Catatan teknis:**
-- `catalog-apps/` ≠ `templates/` (manifest image vs scaffold kode)
-- `source_type=catalog_app` belum diizinkan di `validateSourceFields` sampai 22c
-- Env: `SAILORPORT_CATALOG_APPS` (default cari folder `catalog-apps`)
+- Tambah catalog app baru: folder `catalog-apps/<id>/manifest.json` (API auto-list; web ikut API)
+- Env: `SAILORPORT_CATALOG_APPS`, `SAILORPORT_TEMPLATES`
 - Agent token: `Authorization: Bearer $SAILORPORT_AGENT_TOKEN`
 
 **Cara jalankan lokal:** `docs/SETUP.md` + `docs/PROGRESS.md` (mode development).
 
-Tolong lanjutkan **Step 22c** (API create catalog_app dari manifest) dengan gaya panduan detail seperti sebelumnya. Baca `docs/PRODUCT.md`.
+Tolong baca `docs/PROGRESS.md` **Next action** dan lanjutkan dari situ dengan gaya panduan detail seperti sebelumnya.
 
 ---
 

@@ -27,7 +27,7 @@ cd apps/web && npm run build   # tsc -b && vite build
 
 Semua harus **exit 0** sebelum lanjut step baru. Kalau salah satu merah, itu blocker — jangan lanjut fitur baru dulu.
 
-**Terakhir dijalankan:** 2026-08-26 — API ✅ (build+vet+test), Agent ✅ (build+vet+test), Web ✅ (tsc+vite build).
+**Terakhir dijalankan:** 2026-08-28 — API ✅ (build+vet+test), Agent ✅ (build+vet+test), Web ✅ (tsc+vite build).
 
 ---
 
@@ -46,6 +46,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 9. Webhook tanpa/dengan signature salah, dan repo yang tidak terdaftar → **401** yang sama (tidak ada `no matching service`) — regression check A-H1
 10. Disable user di portal, lalu pakai token lama user itu ke `GET /api/v1/services` → **401** tanpa perlu tunggu token kedaluwarsa — regression check A-H3
 11. `PATCH /api/v1/deployments/{id}` dengan JWT developer → **405** (route portal sudah dihapus); `PATCH /api/v1/agent/deployments/{id}` dengan agent token tetap **200** — regression check A-H4
+12. **Catalog app (Step 22):** Portal Add service → From catalog → PostgreSQL → Deploy dev → `running`; agent log `catalog_app pull` (bukan git/build). Stop / Start / Logs / History OK. Atau curl di `docs/PROGRESS.md` tes 22c–22d.
 
 ---
 
@@ -73,6 +74,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | JWT tanpa validasi `iss` / `aud` | Rendah | Pass A. `internal/auth/jwt.go:32` — aman karena `SigningMethodHS256` dipaksa dan secret tunggal |
 | Compose: password Postgres default + port 5433 dipublish | Rendah | Pass A. `deploy/compose/docker-compose.yml:6` — dev convenience; jangan dipakai apa adanya di host publik |
 | Portal masih menampilkan form `/register` padahal register sudah tertutup | Rendah | Efek fix A-C2. Setelah admin pertama ada, submit selalu **403** dengan pesan jelas; menyembunyikan link/form = Pass C |
+| Catalog app: `POSTGRES_PASSWORD=changeme` hardcoded di agent | Sedang | Step 22d MVP; env harus dari manifest/API nanti |
 | `model.RegisterRequest.Role` diabaikan | Rendah | Efek fix A-C2. Akun pertama selalu `admin`; field dibiarkan supaya kontrak web tidak pecah |
 | Dua register serentak di instalasi kosong bisa jadi dua admin | Rendah | Efek fix A-C2. Gate-nya `COUNT(*)` lalu INSERT (bukan atomik); praktis tidak relevan karena siapa pun yang duluan register tetap dapat admin |
 | Portal tidak auto-logout saat 401 di tengah sesi | Rendah | Efek fix A-H3. Token user yang di-disable langsung ditolak API, tapi portal baru menghapus token saat `me()` gagal (refresh / buka ulang); interceptor 401 global = Pass C |

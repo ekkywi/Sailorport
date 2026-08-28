@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 22b — catalog-apps manifests + list API (22a fields sudah ada)
+- **Step selesai:** 22f — catalog apps end-to-end (22a–22f)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** 22c — API create/deploy `source_type=catalog_app`; lalu 22d agent pull/run, 22e portal
-- **Terakhir dikerjakan:** 2026-08-26 — Step 22a–22b (service catalog_app fields + `GET /api/v1/catalog-apps`)
+- **Step berikutnya:** (belum ditetapkan) — opsional: catalog app env dari manifest, Redis manifest, worker admin lite
+- **Terakhir dikerjakan:** 2026-08-28 — Step 22c–22f (create/deploy catalog_app + agent pull/run + portal + docs)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -65,10 +65,10 @@
 - [x] Step 21f — Docs + smoke notes
 - [x] Step 22a — Service `catalog_app` fields (migration + model/store + web types)
 - [x] Step 22b — `catalog-apps/` manifests + `GET /api/v1/catalog-apps`
-- [ ] Step 22c — API create/deploy `source_type=catalog_app`
-- [ ] Step 22d — Agent `docker pull` + `run` (no git/build)
-- [ ] Step 22e — Portal Add from catalog
-- [ ] Step 22f — Docs + smoke end-to-end
+- [x] Step 22c — API create/deploy `source_type=catalog_app`
+- [x] Step 22d — Agent `docker pull` + `run` (no git/build)
+- [x] Step 22e — Portal Add from catalog
+- [x] Step 22f — Docs + smoke end-to-end
 
 ## Yang sudah jalan
 
@@ -599,7 +599,7 @@ curl -sS -X POST "http://localhost:8080/api/v1/deployments/$OLD_DEP_ID/redeploy"
 
 **Tes 21e (portal):** Deploy service git → History tampil short SHA → Redeploy pada baris lama → job baru `pending` dengan SHA yang sama → agent log `sha="..."`.
 
-### Step 22 — Catalog apps (in progress)
+### Step 22 — Catalog apps ✅
 
 Jalur sekunder: app platform dari **manifest image** (bukan Git/scaffold). Folder `catalog-apps/` terpisah dari `templates/`.
 
@@ -607,17 +607,39 @@ Jalur sekunder: app platform dari **manifest image** (bukan Git/scaffold). Folde
 |----------|--------|-----|
 | 22a Data model | ✅ | Migrasi `00020_service_catalog_app.sql`; `catalog_app_id` / `image` / `container_port`; store + catalog trim/merge; web types |
 | 22b Manifests + list API | ✅ | `catalog-apps/postgres/manifest.json`; package `catalogapp`; `GET /api/v1/catalog-apps` (+ `/{id}`); env `SAILORPORT_CATALOG_APPS` |
-| 22c API create/deploy | ⬜ | Izinkan `source_type=catalog_app`; isi image dari manifest |
-| 22d Agent pull/run | ⬜ | Tanpa `git.Sync` / `docker build` |
-| 22e Portal UI | ⬜ | Add from catalog |
-| 22f Docs + smoke | ⬜ | Progress final + tes Postgres running |
+| 22c API create/deploy | ✅ | `source_type=catalog_app`; `applyCatalogAppDefaults`; deploy gate; reject switch ke catalog_app via update |
+| 22d Agent pull/run | ✅ | Claim job kirim `image` + `container_port`; `docker pull` + `run` (tanpa git/build) |
+| 22e Portal UI | ✅ | Add service → From catalog; `CatalogAppForm`; badge Catalog di list; Deploy now |
+| 22f Docs + smoke | ✅ | Progress + QC smoke; Postgres running via portal atau curl |
 
-**Tes 22b:**
+**Tes 22b (list manifests):**
 
 ```bash
 curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/catalog-apps
 curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/catalog-apps/postgres
 ```
+
+**Tes 22c (API create + deploy gate):**
+
+```bash
+curl -sS -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"demo-pg","owner":"you","source_type":"catalog_app","catalog_app_id":"postgres"}'
+
+export ID=<id-dari-response>
+
+curl -sS -X POST "http://localhost:8080/api/v1/services/$ID/deployments" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"environment":"dev"}'
+```
+
+Harapan create: `image=postgres:16-alpine`, `container_port=5432`. Deploy: `status=pending`.
+
+**Tes 22d (agent):** Agent log menampilkan `catalog_app pull image=postgres:16-alpine` (bukan `git sync` / `docker build`). Deployment → `running`, `docker ps` ada `sailorport-demo-pg-dev`.
+
+**Tes 22e (portal):** Login → Catalog → Add service → **From catalog** → PostgreSQL → Add → Deploy now → dev. List: badge **Catalog** + image. Stop / Start / Logs / History sama seperti service lain.
+
+**Known debt (catalog_app):** Agent MVP set `POSTGRES_PASSWORD=changeme` hardcoded untuk semua `catalog_app` (bukan dari manifest). Env/volume per app → step berikutnya jika perlu.
 
 ### Checkpoint — Product vision (2026-08-20)
 
@@ -629,7 +651,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** create/deploy `catalog_app` (22c+), agent pull, portal picker; private Git credentials; polish edit Git fields.
+**Yang belum di kode:** env/volume catalog_app dari manifest; app catalog tambahan (Redis, …); private Git credentials; polish edit Git fields.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
@@ -638,15 +660,14 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 | 19a–19d | Git path | ✅ selesai |
 | 20a–20e | Webhook auto-deploy | ✅ selesai |
 | 21a–21f | Rollback / redeploy | ✅ selesai |
-| 22a–22b | Catalog apps foundation | ✅ fields + manifests + list API |
-| 22c–22f | Catalog apps deploy path | create API → agent pull → portal → docs |
+| 22a–22f | Catalog apps deploy path | ✅ selesai |
 | — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
 
 ## Next action
 
-1. **Step 22c** — API create service `source_type=catalog_app` (isi dari manifest)
-2. 22d agent pull/run → 22e portal → 22f docs
-3. Opsional: edit Git fields di portal; private repo credentials
+1. Opsional: manifest Redis + env dari manifest untuk catalog_app
+2. Opsional: edit Git fields di portal; private repo credentials
+3. Pass B/C QC sebelum expose publik (`docs/QC.md`)
 
 ## Cara lanjut di mesin lain
 

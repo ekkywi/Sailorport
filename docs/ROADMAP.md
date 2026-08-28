@@ -57,9 +57,9 @@ Flow yang sudah jalan:
 | 19 | Git-backed service (19a–19d: model, API, agent sync, portal) | ✅ selesai |
 | 20 | Webhook auto-deploy (20a–20e) | ✅ selesai |
 | 21 | Rollback / redeploy commit or tag | ✅ done |
-| 22 | Catalog apps (Postgres, Redis, Gitea, …) | 🔄 22a–22b done; next 22c–22f |
+| 22 | Catalog apps (Postgres, Redis, Gitea, …) | ✅ 22a–22f done |
 
-Urutan berikutnya: **22c → 22d → 22e → 22f**.
+Urutan berikutnya: lihat **Next action** di `docs/PROGRESS.md` (opsional polish / Pass B–C).
 
 ## Fase 3 — Ops & polish
 
