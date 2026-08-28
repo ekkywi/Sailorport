@@ -883,6 +883,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         open={historyTarget !== null}
         serviceId={historyTarget?.id ?? null}
         serviceName={historyTarget?.name ?? ""}
+        sourceType={historyTarget?.source_type}
+        containerPort={historyTarget?.container_port}
         onOpenChange={(open) => {
           if (!open) setHistoryTarget(null);
         }}

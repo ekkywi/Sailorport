@@ -1,9 +1,11 @@
 import { Boxes, History, Pencil, Play, Rocket, ScrollText, Square, Trash2 } from "lucide-react";
 import {
   DataPanel,
+  DeployedPortInfo,
   EmptyState,
   EnvironmentBadge,
   StatusBadge,
+  containerPortForSource,
   truncateMiddle,
   userInitials,
 } from "@/components/app";
@@ -198,15 +200,14 @@ function EnvDeployCell({
                   />
                 </button>
                 {d.status === "running" && d.port != null ? (
-                  <a
-                    href={`http://localhost:${d.port}/healthz`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    :{d.port}
-                  </a>
+                  <DeployedPortInfo
+                    hostPort={d.port}
+                    containerPort={containerPortForSource(
+                      svc.source_type,
+                      svc.container_port,
+                    )}
+                    linkHealthz={svc.source_type !== "catalog_app"}
+                  />
                 ) : null}
                 {(d.status === "running" || d.status === "stopped") ? (
                   <Button

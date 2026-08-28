@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ExternalLink, RefreshCw, RotateCcw } from "lucide-react";
+import { RefreshCw, RotateCcw } from "lucide-react";
 import {
+  DeployedPortInfo,
   EmptyState,
   ErrorBanner,
   EnvironmentBadge,
   StatusBadge,
+  containerPortForSource,
   formatRelativeTime,
 } from "@/components/app";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,8 @@ import type { Deployment } from "./types";
 type DeploymentsDialogProps = {
   serviceId: string | null;
   serviceName: string;
+  sourceType?: string;
+  containerPort?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRefreshCatalog?: () => void;
@@ -53,6 +57,8 @@ function shortSHA(sha: string) {
 export function DeploymentsDialog({
   serviceId,
   serviceName,
+  sourceType = "",
+  containerPort = 0,
   open,
   onOpenChange,
   onRefreshCatalog,
@@ -220,15 +226,14 @@ export function DeploymentsDialog({
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
                       {d.status === "running" && d.port != null ? (
-                        <a
-                          href={`http://localhost:${d.port}/healthz`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[12px] text-foreground underline-offset-2 hover:underline"
-                        >
-                          healthz
-                          <ExternalLink className="size-3" />
-                        </a>
+                        <DeployedPortInfo
+                          hostPort={d.port}
+                          containerPort={containerPortForSource(
+                            sourceType,
+                            containerPort,
+                          )}
+                          linkHealthz={sourceType !== "catalog_app"}
+                        />
                       ) : null}
                       {canRedeploy ? (
                         <Button
