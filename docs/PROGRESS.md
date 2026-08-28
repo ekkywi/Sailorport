@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 22f — catalog apps end-to-end (22a–22f)
+- **Step selesai:** 23a — catalog app env schema in manifests
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** (belum ditetapkan) — opsional: catalog app env dari manifest, Redis manifest, worker admin lite
-- **Terakhir dikerjakan:** 2026-08-28 — Step 22c–22f (create/deploy catalog_app + agent pull/run + portal + docs)
+- **Step berikutnya:** 23b — DB + SecretsStore (plaintext MVP) untuk nilai env catalog
+- **Terakhir dikerjakan:** 2026-08-28 — Step 23a (EnvField + validate + postgres manifest env schema)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -69,6 +69,7 @@
 - [x] Step 22d — Agent `docker pull` + `run` (no git/build)
 - [x] Step 22e — Portal Add from catalog
 - [x] Step 22f — Docs + smoke end-to-end
+- [x] Step 23a — Catalog app env schema (`EnvField` + validate + postgres manifest + web types)
 
 ## Yang sudah jalan
 
@@ -639,7 +640,26 @@ Harapan create: `image=postgres:16-alpine`, `container_port=5432`. Deploy: `stat
 
 **Tes 22e (portal):** Login → Catalog → Add service → **From catalog** → PostgreSQL → Add → Deploy now → dev. List: badge **Catalog** + image. Stop / Start / Logs / History sama seperti service lain.
 
-**Known debt (catalog_app):** Agent MVP set `POSTGRES_PASSWORD=changeme` hardcoded untuk semua `catalog_app` (bukan dari manifest). Env/volume per app → step berikutnya jika perlu.
+**Known debt (catalog_app):** Agent MVP set `POSTGRES_PASSWORD=changeme` hardcoded untuk semua `catalog_app` (bukan dari manifest). Env **values** user → 23b–23d; encrypt at-rest → pre-prod.
+
+### Step 23 — Catalog app env (in progress)
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 23a Env schema | ✅ | `EnvField` + `validateEnvFields`; postgres manifest `env[]`; web `CatalogAppEnvField` |
+| 23b DB + store | ⬜ | Simpan env values; `SecretsStore` interface (plaintext MVP) |
+| 23c API create | ⬜ | Validasi vs manifest; redact secret di GET |
+| 23d Agent | ⬜ | Claim job env; hapus hardcode password |
+| 23e Portal | ⬜ | Form dinamis dari schema |
+| 23f Docs + smoke | ⬜ | End-to-end dengan password dari user |
+
+**Tes 23a:**
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/catalog-apps/postgres | jq .env
+```
+
+Harapan: `POSTGRES_PASSWORD` dengan `required: true`, `secret: true`, tanpa default.
 
 ### Checkpoint — Product vision (2026-08-20)
 
@@ -651,22 +671,19 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** env/volume catalog_app dari manifest; app catalog tambahan (Redis, …); private Git credentials; polish edit Git fields.
+**Yang belum di kode:** simpan/deploy env values catalog_app (23b+); encrypt at-rest; app catalog tambahan (Redis); private Git credentials.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| 19a–19d | Git path | ✅ selesai |
-| 20a–20e | Webhook auto-deploy | ✅ selesai |
-| 21a–21f | Rollback / redeploy | ✅ selesai |
-| 22a–22f | Catalog apps deploy path | ✅ selesai |
+| 23b–23f | Catalog app env values | DB → API → agent → portal → docs |
 | — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
 
 ## Next action
 
-1. Opsional: manifest Redis + env dari manifest untuk catalog_app
-2. Opsional: edit Git fields di portal; private repo credentials
+1. **Step 23b** — migrasi + `SecretsStore` plaintext + simpan env per service
+2. 23c API create + redact → 23d agent → 23e portal → 23f docs
 3. Pass B/C QC sebelum expose publik (`docs/QC.md`)
 
 ## Cara lanjut di mesin lain

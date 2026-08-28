@@ -87,6 +87,14 @@ export type GitServiceFormValues = {
   dockerfile_path: string;
 };
 
+export type CatalogAppEnvField = {
+  name: string;
+  description?: string;
+  required: boolean;
+  secret: boolean;
+  default?: string;
+};
+
 export type CatalogApp = {
   id: string;
   name: string;
@@ -94,7 +102,8 @@ export type CatalogApp = {
   image: string;
   container_port: number;
   tags: string[];
-}
+  env?: CatalogAppEnvField[];
+};
 
 export type CatalogAppFormValues = {
   catalog_app_id: string;

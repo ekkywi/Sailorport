@@ -8,13 +8,53 @@ import (
 	"strings"
 )
 
+type EnvField struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Required    bool   `json:"required"`
+	Secret      bool   `json:"secret"`
+	Default     string `json:"default,omitempty"`
+}
+
 type Manifest struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	Image         string   `json:"image"`
-	ContainerPort int      `json:"container_port"`
-	Tags          []string `json:"tags,omitempty"`
+	ID            string     `json:"id"`
+	Name          string     `json:"name"`
+	Description   string     `json:"description"`
+	Image         string     `json:"image"`
+	ContainerPort int        `json:"container_port"`
+	Tags          []string   `json:"tags,omitempty"`
+	Env           []EnvField `json:"env,omitempty"`
+}
+
+func validateEnvFields(appID string, fields []EnvField) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(fields))
+	for i, f := range fields {
+		name := strings.TrimSpace(f.Name)
+		if name == "" {
+			return fmt.Errorf("catalog app %q: env[%d]: name is required", appID, i)
+		}
+		if _, dup := seen[name]; dup {
+			return fmt.Errorf("catalog app %q: duplicate env name %q", appID, name)
+		}
+		seen[name] = struct{}{}
+
+		for j, r := range name {
+			if r >= 'A' && r <= 'Z' {
+				continue
+			}
+			if r >= '0' && r <= '9' && j > 0 {
+				continue
+			}
+			if r == '_' && j > 0 {
+				continue
+			}
+			return fmt.Errorf("catalog app %q: invalid env name %q", appID, name)
+		}
+	}
+	return nil
 }
 
 type Registry struct {
@@ -66,6 +106,16 @@ func (r *Registry) Get(id string) (Manifest, error) {
 	}
 	if strings.TrimSpace(m.Image) == "" {
 		return Manifest{}, fmt.Errorf("catalog app %q: image is required", id)
+	}
+
+	for i := range m.Env {
+		m.Env[i].Name = strings.TrimSpace(m.Env[i].Name)
+		m.Env[i].Description = strings.TrimSpace(m.Env[i].Description)
+		m.Env[i].Default = strings.TrimSpace(m.Env[i].Default)
+	}
+
+	if err := validateEnvFields(id, m.Env); err != nil {
+		return Manifest{}, err
 	}
 	return m, nil
 }

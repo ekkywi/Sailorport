@@ -4,5 +4,27 @@
   "description": "Managed Postgres container from a public image. No git clone or docker build.",
   "image": "postgres:16-alpine",
   "container_port": 5432,
-  "tags": ["database", "postgres"]
+  "tags": ["database", "postgres"],
+  "env": [
+    {
+      "name": "POSTGRES_USER",
+      "description": "Superuser name for the database",
+      "required": false,
+      "secret": false,
+      "default": "postgres"
+    },
+    {
+      "name": "POSTGRES_PASSWORD",
+      "description": "Superuser password (required for the container to start)",
+      "required": true,
+      "secret": true
+    },
+    {
+      "name": "POSTGRES_DB",
+      "description": "Initial database name (defaults to POSTGRES_USER if omitted)",
+      "required": false,
+      "secret": false,
+      "default": "postgres"
+    }
+  ]
 }

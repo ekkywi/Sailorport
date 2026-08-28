@@ -17,14 +17,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 22 (22a–22f)** — catalog apps end-to-end:
-- 22a–22b: fields + `catalog-apps/` manifests + list API
-- 22c: create `source_type=catalog_app` (image dari manifest)
-- 22d: agent `docker pull` + `run`
-- 22e: portal Add from catalog
-- 22f: docs + smoke
+**Step terakhir selesai:** **Step 23a** — env schema di catalog app manifests (`EnvField`, validate, postgres `env[]`).
 
-**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: env dari manifest, Redis manifest, Pass B/C).
+**Step berikutnya:** **23b** — DB + `SecretsStore` (plaintext MVP) untuk nilai env. Lanjut 23c–23f.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
