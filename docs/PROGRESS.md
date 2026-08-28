@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 23a — catalog app env schema in manifests
+- **Step selesai:** 23b — catalog env DB + plaintext SecretsStore
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** 23b — DB + SecretsStore (plaintext MVP) untuk nilai env catalog
-- **Terakhir dikerjakan:** 2026-08-28 — Step 23a (EnvField + validate + postgres manifest env schema)
+- **Step berikutnya:** 23c — API create + redact catalog env
+- **Terakhir dikerjakan:** 2026-08-28 — Step 23b (service_catalog_env + secrets/plaintext)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -70,6 +70,7 @@
 - [x] Step 22e — Portal Add from catalog
 - [x] Step 22f — Docs + smoke end-to-end
 - [x] Step 23a — Catalog app env schema (`EnvField` + validate + postgres manifest + web types)
+- [x] Step 23b — `service_catalog_env` store + `secrets.PlaintextStore`
 
 ## Yang sudah jalan
 
@@ -647,7 +648,7 @@ Harapan create: `image=postgres:16-alpine`, `container_port=5432`. Deploy: `stat
 | Sub-step | Status | Isi |
 |----------|--------|-----|
 | 23a Env schema | ✅ | `EnvField` + `validateEnvFields`; postgres manifest `env[]`; web `CatalogAppEnvField` |
-| 23b DB + store | ⬜ | Simpan env values; `SecretsStore` interface (plaintext MVP) |
+| 23b DB + store | ✅ | Migrasi `00021`; `CatalogEnvStore`; `secrets.Store` + `PlaintextStore` (PublicView redact) |
 | 23c API create | ⬜ | Validasi vs manifest; redact secret di GET |
 | 23d Agent | ⬜ | Claim job env; hapus hardcode password |
 | 23e Portal | ⬜ | Form dinamis dari schema |
@@ -671,7 +672,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** simpan/deploy env values catalog_app (23b+); encrypt at-rest; app catalog tambahan (Redis); private Git credentials.
+**Yang belum di kode:** API create/deploy env values (23c+); agent env dari job (23d); encrypt at-rest; app catalog tambahan (Redis).
 
 ## Rencana step berikutnya (belum dikerjakan)
 
@@ -682,8 +683,8 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 
 ## Next action
 
-1. **Step 23b** — migrasi + `SecretsStore` plaintext + simpan env per service
-2. 23c API create + redact → 23d agent → 23e portal → 23f docs
+1. **Step 23c** — create `catalog_app` + `catalog_env`; validasi manifest; merge `PublicView` di GET
+2. 23d agent → 23e portal → 23f docs
 3. Pass B/C QC sebelum expose publik (`docs/QC.md`)
 
 ## Cara lanjut di mesin lain

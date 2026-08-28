@@ -11,6 +11,7 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/db"
 	"github.com/ekkywi/sailorport/apps/api/internal/handler"
 	"github.com/ekkywi/sailorport/apps/api/internal/migrate"
+	"github.com/ekkywi/sailorport/apps/api/internal/secrets"
 	"github.com/ekkywi/sailorport/apps/api/internal/service"
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 	"github.com/ekkywi/sailorport/apps/api/internal/template"
@@ -49,6 +50,8 @@ func main() {
 	log.Printf("Agent token auth: enabled")
 
 	serviceStore := store.NewServicesStore(sqlDB)
+	catalogEnvStore := store.NewCatalogEnvStore(sqlDB)
+	_ = secrets.NewPlaintext(catalogEnvStore) // wired in 23c Catalog.Create
 	deploymentsStore := store.NewDeploymentsStore(sqlDB)
 	catalogAppsReg := catalogapp.NewRegistry(cfg.CatalogAppDir)
 	catalog := service.NewCatalog(serviceStore, deploymentsStore, cfg.WorkspaceDir, catalogAppsReg)
