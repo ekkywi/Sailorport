@@ -1,7 +1,8 @@
-import { FolderGit2, LayoutTemplate, Tag } from "lucide-react";
+import { FolderGit2, LayoutTemplate, Package, Tag } from "lucide-react";
 
 type AddServiceChooserProps = {
   onGit: () => void;
+  onCatalog?: () => void;
   onTemplate: () => void;
   onRegister: () => void;
 };
@@ -40,6 +41,7 @@ function ChoiceCard({
 
 export function AddServiceChooser({
   onGit,
+  onCatalog,
   onTemplate,
   onRegister,
 }: AddServiceChooserProps) {
@@ -51,6 +53,14 @@ export function AddServiceChooser({
         icon={FolderGit2}
         onClick={onGit}
       />
+      {onCatalog ? (
+        <ChoiceCard
+          title="From catalog"
+          description="Platform image (Postgres, …). Deploy pulls and runs — no git or build."
+          icon={Package}
+          onClick={onCatalog}
+        />
+      ) : null}
       <ChoiceCard
         title="From template"
         description="Scaffold a workspace from a golden-path template (e.g. go-api)."

@@ -28,10 +28,16 @@ import {
   updateService,
 } from "./api";
 import { AddServiceChooser } from "./AddServiceChooser";
+import { CatalogAppForm } from "./CatalogAppForm";
 import { GitServiceForm } from "./GitServiceForm";
 import { ServiceForm } from "./ServiceForm";
 import { ServiceList } from "./ServiceList";
-import type { GitServiceFormValues, Service, ServiceFormValues } from "./types";
+import type {
+  CatalogAppFormValues,
+  GitServiceFormValues,
+  Service,
+  ServiceFormValues,
+} from "./types";
 import {
   emptyServiceForm,
   formValuesToUpdateInput,
@@ -55,7 +61,21 @@ const emptyGitForm: GitServiceFormValues = {
   dockerfile_path: "Dockerfile",
 };
 
-type DialogMode = "none" | "choose" | "create" | "register" | "git" | "edit";
+const emptyCatalogForm: CatalogAppFormValues = {
+  catalog_app_id: "",
+  name: "",
+  description: "",
+  owner: "",
+};
+
+type DialogMode =
+  | "none"
+  | "choose"
+  | "create"
+  | "register"
+  | "git"
+  | "catalog"
+  | "edit";
 
 export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const canWrite = canWriteCatalog(currentUser.role);
@@ -66,6 +86,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [formError, setFormError] = useState("");
   const [values, setValues] = useState<ServiceFormValues>(emptyServiceForm);
   const [gitValues, setGitValues] = useState<GitServiceFormValues>(emptyGitForm);
+  const [catalogValues, setCatalogValues] =
+    useState<CatalogAppFormValues>(emptyCatalogForm);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -74,6 +96,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
   const [createdPath, setCreatedPath] = useState("");
   const [gitCreated, setGitCreated] = useState<Service | null>(null);
+  const [catalogCreated, setCatalogCreated] = useState<Service | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Service | null>(null);
   const [deployDialogTarget, setDeployDialogTarget] = useState<Service | null>(null);
   const [runtimeTarget, setRuntimeTarget] = useState<{
@@ -184,11 +207,13 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   function closeDialog() {
     setValues(emptyServiceForm);
     setGitValues(emptyGitForm);
+    setCatalogValues(emptyCatalogForm);
     setEditingId(null);
     setEditingSourceType("");
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
+    setCatalogCreated(null);
     setDialog("none");
   }
 
@@ -197,9 +222,11 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setEditingSourceType("");
     setValues(emptyServiceForm);
     setGitValues(emptyGitForm);
+    setCatalogValues(emptyCatalogForm);
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
+    setCatalogCreated(null);
     setDialog("choose");
   }
 
@@ -208,9 +235,11 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setEditingSourceType("");
     setValues(emptyServiceForm);
     setGitValues(emptyGitForm);
+    setCatalogValues(emptyCatalogForm);
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
+    setCatalogCreated(null);
     setDialog("create");
   }
 
@@ -221,6 +250,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
+    setCatalogCreated(null);
     setDialog("register");
   }
 
@@ -228,10 +258,24 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setEditingId(null);
     setEditingSourceType("");
     setGitValues(emptyGitForm);
+    setCatalogValues(emptyCatalogForm);
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
+    setCatalogCreated(null);
     setDialog("git");
+  }
+
+  function startCatalog() {
+    setEditingId(null);
+    setEditingSourceType("");
+    setCatalogValues(emptyCatalogForm);
+    setGitValues(emptyGitForm);
+    setFormError("");
+    setCreatedPath("");
+    setGitCreated(null);
+    setCatalogCreated(null);
+    setDialog("catalog");
   }
 
   function startEdit(svc: Service) {
@@ -251,6 +295,10 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
 
   function onGitChange(field: keyof GitServiceFormValues, value: string) {
     setGitValues((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function onCatalogChange(field: keyof CatalogAppFormValues, value: string) {
+    setCatalogValues((prev) => ({ ...prev, [field]: value }));
   }
 
   async function onSubmitMetadata(e: FormEvent) {
@@ -304,6 +352,30 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     } catch (err) {
       setFormError(
         err instanceof Error ? err.message : "Failed to add service from Git",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onSubmitCatalog(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setFormError("");
+    try {
+      const created = await createService({
+        name: catalogValues.name.trim(),
+        description: catalogValues.description.trim(),
+        owner: catalogValues.owner.trim(),
+        source_type: "catalog_app",
+        catalog_app_id: catalogValues.catalog_app_id.trim(),
+      });
+      toast("Service added from catalog");
+      setCatalogCreated(created);
+      await load();
+    } catch (err) {
+      setFormError(
+        err instanceof Error ? err.message : "Failed to add from catalog",
       );
     } finally {
       setSaving(false);
@@ -428,6 +500,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               </DialogHeader>
               <AddServiceChooser
                 onGit={startGit}
+                onCatalog={startCatalog}
                 onTemplate={startCreate}
                 onRegister={startRegister}
               />
@@ -540,6 +613,75 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
             </>
           ) : null}
 
+          {dialog === "catalog" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {catalogCreated ? "Service added" : "From catalog"}
+                </DialogTitle>
+                <DialogDescription>
+                  {catalogCreated
+                    ? "Registered in the catalog. Deploy when you are ready — the agent will pull and run the image."
+                    : "Add a platform app (e.g. PostgreSQL) from the catalog."}
+                </DialogDescription>
+              </DialogHeader>
+              {catalogCreated ? (
+                <div className="space-y-4">
+                  <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+                    <p className="text-[13px] font-medium">{catalogCreated.name}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {catalogCreated.catalog_app_id}
+                    </p>
+                    {catalogCreated.image ? (
+                      <p
+                        className="mt-1 truncate font-mono text-[11px] text-muted-foreground"
+                        title={catalogCreated.image}
+                      >
+                        {catalogCreated.image}
+                        {catalogCreated.container_port
+                          ? ` · port ${catalogCreated.container_port}`
+                          : null}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 text-[13px]"
+                      onClick={() => {
+                        const svc = catalogCreated;
+                        closeDialog();
+                        setDeployDialogTarget(svc);
+                      }}
+                    >
+                      Deploy now
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-[13px]"
+                      onClick={closeDialog}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <CatalogAppForm
+                  values={catalogValues}
+                  saving={saving}
+                  error={formError}
+                  onChange={onCatalogChange}
+                  onSubmit={onSubmitCatalog}
+                  onCancel={closeDialog}
+                  onBack={startAdd}
+                />
+              )}
+            </>
+          ) : null}
+
           {dialog === "register" ? (
             <>
               <DialogHeader>
@@ -556,7 +698,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 onChange={onChange}
                 onSubmit={onSubmitMetadata}
                 onCancel={closeDialog}
-                onCreateInstead={startAdd}
+                onBack={startAdd}
               />
             </>
           ) : null}

@@ -17,7 +17,7 @@ type ServiceFormProps = {
   onChange: (field: keyof ServiceFormValues, value: string | boolean) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
-  onCreateInstead?: () => void;
+  onBack?: () => void;
 };
 
 export function ServiceForm({
@@ -30,7 +30,7 @@ export function ServiceForm({
   onChange,
   onSubmit,
   onCancel,
-  onCreateInstead,
+  onBack,
 }: ServiceFormProps) {
   const isEdit = mode === "edit";
 
@@ -108,14 +108,14 @@ export function ServiceForm({
         >
           Cancel
         </Button>
-        {onCreateInstead ? (
+        {onBack ? (
           <button
             type="button"
             className="text-[12px] text-muted-foreground transition-colors hover:text-foreground"
-            onClick={onCreateInstead}
+            onClick={onBack}
             disabled={saving}
           >
-            Back to options
+            Back
           </button>
         ) : null}
       </div>

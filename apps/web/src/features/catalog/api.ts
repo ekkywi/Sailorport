@@ -1,5 +1,5 @@
 import { apiFetch, readErrorMessage } from "../../lib/http";
-import type { CreateServiceInput, Service, UpdateServiceInput } from "./types";
+import type { CatalogApp, CreateServiceInput, Service, UpdateServiceInput } from "./types";
 
 export async function listServices(): Promise<Service[]> {
   const res = await apiFetch("/api/v1/services");
@@ -41,4 +41,12 @@ export async function deleteService(id: string): Promise<void> {
   if (!res.ok) {
     throw new Error(await readErrorMessage(res, `Gagal delete: ${res.status}`));
   }
+}
+
+export async function listCatalogApps(): Promise<CatalogApp[]> {
+  const res = await apiFetch("/api/v1/catalog-apps");
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, `Gagal list catalog apps: ${res.status}`));
+  }
+  return res.json();
 }

@@ -90,6 +90,29 @@ function OriginCell({ svc }: { svc: Service }) {
     );
   }
 
+  if (svc.source_type === "catalog_app") {
+    return (
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="inline-flex max-w-full items-center gap-1.5">
+          <span className="rounded-md bg-violet-500/12 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-violet-700 uppercase dark:text-violet-400">
+            Catalog
+          </span>
+          <span className="truncate text-[11px] text-muted-foreground">
+            {svc.catalog_app_id || "app"}
+          </span>
+        </span>
+        {svc.image ? (
+          <span
+            className="block truncate font-mono text-[11px] text-muted-foreground"
+            title={svc.image}
+          >
+            {svc.image}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
   if (svc.template_id) {
     return (
       <div className="flex min-w-0 flex-col gap-0.5">

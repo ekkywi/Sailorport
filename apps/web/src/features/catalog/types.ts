@@ -87,6 +87,22 @@ export type GitServiceFormValues = {
   dockerfile_path: string;
 };
 
+export type CatalogApp = {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  container_port: number;
+  tags: string[];
+}
+
+export type CatalogAppFormValues = {
+  catalog_app_id: string;
+  name: string;
+  description: string;
+  owner: string;
+}
+
 export const emptyServiceForm: ServiceFormValues = {
   name: "",
   description: "",
@@ -132,8 +148,11 @@ export function generateWebhookSecret(bytes = 32): string {
   return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** True if the service can be deployed (scaffold workspace or linked Git repo). */
-export function canDeployService(svc: Pick<Service, "workspace_path" | "source_type" | "repo_url">): boolean {
+export function canDeployService(
+  svc: Pick<Service, "workspace_path" | "source_type" | "repo_url" | "image">,
+): boolean {
   if (svc.workspace_path?.trim()) return true;
-  return svc.source_type === "git" && Boolean(svc.repo_url?.trim());
+  if (svc.source_type === "git" && Boolean(svc.repo_url?.trim())) return true;
+  if (svc.source_type === "catalog_app" && Boolean(svc.image?.trim())) return true;
+  return false;
 }
