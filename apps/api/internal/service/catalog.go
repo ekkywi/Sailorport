@@ -12,6 +12,7 @@ import (
 
 	"github.com/ekkywi/sailorport/apps/api/internal/catalogapp"
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
+	"github.com/ekkywi/sailorport/apps/api/internal/secrets"
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
@@ -48,6 +49,7 @@ type Catalog struct {
 	cleanup      CleanupEnqueue
 	audit        *Audit
 	apps         *catalogapp.Registry
+	secrets      secrets.Store
 }
 
 func (c *Catalog) SetCleanupEnqueue(e CleanupEnqueue) {
@@ -63,12 +65,14 @@ func NewCatalog(
 	deployments DeploymentReader,
 	workspaceDir string,
 	apps *catalogapp.Registry,
+	secretsStore secrets.Store,
 ) *Catalog {
 	return &Catalog{
 		repo:         repo,
 		deployments:  deployments,
 		workspaceDir: workspaceDir,
 		apps:         apps,
+		secrets:      secretsStore,
 	}
 }
 
@@ -77,24 +81,31 @@ func (c *Catalog) List(ctx context.Context) ([]model.Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list services: %w", err)
 	}
-	if c.deployments == nil || len(services) == 0 {
+	if len(services) == 0 {
 		return services, nil
 	}
-	latest, err := c.deployments.LatestByServices(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("List services latest deployments: %w", err)
-	}
-	perEnv, err := c.deployments.LatestPerEnvByServices(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("List services env deployments: %w", err)
+	if c.deployments != nil {
+		latest, err := c.deployments.LatestByServices(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("List services latest deployments: %w", err)
+		}
+		perEnv, err := c.deployments.LatestPerEnvByServices(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("List services env deployments: %w", err)
+		}
+		for i := range services {
+			if d, ok := latest[services[i].ID]; ok {
+				cp := d
+				services[i].LatestDeployment = &cp
+			}
+			if envs, ok := perEnv[services[i].ID]; ok && len(envs) > 0 {
+				services[i].EnvDeployments = envs
+			}
+		}
 	}
 	for i := range services {
-		if d, ok := latest[services[i].ID]; ok {
-			cp := d
-			services[i].LatestDeployment = &cp
-		}
-		if envs, ok := perEnv[services[i].ID]; ok && len(envs) > 0 {
-			services[i].EnvDeployments = envs
+		if err := c.attachCatalogEnvPublic(ctx, &services[i]); err != nil {
+			return nil, err
 		}
 	}
 	return services, nil
@@ -109,6 +120,9 @@ func (c *Catalog) Get(ctx context.Context, id string) (model.Service, error) {
 	if err != nil {
 		return model.Service{}, mapRepoErr(err)
 	}
+	if err := c.attachCatalogEnvPublic(ctx, &svc); err != nil {
+		return model.Service{}, err
+	}
 	return svc, nil
 }
 
@@ -121,10 +135,41 @@ func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest, ac
 	if err != nil {
 		return model.Service{}, err
 	}
+
+	var envEntries []model.CatalogEnv
+	if req.SourceType == "catalog_app" {
+		m, err := c.catalogAppManifest(req.CatalogAppID)
+		if err != nil {
+			return model.Service{}, err
+		}
+		envEntries, err = buildCatalogEnvEntries(m, req.CatalogEnv)
+		if err != nil {
+			return model.Service{}, err
+		}
+	} else if len(req.CatalogEnv) > 0 {
+		return model.Service{}, fmt.Errorf("%w: catalog_env is only allowed for source_type=catalog_app", ErrInvalid)
+	}
+
 	svc, err := c.repo.Create(ctx, req)
 	if err != nil {
 		return model.Service{}, mapRepoErr(err)
 	}
+
+	if len(envEntries) > 0 {
+		if c.secrets == nil {
+			_ = c.repo.Delete(ctx, svc.ID)
+			return model.Service{}, fmt.Errorf("catalog secrets store not configured")
+		}
+		if err := c.secrets.ReplaceAll(ctx, svc.ID, envEntries); err != nil {
+			_ = c.repo.Delete(ctx, svc.ID)
+			return model.Service{}, fmt.Errorf("save catalog env: %w", err)
+		}
+	}
+
+	if err := c.attachCatalogEnvPublic(ctx, &svc); err != nil {
+		return model.Service{}, err
+	}
+
 	c.recordService(ctx, actorID, actorEmail, "service.create", svc)
 	return svc, nil
 }
@@ -448,4 +493,15 @@ func (c *Catalog) applyCatalogAppDefaults(req model.CreateServiceRequest) (model
 	req.AutoDeployEnabled = false
 
 	return req, nil
+}
+
+func (c *Catalog) catalogAppManifest(catalogAppID string) (catalogapp.Manifest, error) {
+	if c.apps == nil {
+		return catalogapp.Manifest{}, fmt.Errorf("%w: catalog apps registry not configured", ErrInvalid)
+	}
+	m, err := c.apps.Get(catalogAppID)
+	if err != nil {
+		return catalogapp.Manifest{}, fmt.Errorf("%w: unknown catalog_app_id %q", ErrInvalid, catalogAppID)
+	}
+	return m, nil
 }

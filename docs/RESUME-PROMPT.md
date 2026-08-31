@@ -17,9 +17,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 23b** — `service_catalog_env` table + store + `secrets.PlaintextStore`.
+**Step terakhir selesai:** **Step 23c** — API create dengan `catalog_env`, validasi manifest, simpan ke DB, redact di list/get (`POSTGRES_PASSWORD_set`).
 
-**Step berikutnya:** **23c** — API create dengan `catalog_env`, validasi manifest, redact di GET.
+**Step berikutnya:** **23d** — agent claim job dapat env dari API; hapus hardcode `POSTGRES_PASSWORD=changeme`.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -32,10 +32,11 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - MVP core Step 0–18
 - Step 19–21 Git + webhook + redeploy by SHA
 - Step 22 catalog apps (API + agent + portal)
-- Migrasi `00017`–`00020`
+- Step 23a–23c catalog env schema + DB + API create/redact
+- Migrasi `00017`–`00021`
 
 **Yang belum / opsional:**
-- Env/volume catalog_app dari manifest (agent saat ini hardcode `POSTGRES_PASSWORD` untuk smoke)
+- Agent pakai `catalog_env` dari claim job (23d); portal form env (23e)
 - Manifest app tambahan (Redis, …)
 - Private Git credentials; polish edit Git fields
 - Pass B/C production review sebelum expose publik
@@ -44,6 +45,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Tambah catalog app baru: folder `catalog-apps/<id>/manifest.json` (API auto-list; web ikut API)
 - Env: `SAILORPORT_CATALOG_APPS`, `SAILORPORT_TEMPLATES`
 - Agent token: `Authorization: Bearer $SAILORPORT_AGENT_TOKEN`
+- Redact secret catalog env **hanya di handler** via `PublicView` (sama pola `webhook_secret_set`)
 
 **Cara jalankan lokal:** `docs/SETUP.md` + `docs/PROGRESS.md` (mode development).
 

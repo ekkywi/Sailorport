@@ -51,10 +51,10 @@ func main() {
 
 	serviceStore := store.NewServicesStore(sqlDB)
 	catalogEnvStore := store.NewCatalogEnvStore(sqlDB)
-	_ = secrets.NewPlaintext(catalogEnvStore) // wired in 23c Catalog.Create
+	secretsStore := secrets.NewPlaintext(catalogEnvStore)
 	deploymentsStore := store.NewDeploymentsStore(sqlDB)
 	catalogAppsReg := catalogapp.NewRegistry(cfg.CatalogAppDir)
-	catalog := service.NewCatalog(serviceStore, deploymentsStore, cfg.WorkspaceDir, catalogAppsReg)
+	catalog := service.NewCatalog(serviceStore, deploymentsStore, cfg.WorkspaceDir, catalogAppsReg, secretsStore)
 	catalogApps := service.NewCatalogApps(catalogAppsReg)
 	templates := template.NewRegistry(cfg.TemplatesDir)
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)

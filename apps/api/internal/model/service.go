@@ -24,6 +24,7 @@ type Service struct {
 	CatalogAppID          string                `json:"catalog_app_id"`
 	Image                 string                `json:"image"`
 	ContainerPort         int                   `json:"container_port"`
+	CatalogEnv            CatalogEnvPublic      `json:"catalog_env,omitempty"`
 }
 
 type CreateServiceRequest struct {
@@ -41,7 +42,8 @@ type CreateServiceRequest struct {
 	AutoDeployEnvironment string `json:"auto_deploy_environment"`
 	CatalogAppID          string `json:"catalog_app_id"`
 	Image                 string `json:"image"`
-	ContainerPort         int    `json:"container_port"`
+	ContainerPort         int               `json:"container_port"`
+	CatalogEnv            map[string]string `json:"catalog_env,omitempty"`
 }
 
 type UpdateServiceRequest struct {

@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 23b — catalog env DB + plaintext SecretsStore
+- **Step selesai:** 23c — API create + redact catalog env
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** 23c — API create + redact catalog env
-- **Terakhir dikerjakan:** 2026-08-28 — Step 23b (service_catalog_env + secrets/plaintext)
+- **Step berikutnya:** 23d — agent claim job env (hapus hardcode password)
+- **Terakhir dikerjakan:** 2026-08-31 — Step 23c (catalog_env create/list/get + validasi manifest)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -71,6 +71,7 @@
 - [x] Step 22f — Docs + smoke end-to-end
 - [x] Step 23a — Catalog app env schema (`EnvField` + validate + postgres manifest + web types)
 - [x] Step 23b — `service_catalog_env` store + `secrets.PlaintextStore`
+- [x] Step 23c — API `catalog_env` on create; validasi manifest; redact di list/get
 
 ## Yang sudah jalan
 
@@ -641,7 +642,7 @@ Harapan create: `image=postgres:16-alpine`, `container_port=5432`. Deploy: `stat
 
 **Tes 22e (portal):** Login → Catalog → Add service → **From catalog** → PostgreSQL → Add → Deploy now → dev. List: badge **Catalog** + image. Stop / Start / Logs / History sama seperti service lain.
 
-**Known debt (catalog_app):** Agent MVP set `POSTGRES_PASSWORD=changeme` hardcoded untuk semua `catalog_app` (bukan dari manifest). Env **values** user → 23b–23d; encrypt at-rest → pre-prod.
+**Known debt (catalog_app):** Agent masih set `POSTGRES_PASSWORD=changeme` hardcoded (23d). API sudah simpan env user di `service_catalog_env` dan redact di GET.
 
 ### Step 23 — Catalog app env (in progress)
 
@@ -649,7 +650,7 @@ Harapan create: `image=postgres:16-alpine`, `container_port=5432`. Deploy: `stat
 |----------|--------|-----|
 | 23a Env schema | ✅ | `EnvField` + `validateEnvFields`; postgres manifest `env[]`; web `CatalogAppEnvField` |
 | 23b DB + store | ✅ | Migrasi `00021`; `CatalogEnvStore`; `secrets.Store` + `PlaintextStore` (PublicView redact) |
-| 23c API create | ⬜ | Validasi vs manifest; redact secret di GET |
+| 23c API create | ✅ | Validasi vs manifest; `ReplaceAll` on create; redact secret di list/get |
 | 23d Agent | ⬜ | Claim job env; hapus hardcode password |
 | 23e Portal | ⬜ | Form dinamis dari schema |
 | 23f Docs + smoke | ⬜ | End-to-end dengan password dari user |
@@ -662,6 +663,26 @@ curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/catalog-
 
 Harapan: `POSTGRES_PASSWORD` dengan `required: true`, `secret: true`, tanpa default.
 
+**Tes 23c (API create + redact):**
+
+```bash
+# Tanpa password → 400
+curl -sS -w "\nHTTP %{http_code}\n" -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"pg-bad","owner":"you","source_type":"catalog_app","catalog_app_id":"postgres"}'
+
+# Dengan password → 201; GET tidak bocor nilai secret
+curl -sS -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"pg-ok","owner":"you","source_type":"catalog_app","catalog_app_id":"postgres",
+       "catalog_env":{"POSTGRES_PASSWORD":"my-secret"}}' | jq .catalog_env
+
+export ID=<id-dari-response>
+curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/services/$ID | jq .catalog_env
+```
+
+Harapan: `POSTGRES_PASSWORD_set: true`, `POSTGRES_USER: "postgres"`, **tanpa** field `POSTGRES_PASSWORD` berisi nilai asli.
+
 ### Checkpoint — Product vision (2026-08-20)
 
 Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
@@ -672,19 +693,19 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** API create/deploy env values (23c+); agent env dari job (23d); encrypt at-rest; app catalog tambahan (Redis).
+**Yang belum di kode:** agent env dari job (23d); portal form env (23e); encrypt at-rest; app catalog tambahan (Redis).
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| 23b–23f | Catalog app env values | DB → API → agent → portal → docs |
+| 23d–23f | Catalog app env values | Agent → portal → docs/smoke |
 | — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
 
 ## Next action
 
-1. **Step 23c** — create `catalog_app` + `catalog_env`; validasi manifest; merge `PublicView` di GET
-2. 23d agent → 23e portal → 23f docs
+1. **Step 23d** — claim job kirim `catalog_env` ke agent; hapus hardcode `changeme`
+2. 23e portal → 23f docs/smoke
 3. Pass B/C QC sebelum expose publik (`docs/QC.md`)
 
 ## Cara lanjut di mesin lain

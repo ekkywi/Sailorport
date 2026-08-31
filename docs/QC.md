@@ -74,7 +74,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | JWT tanpa validasi `iss` / `aud` | Rendah | Pass A. `internal/auth/jwt.go:32` — aman karena `SigningMethodHS256` dipaksa dan secret tunggal |
 | Compose: password Postgres default + port 5433 dipublish | Rendah | Pass A. `deploy/compose/docker-compose.yml:6` — dev convenience; jangan dipakai apa adanya di host publik |
 | Portal masih menampilkan form `/register` padahal register sudah tertutup | Rendah | Efek fix A-C2. Setelah admin pertama ada, submit selalu **403** dengan pesan jelas; menyembunyikan link/form = Pass C |
-| Catalog app: `POSTGRES_PASSWORD=changeme` hardcoded di agent | Sedang | Step 22d MVP; env harus dari manifest/API nanti |
+| Catalog app: `POSTGRES_PASSWORD=changeme` hardcoded di agent | Sedang | API sudah simpan env (23c); agent masih hardcode — fix di **Step 23d** |
 | `model.RegisterRequest.Role` diabaikan | Rendah | Efek fix A-C2. Akun pertama selalu `admin`; field dibiarkan supaya kontrak web tidak pecah |
 | Dua register serentak di instalasi kosong bisa jadi dua admin | Rendah | Efek fix A-C2. Gate-nya `COUNT(*)` lalu INSERT (bukan atomik); praktis tidak relevan karena siapa pun yang duluan register tetap dapat admin |
 | Portal tidak auto-logout saat 401 di tengah sesi | Rendah | Efek fix A-H3. Token user yang di-disable langsung ditolak API, tapi portal baru menghapus token saat `me()` gagal (refresh / buka ulang); interceptor 401 global = Pass C |
