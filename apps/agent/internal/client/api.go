@@ -23,21 +23,22 @@ type APIClient struct {
 }
 
 type DeploymentJob struct {
-	ID              string  `json:"id"`
-	ServiceID       string  `json:"service_id"`
-	EnvironmentID   string  `json:"environment_id"`
-	EnvironmentSlug string  `json:"environment_slug"`
-	WorkerID        *string `json:"worker_id"`
-	Status          string  `json:"status"`
-	GitSHA          string  `json:"git_sha"`
-	ServiceName     string  `json:"service_name"`
-	WorkspacePath   string  `json:"workspace_path"`
-	SourceType      string  `json:"source_type"`
-	RepoURL         string  `json:"repo_url"`
-	Branch          string  `json:"branch"`
-	DockerfilePath  string  `json:"dockerfile_path"`
-	Image           string  `json:"image"`
-	ContainerPort   int     `json:"container_port"`
+	ID              string            `json:"id"`
+	ServiceID       string            `json:"service_id"`
+	EnvironmentID   string            `json:"environment_id"`
+	EnvironmentSlug string            `json:"environment_slug"`
+	WorkerID        *string           `json:"worker_id"`
+	Status          string            `json:"status"`
+	GitSHA          string            `json:"git_sha"`
+	ServiceName     string            `json:"service_name"`
+	WorkspacePath   string            `json:"workspace_path"`
+	SourceType      string            `json:"source_type"`
+	RepoURL         string            `json:"repo_url"`
+	Branch          string            `json:"branch"`
+	DockerfilePath  string            `json:"dockerfile_path"`
+	Image           string            `json:"image"`
+	ContainerPort   int               `json:"container_port"`
+	CatalogEnv      map[string]string `json:"catalog_env,omitempty"`
 }
 
 type UpdateDeploymentRequest struct {

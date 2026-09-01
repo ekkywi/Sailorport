@@ -36,12 +36,13 @@ type UpdateDeploymentRequest struct {
 
 type DeploymentJob struct {
 	Deployment
-	ServiceName    string `json:"service_name"`
-	WorkspacePath  string `json:"workspace_path"`
-	SourceType     string `json:"source_type"`
-	RepoURL        string `json:"repo_url"`
-	Branch         string `json:"branch"`
-	DockerfilePath string `json:"dockerfile_path"`
-	Image          string `json:"image"`
-	ContainerPort  int    `json:"container_port"`
+	ServiceName    string            `json:"service_name"`
+	WorkspacePath  string            `json:"workspace_path"`
+	SourceType     string            `json:"source_type"`
+	RepoURL        string            `json:"repo_url"`
+	Branch         string            `json:"branch"`
+	DockerfilePath string            `json:"dockerfile_path"`
+	Image          string            `json:"image"`
+	ContainerPort  int               `json:"container_port"`
+	CatalogEnv     map[string]string `json:"catalog_env,omitempty"`
 }

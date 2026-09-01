@@ -34,6 +34,7 @@ export type Service = {
   updated_at: string;
   latest_deployment?: LatestDeployment | null;
   env_deployments?: Record<string, LatestDeployment>;
+  catalog_env?: Record<string, string | boolean>;
 };
 
 export type CreateServiceInput = {
@@ -50,6 +51,7 @@ export type CreateServiceInput = {
   catalog_app_id?: string;
   image?: string;
   container_port?: number;
+  catalog_env?: Record<string, string>;
 };
 
 export type UpdateServiceInput = {
@@ -110,6 +112,19 @@ export type CatalogAppFormValues = {
   name: string;
   description: string;
   owner: string;
+  catalog_env: Record<string, string>;
+};
+
+export function defaultCatalogEnvFromApp(
+  app: CatalogApp | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const field of app?.env ?? []) {
+    if (field.default) {
+      out[field.name] = field.default;
+    }
+  }
+  return out;
 }
 
 export const emptyServiceForm: ServiceFormValues = {

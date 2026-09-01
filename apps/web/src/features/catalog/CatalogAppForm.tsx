@@ -4,13 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { listCatalogApps } from "./api";
-import type { CatalogApp, CatalogAppFormValues } from "./types";
+import {
+  defaultCatalogEnvFromApp,
+  type CatalogApp,
+  type CatalogAppFormValues,
+} from "./types";
 
 type CatalogAppFormProps = {
   values: CatalogAppFormValues;
+  catalogEnv: Record<string, string>;
   saving: boolean;
   error?: string;
   onChange: (field: keyof CatalogAppFormValues, value: string) => void;
+  onCatalogEnvChange: (name: string, value: string) => void;
+  onCatalogEnvReset: (env: Record<string, string>) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
   onBack?: () => void;
@@ -18,9 +25,12 @@ type CatalogAppFormProps = {
 
 export function CatalogAppForm({
   values,
+  catalogEnv,
   saving,
   error,
   onChange,
+  onCatalogEnvChange,
+  onCatalogEnvReset,
   onSubmit,
   onCancel,
   onBack,
@@ -39,6 +49,7 @@ export function CatalogAppForm({
 
         if (data.length > 0 && !values.catalog_app_id) {
           onChange("catalog_app_id", data[0].id);
+          onCatalogEnvReset(defaultCatalogEnvFromApp(data[0]));
         }
       } catch (err) {
         setLoadError(
@@ -108,6 +119,8 @@ export function CatalogAppForm({
             if (!values.name.trim()) {
               onChange("name", id);
             }
+            const app = apps.find((a) => a.id === id);
+            onCatalogEnvReset(defaultCatalogEnvFromApp(app));
           }}
           required
           className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-[13px] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -176,6 +189,54 @@ export function CatalogAppForm({
           className="h-9 text-[13px]"
         />
       </div>
+
+      {selected?.env && selected.env.length > 0 ? (
+        <div className="space-y-3 border-t border-border/60 pt-3 sm:col-span-2">
+          <div>
+            <p className="text-[13px] font-medium text-foreground">
+              Environment variables
+            </p>
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
+              Values for the container image. Secrets are stored securely and
+              not shown again after save.
+            </p>
+          </div>
+          {selected.env.map((field) => (
+            <div key={field.name} className="space-y-1.5">
+              <Label
+                htmlFor={`catalog-env-${field.name}`}
+                className="text-[12px] text-muted-foreground"
+              >
+                {field.name}
+                {field.required ? " *" : ""}
+              </Label>
+              <Input
+                id={`catalog-env-${field.name}`}
+                type={field.secret ? "password" : "text"}
+                value={catalogEnv[field.name] ?? ""}
+                onChange={(e) =>
+                  onCatalogEnvChange(field.name, e.target.value)
+                }
+                required={field.required}
+                placeholder={
+                  field.default
+                    ? `Default: ${field.default}`
+                    : field.secret
+                      ? "Required"
+                      : "Optional"
+                }
+                className="h-9 text-[13px]"
+                autoComplete="off"
+              />
+              {field.description ? (
+                <p className="text-[11px] text-muted-foreground">
+                  {field.description}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-3 pt-1 sm:col-span-2">
         <Button type="submit" size="sm" className="h-8 text-[13px]" disabled={saving}>

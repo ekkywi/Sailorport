@@ -66,6 +66,7 @@ const emptyCatalogForm: CatalogAppFormValues = {
   name: "",
   description: "",
   owner: "",
+  catalog_env: {},
 };
 
 type DialogMode =
@@ -301,6 +302,20 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setCatalogValues((prev) => ({ ...prev, [field]: value }));
   }
 
+  function onCatalogEnvChange(name: string, value: string) {
+    setCatalogValues((prev) => ({
+      ...prev,
+      catalog_env: { ...prev.catalog_env, [name]: value },
+    }));
+  }
+
+  function onCatalogEnvReset(env: Record<string, string>) {
+    setCatalogValues((prev) => ({
+      ...prev,
+      catalog_env: env,
+    }));
+  }
+
   async function onSubmitMetadata(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -369,6 +384,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         owner: catalogValues.owner.trim(),
         source_type: "catalog_app",
         catalog_app_id: catalogValues.catalog_app_id.trim(),
+        catalog_env: catalogValues.catalog_env,
       });
       toast("Service added from catalog");
       setCatalogCreated(created);
@@ -671,9 +687,12 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               ) : (
                 <CatalogAppForm
                   values={catalogValues}
+                  catalogEnv={catalogValues.catalog_env}
                   saving={saving}
                   error={formError}
                   onChange={onCatalogChange}
+                  onCatalogEnvChange={onCatalogEnvChange}
+                  onCatalogEnvReset={onCatalogEnvReset}
                   onSubmit={onSubmitCatalog}
                   onCancel={closeDialog}
                   onBack={startAdd}

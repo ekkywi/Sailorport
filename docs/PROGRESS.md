@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 23c — API create + redact catalog env
+- **Step selesai:** 23 — catalog app env values end-to-end (23a–23f)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** 23d — agent claim job env (hapus hardcode password)
-- **Terakhir dikerjakan:** 2026-08-31 — Step 23c (catalog_env create/list/get + validasi manifest)
+- **Step berikutnya:** (belum ditetapkan) — opsional: Redis manifest, encrypt catalog env at-rest, Pass B/C QC
+- **Terakhir dikerjakan:** 2026-09-01 — Step 23f (docs + smoke catalog env portal → agent)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -72,6 +72,9 @@
 - [x] Step 23a — Catalog app env schema (`EnvField` + validate + postgres manifest + web types)
 - [x] Step 23b — `service_catalog_env` store + `secrets.PlaintextStore`
 - [x] Step 23c — API `catalog_env` on create; validasi manifest; redact di list/get
+- [x] Step 23d — Agent claim job `catalog_env`; hapus hardcode password
+- [x] Step 23e — Portal form env dinamis (Add from catalog)
+- [x] Step 23f — Docs + smoke end-to-end catalog env
 
 ## Yang sudah jalan
 
@@ -640,20 +643,18 @@ Harapan create: `image=postgres:16-alpine`, `container_port=5432`. Deploy: `stat
 
 **Tes 22d (agent):** Agent log menampilkan `catalog_app pull image=postgres:16-alpine` (bukan `git sync` / `docker build`). Deployment → `running`, `docker ps` ada `sailorport-demo-pg-dev`.
 
-**Tes 22e (portal):** Login → Catalog → Add service → **From catalog** → PostgreSQL → Add → Deploy now → dev. List: badge **Catalog** + image. Stop / Start / Logs / History sama seperti service lain.
+**Tes 22e (portal):** Login → Catalog → Add service → **From catalog** → PostgreSQL → isi password → Add → Deploy now → dev. List: badge **Catalog** + image. Stop / Start / Logs / History sama seperti service lain.
 
-**Known debt (catalog_app):** Agent masih set `POSTGRES_PASSWORD=changeme` hardcoded (23d). API sudah simpan env user di `service_catalog_env` dan redact di GET.
-
-### Step 23 — Catalog app env (in progress)
+### Step 23 — Catalog app env ✅
 
 | Sub-step | Status | Isi |
 |----------|--------|-----|
 | 23a Env schema | ✅ | `EnvField` + `validateEnvFields`; postgres manifest `env[]`; web `CatalogAppEnvField` |
 | 23b DB + store | ✅ | Migrasi `00021`; `CatalogEnvStore`; `secrets.Store` + `PlaintextStore` (PublicView redact) |
 | 23c API create | ✅ | Validasi vs manifest; `ReplaceAll` on create; redact secret di list/get |
-| 23d Agent | ⬜ | Claim job env; hapus hardcode password |
-| 23e Portal | ⬜ | Form dinamis dari schema |
-| 23f Docs + smoke | ⬜ | End-to-end dengan password dari user |
+| 23d Agent | ✅ | `ClaimNext` + `ResolveForDeploy`; agent `docker run -e` dari job |
+| 23e Portal | ✅ | Form dinamis dari `GET /catalog-apps` schema |
+| 23f Docs + smoke | ✅ | End-to-end portal → API → agent dengan password user |
 
 **Tes 23a:**
 
@@ -683,6 +684,28 @@ curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/services
 
 Harapan: `POSTGRES_PASSWORD_set: true`, `POSTGRES_USER: "postgres"`, **tanpa** field `POSTGRES_PASSWORD` berisi nilai asli.
 
+**Tes 23f (portal → agent end-to-end):**
+
+```bash
+# Mode dev: postgres compose + API + web + agent (lihat bagian "Mode development" di atas)
+
+# Portal: Catalog → Add service → From catalog → PostgreSQL
+#   - POSTGRES_USER / POSTGRES_DB default "postgres"
+#   - Isi POSTGRES_PASSWORD (mis. my-portal-password)
+#   - Add service → Deploy now → dev
+
+# Verifikasi container (ganti nama service jika perlu):
+docker ps --filter name=sailorport-demo-pg-dev
+docker exec sailorport-demo-pg-dev env | grep POSTGRES_PASSWORD
+# Harapan: POSTGRES_PASSWORD=my-portal-password (bukan changeme)
+
+# API redact (opsional):
+curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/services/$ID | jq .catalog_env
+# Harapan: POSTGRES_PASSWORD_set: true, tanpa nilai password
+```
+
+**Known debt (catalog env):** Encrypt at-rest (`secrets.Store` plaintext MVP); update `catalog_env` pada service existing (belum ada API); manifest app tambahan (Redis).
+
 ### Checkpoint — Product vision (2026-08-20)
 
 Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
@@ -693,20 +716,20 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** agent env dari job (23d); portal form env (23e); encrypt at-rest; app catalog tambahan (Redis).
+**Yang belum di kode:** encrypt catalog env at-rest; update env pada service existing; app catalog tambahan (Redis).
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| 23d–23f | Catalog app env values | Agent → portal → docs/smoke |
 | — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
+| — | Catalog apps | Redis manifest, dll. |
+| — | Production hardening | Pass B/C QC (`docs/QC.md`) |
 
 ## Next action
 
-1. **Step 23d** — claim job kirim `catalog_env` ke agent; hapus hardcode `changeme`
-2. 23e portal → 23f docs/smoke
-3. Pass B/C QC sebelum expose publik (`docs/QC.md`)
+1. Pass B/C QC sebelum expose publik (`docs/QC.md`)
+2. Opsional: manifest Redis / encrypt `service_catalog_env` at-rest
 
 ## Cara lanjut di mesin lain
 

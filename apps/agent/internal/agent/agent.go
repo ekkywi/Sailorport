@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -74,6 +75,30 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 }
 
+func catalogEnvSlice(m map[string]string) []string {
+	if len(m) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		k = strings.TrimSpace(k)
+		if k == "" {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	if len(keys) == 0 {
+		return nil
+	}
+	sort.Strings(keys)
+
+	out := make([]string, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, k+"="+m[k])
+	}
+	return out
+}
+
 func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 	job, err := a.client.ClaimNext(workerID)
 	if err != nil {
@@ -126,7 +151,14 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 			containerPort = 8080
 		}
 
-		env := []string{"POSTGRES_PASSWORD=changeme"}
+		env := catalogEnvSlice(job.CatalogEnv)
+		if len(env) == 0 {
+			err := fmt.Errorf("catalog_app job has no catalog_env")
+			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+				Status: "failed", ErrorMessage: err.Error(),
+			})
+			return err
+		}
 
 		cid, err := docker.Run(containerName, image, port, containerPort, env)
 		if err != nil {

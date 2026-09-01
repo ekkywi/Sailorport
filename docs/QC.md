@@ -74,7 +74,6 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | JWT tanpa validasi `iss` / `aud` | Rendah | Pass A. `internal/auth/jwt.go:32` — aman karena `SigningMethodHS256` dipaksa dan secret tunggal |
 | Compose: password Postgres default + port 5433 dipublish | Rendah | Pass A. `deploy/compose/docker-compose.yml:6` — dev convenience; jangan dipakai apa adanya di host publik |
 | Portal masih menampilkan form `/register` padahal register sudah tertutup | Rendah | Efek fix A-C2. Setelah admin pertama ada, submit selalu **403** dengan pesan jelas; menyembunyikan link/form = Pass C |
-| Catalog app: `POSTGRES_PASSWORD=changeme` hardcoded di agent | Sedang | API sudah simpan env (23c); agent masih hardcode — fix di **Step 23d** |
 | `model.RegisterRequest.Role` diabaikan | Rendah | Efek fix A-C2. Akun pertama selalu `admin`; field dibiarkan supaya kontrak web tidak pecah |
 | Dua register serentak di instalasi kosong bisa jadi dua admin | Rendah | Efek fix A-C2. Gate-nya `COUNT(*)` lalu INSERT (bukan atomik); praktis tidak relevan karena siapa pun yang duluan register tetap dapat admin |
 | Portal tidak auto-logout saat 401 di tengah sesi | Rendah | Efek fix A-H3. Token user yang di-disable langsung ditolak API, tapi portal baru menghapus token saat `me()` gagal (refresh / buka ulang); interceptor 401 global = Pass C |
@@ -93,6 +92,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | 2026-08-26 | **A-H2** Secret diambil dari service pertama yang punya secret, tapi yang di-deploy `eligible[0]` → secret service A bisa memicu deploy service B pada repo yang sama | `filterVerifiedServices` menyisakan service yang **secret-nya sendiri** cocok dengan body; auto-deploy dan target dipilih hanya dari himpunan itu. Tes baru: `TestHandleGitHub_OtherServiceSecretCannotDeploy`, `TestHandleGitHub_DeploysServiceOwningTheSecret` |
 | 2026-08-26 | **A-H4** `PATCH /api/v1/deployments/{id}` terbuka untuk role writer, padahal itu endpoint laporan status agent → developer bisa mengarang `status`/`git_sha`/`container_id` | Route portal dihapus dari `router.go`; laporan status hanya lewat `PATCH /api/v1/agent/deployments/{id}` (`withAgentToken`). Portal tidak pernah memakainya (`features/deployments/api.ts` hanya `POST …/redeploy`) |
 | 2026-08-26 | **A-H3** `RequireRole` percaya `role`/`disabled` dari klaim JWT (TTL 24 jam) → user yang di-disable, di-soft-delete, atau diturunkan role tetap punya akses sampai token kedaluwarsa | `RequireAuth(secret, currentUserLookup)` memuat user dari DB (`service.Auth.Me` → tolak disabled / `deleted_at`), lalu menimpa `claims.Role` + `claims.Email` dengan nilai DB sebelum `RequireRole` berjalan. Biaya: satu query user per request ber-JWT |
+| 2026-09-01 | Catalog app: `POSTGRES_PASSWORD=changeme` hardcoded di agent | Step 23d–23f: `catalog_env` dari claim job + portal form; agent `docker run -e` dari map env user |
 
 ---
 

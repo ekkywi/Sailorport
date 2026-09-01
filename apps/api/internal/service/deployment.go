@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
+	"github.com/ekkywi/sailorport/apps/api/internal/secrets"
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
@@ -16,10 +17,23 @@ type Deployments struct {
 	envs    *store.EnvironmentsStore
 	catalog *Catalog
 	workers *Workers
+	secrets secrets.Store
 }
 
-func NewDeployments(s *store.DeploymentsStore, envs *store.EnvironmentsStore, catalog *Catalog, workers *Workers) *Deployments {
-	return &Deployments{store: s, envs: envs, catalog: catalog, workers: workers}
+func NewDeployments(
+	s *store.DeploymentsStore,
+	envs *store.EnvironmentsStore,
+	catalog *Catalog,
+	workers *Workers,
+	secretsStore secrets.Store,
+) *Deployments {
+	return &Deployments{
+		store:   s,
+		envs:    envs,
+		catalog: catalog,
+		workers: workers,
+		secrets: secretsStore,
+	}
 }
 
 func (d *Deployments) Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest) (model.Deployment, error) {
@@ -140,7 +154,30 @@ func (d *Deployments) ClaimNext(ctx context.Context, workerID string) (model.Dep
 	if err != nil {
 		return model.DeploymentJob{}, fmt.Errorf("Claim job: %w", err)
 	}
+
+	if err := d.attachCatalogEnvForJob(ctx, &job); err != nil {
+		return model.DeploymentJob{}, err
+	}
+
 	return job, nil
+}
+
+func (d *Deployments) attachCatalogEnvForJob(ctx context.Context, job *model.DeploymentJob) error {
+	if job.SourceType != "catalog_app" {
+		return nil
+	}
+	if d.secrets == nil {
+		return fmt.Errorf("catalog secrets store no configured")
+	}
+	env, err := d.secrets.ResolveForDeploy(ctx, job.ServiceID)
+	if err != nil {
+		return fmt.Errorf("resolve catalog env: %w", err)
+	}
+	if len(env) == 0 {
+		return fmt.Errorf("%w: catalog_app service has no env configured", ErrInvalid)
+	}
+	job.CatalogEnv = env
+	return nil
 }
 
 func (d *Deployments) Update(ctx context.Context, id string, req model.UpdateDeploymentRequest) (model.Deployment, error) {
