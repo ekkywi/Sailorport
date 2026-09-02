@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,8 +9,6 @@ import (
 	"strings"
 )
 
-// Nilai bawaan ini ada di repo publik, jadi hanya boleh dipakai di development.
-// Validate() menolaknya untuk APP_ENV lain.
 const (
 	devJWTSecret  = "dev-only-change-me"
 	devAgentToken = "dev-agent-token"
@@ -25,6 +24,7 @@ type Config struct {
 	JWTSecret     string
 	AgentToken    string
 	CatalogAppDir string
+	SecretsKey    string
 }
 
 func Load() Config {
@@ -40,6 +40,7 @@ func Load() Config {
 	jwtSecret := getenv("AUTH_JWT_SECRET", devJWTSecret)
 	agentToken := getenv("SAILORPORT_AGENT_TOKEN", devAgentToken)
 	catalogAppsDir := getenv("SAILORPORT_CATALOG_APPS", defaultCatalogAppsDir())
+	secretsKey := getenv("SAILORPORT_SECRETS_KEY", "")
 
 	return Config{
 		Port:          port,
@@ -51,11 +52,28 @@ func Load() Config {
 		JWTSecret:     jwtSecret,
 		AgentToken:    agentToken,
 		CatalogAppDir: catalogAppsDir,
+		SecretsKey:    secretsKey,
 	}
 }
 
-// Validate menolak secret bawaan di luar development. Tanpa ini, siapa pun yang
-// membaca repo bisa menandatangani JWT role=admin atau memakai agent token.
+func (c Config) SecretsKeyBytes() ([]byte, error) {
+	s := strings.TrimSpace(c.SecretsKey)
+	if s == "" {
+		return nil, nil
+	}
+	key, err := hex.DecodeString(s)
+	if err != nil {
+		return nil, fmt.Errorf("SAILORPORT_SECRETS_KEY must be hex: %w", err)
+	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf(
+			"SAILORPORT_SECRETS_KEY must decode to 32 bytes (64 hex chars), got %d bytes",
+			len(key),
+		)
+	}
+	return key, nil
+}
+
 func (c Config) Validate() error {
 	if c.AppEnv == "development" {
 		return nil
@@ -67,6 +85,11 @@ func (c Config) Validate() error {
 	}
 	if c.AgentToken == "" || c.AgentToken == devAgentToken {
 		problems = append(problems, "SAILORPORT_AGENT_TOKEN is unset or still the dev default")
+	}
+	if strings.TrimSpace(c.SecretsKey) == "" {
+		problems = append(problems, "SAILORPORT_SECRETS_KEY is unset")
+	} else if _, err := c.SecretsKeyBytes(); err != nil {
+		problems = append(problems, err.Error())
 	}
 	if len(problems) == 0 {
 		return nil
@@ -144,8 +167,6 @@ func getenv(key, fallback string) string {
 	return value
 }
 
-// EnsureWorkspaceDir creates the workspace root and verifies it is writable.
-// Call at process start so scaffold fails fast with a clear message.
 func EnsureWorkspaceDir(dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf(

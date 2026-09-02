@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 24 — catalog app versioning (24a–24f)
+- **Step selesai:** 25 — encrypt catalog env secrets at-rest (25a–25f)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** (belum ditetapkan) — opsional: Redis manifest, encrypt catalog env at-rest, Pass B/C QC
-- **Terakhir dikerjakan:** 2026-09-02 — Step 24f (docs + smoke catalog app versions)
+- **Step berikutnya:** (belum ditetapkan) — opsional: Redis manifest, update catalog_env on existing services, Pass B/C QC
+- **Terakhir dikerjakan:** 2026-09-02 — Step 25f (encrypt catalog env at-rest + docs/smoke)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -80,6 +80,12 @@
 - [x] Step 24c — API `resolveCatalogAppImage` — client boleh pilih image, validasi vs manifest
 - [x] Step 24d/e — Portal dropdown versi + kirim `image` saat create
 - [x] Step 24f — Docs + smoke deploy versi berbeda
+- [x] Step 25a — AES-GCM crypto helper (`encryptSecretValue` / `decryptSecretValue`)
+- [x] Step 25b — `EncryptedStore` (encrypt `secret: true` on write; decrypt on deploy/public view)
+- [x] Step 25c — `SAILORPORT_SECRETS_KEY` config + wiring di `main.go`
+- [x] Step 25d — Smoke: DB ciphertext + deploy plaintext + API redact
+- [x] Step 25e — Docs + compose env example
+- [x] Step 25f — QC + commit
 
 ## Yang sudah jalan
 
@@ -105,7 +111,7 @@ Control plane penuh di Compose:
 
 ```bash
 cd deploy/compose
-cp .env.example .env   # sekali per clone; isi AUTH_JWT_SECRET + SAILORPORT_AGENT_TOKEN
+cp .env.example .env   # sekali per clone; isi AUTH_JWT_SECRET + SAILORPORT_AGENT_TOKEN (+ SAILORPORT_SECRETS_KEY untuk production)
 docker compose up -d --build
 # web http://localhost:5173  api http://localhost:8080  postgres :5433
 
@@ -146,7 +152,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 \
 | Portal `/login`, `/register` | — | auth gate |
 | Portal `/overview`, `/catalog`, `/worker`, `/users`, `/audit` | JWT | app shell; `/users` dan `/audit` admin-only (redirect non-admin) |
 
-Env API: `AUTH_JWT_SECRET` dan `SAILORPORT_AGENT_TOKEN` — default dev (`dev-only-change-me` / `dev-agent-token`) hanya berlaku saat `APP_ENV=development`; selain itu `Config.Validate()` membuat API `log.Fatal` saat start. Compose wajib mengisinya dari `deploy/compose/.env`.
+Env API: `AUTH_JWT_SECRET`, `SAILORPORT_AGENT_TOKEN`, dan (opsional dev / wajib production) `SAILORPORT_SECRETS_KEY` — default dev JWT/agent hanya saat `APP_ENV=development`; selain itu `Config.Validate()` membuat API `log.Fatal` saat start. Compose wajib mengisi secret dari `deploy/compose/.env`.
 
 Env agent:
 
@@ -162,6 +168,12 @@ Env agent:
 | `SAILORPORT_POLL_INTERVAL` | `5s` | interval poll job deploy |
 | `SAILORPORT_DEPLOY_PORT_BASE` | `18080` | awal rentang host port workload |
 | `SAILORPORT_DEPLOY_PORT_COUNT` | `32` | jumlah port di rentang (`18080`–`18111`) |
+
+Env API (catalog env encryption):
+
+| Variable | Default | Keterangan |
+|----------|---------|------------|
+| `SAILORPORT_SECRETS_KEY` | kosong | Hex 64 chars (`openssl rand -hex 32`) → AES-256 encrypt `secret: true` rows di `service_catalog_env`. Kosong di development = plaintext store; wajib di production (`APP_ENV != development`). |
 
 Role: `admin`, `developer`, `viewer`
 
@@ -709,7 +721,67 @@ curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/services
 # Harapan: POSTGRES_PASSWORD_set: true, tanpa nilai password
 ```
 
-**Known debt (catalog env):** Encrypt at-rest (`secrets.Store` plaintext MVP); update `catalog_env` pada service existing (belum ada API); manifest app tambahan (Redis).
+**Known debt (catalog env):** Update `catalog_env` pada service existing (belum ada API); manifest app tambahan (Redis).
+
+### Step 25 — Encrypt catalog env at-rest ✅
+
+Manifest `env[].secret: true` → nilai disimpan ter-encrypt di `service_catalog_env.value` (prefix `enc:1…`); non-secret tetap plaintext. Agent deploy tetap dapat plaintext via `ResolveForDeploy`; API GET redact (`*_set`) tidak berubah.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 25a Crypto | ✅ | `crypto.go` — AES-256-GCM, prefix `enc:1` |
+| 25b EncryptedStore | ✅ | `ReplaceAll` encrypt secrets; `ResolveForDeploy` / `PublicView` decrypt; legacy plaintext OK |
+| 25c Config + main | ✅ | `SAILORPORT_SECRETS_KEY`; dev kosong → `PlaintextStore`; key valid → `EncryptedStore` |
+| 25d Smoke | ✅ | `TestSmoke_EncryptedCatalogEnvAtRest` + manual DB check |
+| 25e Docs | ✅ | Progress, QC, RESUME-PROMPT, compose `.env.example` |
+| 25f QC + commit | ✅ | `go test ./...` |
+
+**Generate key:**
+
+```bash
+openssl rand -hex 32   # 64 hex chars → 32 bytes AES-256
+export SAILORPORT_SECRETS_KEY=<output>
+```
+
+**Tes 25a–25b (unit):**
+
+```bash
+cd apps/api && go test ./internal/secrets/... -v
+```
+
+**Tes 25c (API start):**
+
+```bash
+# Tanpa key — dev plaintext OK
+unset SAILORPORT_SECRETS_KEY && go run .
+# log: Catalog env secrets: plaintext ...
+
+export SAILORPORT_SECRETS_KEY=$(openssl rand -hex 32)
+go run .
+# log: Catalog env secrets: encrypted at rest
+```
+
+**Tes 25d (create + DB + redact):**
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@sailorport.com","password":"changeme"}' | jq -r .token)
+
+curl -sS -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"pg-enc-smoke","owner":"you","source_type":"catalog_app","catalog_app_id":"postgres",
+       "catalog_env":{"POSTGRES_PASSWORD":"encrypt-smoke-123"}}' | jq '{id, catalog_env}'
+
+# DB: password harus enc:1..., user plaintext
+docker exec sailorport-postgres psql -U sailorport -d sailorport -c \
+  "SELECT key, left(value, 20) AS value_prefix, secret FROM service_catalog_env
+   WHERE service_id = (SELECT id FROM services WHERE name = 'pg-enc-smoke' LIMIT 1) ORDER BY key;"
+
+# Deploy dev → agent docker run -e POSTGRES_PASSWORD=encrypt-smoke-123 (plaintext di container)
+```
+
+**Backward compat:** row lama plaintext di DB tetap dibaca `EncryptedStore` (tanpa prefix `enc:1`).
 
 ### Step 24 — Catalog app versioning ✅
 
@@ -789,7 +861,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** encrypt catalog env at-rest; update env pada service existing; app catalog tambahan (Redis).
+**Yang belum di kode:** update env pada service existing; app catalog tambahan (Redis).
 
 ## Rencana step berikutnya (belum dikerjakan)
 
@@ -802,7 +874,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 ## Next action
 
 1. Pass B/C QC sebelum expose publik (`docs/QC.md`)
-2. Opsional: manifest Redis / encrypt `service_catalog_env` at-rest
+2. Opsional: manifest Redis / update `catalog_env` on existing services
 
 ## Cara lanjut di mesin lain
 

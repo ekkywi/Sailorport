@@ -17,9 +17,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 24 (24a–24f)** — catalog app versioning: manifest `versions[]` → API validasi image → portal picker → deploy versi berbeda.
+**Step terakhir selesai:** **Step 25 (25a–25f)** — encrypt catalog env secrets at-rest (AES-GCM + `SAILORPORT_SECRETS_KEY`).
 
-**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: Redis manifest, encrypt at-rest, Pass B/C QC).
+**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: Redis manifest, update catalog_env, Pass B/C QC).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -34,10 +34,10 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Step 22 catalog apps (API + agent + portal)
 - Step 23 catalog env (schema, DB, API, agent, portal, smoke)
 - Step 24 catalog app versions (manifest, API image pick, portal dropdown, smoke)
+- Step 25 encrypt catalog env at-rest (`EncryptedStore`, `SAILORPORT_SECRETS_KEY`)
 - Migrasi `00017`–`00021`
 
 **Yang belum / opsional:**
-- Encrypt `service_catalog_env` at-rest (plaintext MVP sekarang)
 - Update `catalog_env` pada service yang sudah ada (belum ada API)
 - Manifest app tambahan (Redis, …)
 - Pass B/C production review sebelum expose publik
@@ -47,7 +47,8 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Portal **From catalog** baca schema env dari API; password = field `secret: true`; versi = dropdown `versions[]` → kirim `image`
 - Agent dapat env penuh lewat `POST /api/v1/agent/jobs/next` → `catalog_env` map
 - Redact secret di GET user: `POSTGRES_PASSWORD_set: true` (bukan nilai asli)
-- Env: `SAILORPORT_CATALOG_APPS`, `SAILORPORT_TEMPLATES`, `SAILORPORT_AGENT_TOKEN`
+- Encrypt at-rest: `SAILORPORT_SECRETS_KEY` (hex 64 chars); hanya baris `secret: true`; dev kosong = plaintext OK
+- Env: `SAILORPORT_CATALOG_APPS`, `SAILORPORT_TEMPLATES`, `SAILORPORT_AGENT_TOKEN`, `SAILORPORT_SECRETS_KEY`
 
 **Cara jalankan lokal:** `docs/SETUP.md` + `docs/PROGRESS.md` (mode development).
 

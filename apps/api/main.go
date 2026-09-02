@@ -51,7 +51,23 @@ func main() {
 
 	serviceStore := store.NewServicesStore(sqlDB)
 	catalogEnvStore := store.NewCatalogEnvStore(sqlDB)
-	secretsStore := secrets.NewPlaintext(catalogEnvStore)
+
+	secretsKey, err := cfg.SecretsKeyBytes()
+	if err != nil {
+		log.Fatalf("Config invalid: %v", err)
+	}
+	var secretsStore secrets.Store
+	if len(secretsKey) == 32 {
+		secretsStore, err = secrets.NewEncrypted(catalogEnvStore, secretsKey)
+		if err != nil {
+			log.Fatalf("Secrets store: %v", err)
+		}
+		log.Printf("Catalog env secrets: encrypted at rest")
+	} else {
+		secretsStore = secrets.NewPlaintext(catalogEnvStore)
+		log.Printf("Catalog env secrets: plaintext (set SAILORPORT_SECRETS_KEY to encrypt)")
+	}
+
 	deploymentsStore := store.NewDeploymentsStore(sqlDB)
 	catalogAppsReg := catalogapp.NewRegistry(cfg.CatalogAppDir)
 	catalog := service.NewCatalog(serviceStore, deploymentsStore, cfg.WorkspaceDir, catalogAppsReg, secretsStore)
