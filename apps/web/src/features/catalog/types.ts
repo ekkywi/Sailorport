@@ -97,11 +97,18 @@ export type CatalogAppEnvField = {
   default?: string;
 };
 
+export type CatalogAppVersion = {
+  tag: string;
+  image: string;
+  default?: boolean;
+};
+
 export type CatalogApp = {
   id: string;
   name: string;
   description: string;
   image: string;
+  versions?: CatalogAppVersion[];
   container_port: number;
   tags: string[];
   env?: CatalogAppEnvField[];
@@ -109,6 +116,7 @@ export type CatalogApp = {
 
 export type CatalogAppFormValues = {
   catalog_app_id: string;
+  image: string;
   name: string;
   description: string;
   owner: string;
@@ -125,6 +133,15 @@ export function defaultCatalogEnvFromApp(
     }
   }
   return out;
+}
+
+export function defaultCatalogImageFromApp(
+  app: CatalogApp | undefined,
+): string {
+  if (!app) return "";
+  if (!app.versions?.length) return app.image;
+  const def = app.versions.find((v) => v.default);
+  return def?.image ?? app.image;
 }
 
 export const emptyServiceForm: ServiceFormValues = {

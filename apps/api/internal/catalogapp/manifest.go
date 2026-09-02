@@ -16,11 +16,18 @@ type EnvField struct {
 	Default     string `json:"default,omitempty"`
 }
 
+type Version struct {
+	Tag     string `json:"tag"`
+	Image   string `json:"image"`
+	Default bool   `json:"default,omitempty"`
+}
+
 type Manifest struct {
 	ID            string     `json:"id"`
 	Name          string     `json:"name"`
 	Description   string     `json:"description"`
 	Image         string     `json:"image"`
+	Versions      []Version  `json:"versions,omitempty"`
 	ContainerPort int        `json:"container_port"`
 	Tags          []string   `json:"tags,omitempty"`
 	Env           []EnvField `json:"env,omitempty"`
@@ -54,6 +61,50 @@ func validateEnvFields(appID string, fields []EnvField) error {
 			return fmt.Errorf("catalog app %q: invalid env name %q", appID, name)
 		}
 	}
+	return nil
+}
+
+func validateVersions(appID string, topImage string, versions []Version) error {
+	if len(versions) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(versions))
+	defaultCount := 0
+	var defaultImage string
+
+	for i, v := range versions {
+		tag := strings.TrimSpace(v.Tag)
+		image := strings.TrimSpace(v.Image)
+		if tag == "" {
+			return fmt.Errorf("catalog app %q: versions[%d]: tag is required", appID, i)
+		}
+		if image == "" {
+			return fmt.Errorf("catalog app %q: versions[%d]: image is required", appID, i)
+		}
+		if _, dup := seen[tag]; dup {
+			return fmt.Errorf("catalog app %q: duplicate version tag %q", appID, tag)
+		}
+		seen[tag] = struct{}{}
+
+		if v.Default {
+			defaultCount++
+			defaultImage = image
+		}
+	}
+
+	if defaultCount != 1 {
+		return fmt.Errorf("catalog app %q: versions require exactly one default version: true", appID)
+	}
+
+	topImage = strings.TrimSpace(topImage)
+	if topImage != "" && topImage != defaultImage {
+		return fmt.Errorf(
+			"catalog app %q: top-level image %q must match default version image %q",
+			appID, topImage, defaultImage,
+		)
+	}
+
 	return nil
 }
 
@@ -115,6 +166,15 @@ func (r *Registry) Get(id string) (Manifest, error) {
 	}
 
 	if err := validateEnvFields(id, m.Env); err != nil {
+		return Manifest{}, err
+	}
+
+	for i := range m.Versions {
+		m.Versions[i].Tag = strings.TrimSpace(m.Versions[i].Tag)
+		m.Versions[i].Image = strings.TrimSpace(m.Versions[i].Image)
+	}
+
+	if err := validateVersions(id, m.Image, m.Versions); err != nil {
 		return Manifest{}, err
 	}
 	return m, nil

@@ -59,7 +59,6 @@ func TestRegistry_GetPostgresManifestEnv(t *testing.T) {
 
 func findCatalogAppsRoot(t *testing.T) string {
 	t.Helper()
-	// go test cwd is the package dir (apps/api/internal/catalogapp)
 	candidates := []string{
 		"../../../../catalog-apps",
 		"../../../catalog-apps",
@@ -73,4 +72,48 @@ func findCatalogAppsRoot(t *testing.T) string {
 	}
 	t.Fatal("could not find catalog-apps/postgres from test cwd")
 	return ""
+}
+
+func TestValidateVersions_EmptyOK(t *testing.T) {
+	if err := validateVersions("postgres", "postgres:16-alpine", nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateVersions_RequiresOneDefault(t *testing.T) {
+	err := validateVersions("postgres", "postgres:16-alpine", []Version{
+		{Tag: "16-alpine", Image: "postgres:16-alpine"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "exactly one default") {
+		t.Fatalf("expected default error, got %v", err)
+	}
+}
+
+func TestValidateVersions_DuplicateTag(t *testing.T) {
+	err := validateVersions("postgres", "postgres:16-alpine", []Version{
+		{Tag: "16-alpine", Image: "postgres:16-alpine", Default: true},
+		{Tag: "16-alpine", Image: "postgres:16", Default: false},
+	})
+	if err == nil || !strings.Contains(err.Error(), "duplicate") {
+		t.Fatalf("expected duplicate error, got %v", err)
+	}
+}
+
+func TestValidateVersions_TopImageMustMatchDefault(t *testing.T) {
+	err := validateVersions("postgres", "postgres:15-alpine", []Version{
+		{Tag: "16-alpine", Image: "postgres:16-alpine", Default: true},
+	})
+	if err == nil || !strings.Contains(err.Error(), "top-level image") {
+		t.Fatalf("expected top-level mismatch error, got %v", err)
+	}
+}
+
+func TestValidateVersions_OK(t *testing.T) {
+	err := validateVersions("postgres", "postgres:16-alpine", []Version{
+		{Tag: "15-alpine", Image: "postgres:15-alpine"},
+		{Tag: "16-alpine", Image: "postgres:16-alpine", Default: true},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 }

@@ -47,6 +47,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 10. Disable user di portal, lalu pakai token lama user itu ke `GET /api/v1/services` → **401** tanpa perlu tunggu token kedaluwarsa — regression check A-H3
 11. `PATCH /api/v1/deployments/{id}` dengan JWT developer → **405** (route portal sudah dihapus); `PATCH /api/v1/agent/deployments/{id}` dengan agent token tetap **200** — regression check A-H4
 12. **Catalog app (Step 22):** Portal Add service → From catalog → PostgreSQL → Deploy dev → `running`; agent log `catalog_app pull` (bukan git/build). Stop / Start / Logs / History OK. Atau curl di `docs/PROGRESS.md` tes 22c–22d.
+13. **Catalog app versions (Step 24):** Portal Add from catalog → pilih **15-alpine** → create → Deploy dev → agent log `pull image=postgres:15-alpine`; `docker inspect` container = `postgres:15-alpine`. Default tanpa pilih versi = `postgres:16-alpine`. Curl invalid image → **400** (`docs/PROGRESS.md` tes 24c).
 
 ---
 

@@ -3,6 +3,11 @@
   "name": "PostgreSQL",
   "description": "Managed Postgres container from a public image. No git clone or docker build.",
   "image": "postgres:16-alpine",
+  "versions": [
+    { "tag": "15-alpine", "image": "postgres:15-alpine" },
+    { "tag": "16-alpine", "image": "postgres:16-alpine", "default": true },
+    { "tag": "17-alpine", "image": "postgres:17-alpine" }
+  ],
   "container_port": 5432,
   "tags": ["database", "postgres"],
   "env": [

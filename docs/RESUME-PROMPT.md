@@ -17,7 +17,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 23 (23a–23f)** — catalog app env end-to-end: schema manifest → DB → API create/redact → agent deploy → portal form.
+**Step terakhir selesai:** **Step 24 (24a–24f)** — catalog app versioning: manifest `versions[]` → API validasi image → portal picker → deploy versi berbeda.
 
 **Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: Redis manifest, encrypt at-rest, Pass B/C QC).
 
@@ -33,6 +33,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Step 19–21 Git + webhook + redeploy by SHA
 - Step 22 catalog apps (API + agent + portal)
 - Step 23 catalog env (schema, DB, API, agent, portal, smoke)
+- Step 24 catalog app versions (manifest, API image pick, portal dropdown, smoke)
 - Migrasi `00017`–`00021`
 
 **Yang belum / opsional:**
@@ -42,8 +43,8 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Pass B/C production review sebelum expose publik
 
 **Catatan teknis:**
-- Tambah catalog app: folder `catalog-apps/<id>/manifest.json` + optional `env[]`
-- Portal **From catalog** baca schema env dari API; password = field `secret: true`
+- Tambah catalog app: folder `catalog-apps/<id>/manifest.json` + optional `env[]` + optional `versions[]`
+- Portal **From catalog** baca schema env dari API; password = field `secret: true`; versi = dropdown `versions[]` → kirim `image`
 - Agent dapat env penuh lewat `POST /api/v1/agent/jobs/next` → `catalog_env` map
 - Redact secret di GET user: `POSTGRES_PASSWORD_set: true` (bukan nilai asli)
 - Env: `SAILORPORT_CATALOG_APPS`, `SAILORPORT_TEMPLATES`, `SAILORPORT_AGENT_TOKEN`

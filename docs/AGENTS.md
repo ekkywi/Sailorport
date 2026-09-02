@@ -120,4 +120,4 @@ Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sa
 
 `docker compose up` → agent → worker online → service di catalog → deploy → status/logs.
 
-**Selesai:** MVP core + Step 18–21 + **Step 22** (catalog apps end-to-end). **Next:** opsional polish / Pass B–C (`docs/PRODUCT.md`, `docs/PROGRESS.md`).
+**Selesai:** MVP core + Step 18–21 + **Step 22** (catalog apps) + **Step 23** (catalog env) + **Step 24** (catalog versions). **Next:** opsional polish / Pass B–C (`docs/PRODUCT.md`, `docs/PROGRESS.md`).

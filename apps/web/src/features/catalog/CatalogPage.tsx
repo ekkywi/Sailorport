@@ -63,6 +63,7 @@ const emptyGitForm: GitServiceFormValues = {
 
 const emptyCatalogForm: CatalogAppFormValues = {
   catalog_app_id: "",
+  image: "",
   name: "",
   description: "",
   owner: "",
@@ -384,6 +385,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         owner: catalogValues.owner.trim(),
         source_type: "catalog_app",
         catalog_app_id: catalogValues.catalog_app_id.trim(),
+        image: catalogValues.image.trim() || undefined,
         catalog_env: catalogValues.catalog_env,
       });
       toast("Service added from catalog");

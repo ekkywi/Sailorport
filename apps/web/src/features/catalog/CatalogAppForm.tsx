@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { listCatalogApps } from "./api";
 import {
   defaultCatalogEnvFromApp,
+  defaultCatalogImageFromApp,
   type CatalogApp,
   type CatalogAppFormValues,
 } from "./types";
@@ -49,6 +50,7 @@ export function CatalogAppForm({
 
         if (data.length > 0 && !values.catalog_app_id) {
           onChange("catalog_app_id", data[0].id);
+          onChange("image", defaultCatalogImageFromApp(data[0]));
           onCatalogEnvReset(defaultCatalogEnvFromApp(data[0]));
         }
       } catch (err) {
@@ -120,6 +122,7 @@ export function CatalogAppForm({
               onChange("name", id);
             }
             const app = apps.find((a) => a.id === id);
+            onChange("image", defaultCatalogImageFromApp(app));
             onCatalogEnvReset(defaultCatalogEnvFromApp(app));
           }}
           required
@@ -146,6 +149,34 @@ export function CatalogAppForm({
           </p>
         ) : null}
       </div>
+
+      {selected?.versions && selected.versions.length > 0 ? (
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label
+            htmlFor="catalog-version"
+            className="text-[12px] text-muted-foreground"
+          >
+            Version
+          </Label>
+          <select
+            id="catalog-version"
+            value={values.image}
+            onChange={(e) => onChange("image", e.target.value)}
+            required
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-[13px] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            {selected.versions.map((v) => (
+              <option key={v.tag} value={v.image}>
+                {v.tag}
+                {v.default ? " (default)" : ""}
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground">
+            Image: <span className="font-mono">{values.image}</span>
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5 sm:col-span-2">
         <Label htmlFor="catalog-name" className="text-[12px] text-muted-foreground">

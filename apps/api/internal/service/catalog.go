@@ -482,7 +482,10 @@ func (c *Catalog) applyCatalogAppDefaults(req model.CreateServiceRequest) (model
 		return req, fmt.Errorf("%w: unknown catalog_app_id %q", ErrInvalid, req.CatalogAppID)
 	}
 
-	req.Image = m.Image
+	req.Image, err = resolveCatalogAppImage(m, req.Image)
+	if err != nil {
+		return req, err
+	}
 	req.ContainerPort = m.ContainerPort
 	req.CatalogAppID = m.ID
 	req.RepoURL = ""
@@ -504,4 +507,20 @@ func (c *Catalog) catalogAppManifest(catalogAppID string) (catalogapp.Manifest, 
 		return catalogapp.Manifest{}, fmt.Errorf("%w: unknown catalog_app_id %q", ErrInvalid, catalogAppID)
 	}
 	return m, nil
+}
+
+func resolveCatalogAppImage(m catalogapp.Manifest, clientImage string) (string, error) {
+	clientImage = strings.TrimSpace(clientImage)
+	if len(m.Versions) == 0 {
+		return m.Image, nil
+	}
+	if clientImage == "" {
+		return m.Image, nil
+	}
+	for _, v := range m.Versions {
+		if clientImage == v.Image {
+			return clientImage, nil
+		}
+	}
+	return "", fmt.Errorf("%w: image %q is not allowed for catalog_app_id %q", ErrInvalid, clientImage, m.ID)
 }

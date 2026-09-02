@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 23 — catalog app env values end-to-end (23a–23f)
+- **Step selesai:** 24 — catalog app versioning (24a–24f)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
 - **Step berikutnya:** (belum ditetapkan) — opsional: Redis manifest, encrypt catalog env at-rest, Pass B/C QC
-- **Terakhir dikerjakan:** 2026-09-01 — Step 23f (docs + smoke catalog env portal → agent)
+- **Terakhir dikerjakan:** 2026-09-02 — Step 24f (docs + smoke catalog app versions)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -75,6 +75,11 @@
 - [x] Step 23d — Agent claim job `catalog_env`; hapus hardcode password
 - [x] Step 23e — Portal form env dinamis (Add from catalog)
 - [x] Step 23f — Docs + smoke end-to-end catalog env
+- [x] Step 24a — Catalog app `versions[]` schema + `validateVersions` di `catalogapp`
+- [x] Step 24b — Postgres manifest `versions` (15/16/17-alpine)
+- [x] Step 24c — API `resolveCatalogAppImage` — client boleh pilih image, validasi vs manifest
+- [x] Step 24d/e — Portal dropdown versi + kirim `image` saat create
+- [x] Step 24f — Docs + smoke deploy versi berbeda
 
 ## Yang sudah jalan
 
@@ -705,6 +710,74 @@ curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/services
 ```
 
 **Known debt (catalog env):** Encrypt at-rest (`secrets.Store` plaintext MVP); update `catalog_env` pada service existing (belum ada API); manifest app tambahan (Redis).
+
+### Step 24 — Catalog app versioning ✅
+
+User bisa memilih image versi (mis. Postgres 15 vs 16) saat create service catalog_app. Manifest `versions[]` mendefinisikan tag + image; top-level `image` harus sama dengan versi `default: true`.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 24a Schema + validasi | ✅ | `Version` struct; `validateVersions` (unique tag, satu default, top-level image = default image) |
+| 24b Manifest data | ✅ | `catalog-apps/postgres/manifest.json` — 15/16/17-alpine; default 16 |
+| 24c API image selection | ✅ | `resolveCatalogAppImage` di `applyCatalogAppDefaults`; kosong → default; invalid → 400 |
+| 24d/e Portal picker | ✅ | `CatalogAppForm` dropdown versi; `CreateServiceInput.image` dari form |
+| 24f Docs + smoke | ✅ | Progress + QC; curl + portal deploy versi berbeda |
+
+**Tes 24a (unit):**
+
+```bash
+cd apps/api && go test ./internal/catalogapp/... -v
+```
+
+**Tes 24b (manifest API):**
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/catalog-apps/postgres | jq '.versions'
+```
+
+Harapan: array 15/16/17; `16-alpine` punya `"default": true`.
+
+**Tes 24c (API create):**
+
+```bash
+# Default (tanpa image) → postgres:16-alpine
+curl -sS -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"pg-default","owner":"you","source_type":"catalog_app","catalog_app_id":"postgres",
+       "catalog_env":{"POSTGRES_PASSWORD":"secret123"}}' | jq .image
+
+# Versi 15 → postgres:15-alpine
+curl -sS -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"pg15","owner":"you","source_type":"catalog_app","catalog_app_id":"postgres",
+       "image":"postgres:15-alpine","catalog_env":{"POSTGRES_PASSWORD":"secret123"}}' | jq .image
+
+# Image tidak ada di manifest → 400
+curl -sS -o /dev/null -w "%{http_code}\n" -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"pg-bad","owner":"you","source_type":"catalog_app","catalog_app_id":"postgres",
+       "image":"postgres:99-alpine","catalog_env":{"POSTGRES_PASSWORD":"secret123"}}'
+```
+
+**Tes 24f (portal → agent end-to-end):**
+
+```bash
+# Mode dev: postgres compose + API + web + agent (lihat "Mode development" di atas)
+
+# Portal: Catalog → Add service → From catalog → PostgreSQL
+#   - Pilih Version: 15-alpine
+#   - Isi POSTGRES_PASSWORD → Add service → Deploy now → dev
+
+# Verifikasi agent pull image yang benar:
+docker ps --filter name=sailorport-pg15-dev
+docker inspect sailorport-pg15-dev --format '{{.Config.Image}}'
+# Harapan: postgres:15-alpine
+
+# Bandingkan dengan service default (16-alpine) — buat kedua service terpisah jika perlu
+```
+
+Agent tidak perlu perubahan: deploy memakai `services.image` dari job claim (sudah dari Step 22).
 
 ### Checkpoint — Product vision (2026-08-20)
 
