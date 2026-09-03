@@ -133,3 +133,62 @@ func TestNormalizeCatalogEnvInput_SkipsEmptyKeys(t *testing.T) {
 		t.Fatalf("normalize: %+v", got)
 	}
 }
+
+func existingPostgresEnv(password string) []model.CatalogEnv {
+	return []model.CatalogEnv{
+		{Key: "POSTGRES_USER", Value: "postgres", Secret: false},
+		{Key: "POSTGRES_PASSWORD", Value: password, Secret: true},
+		{Key: "POSTGRES_DB", Value: "postgres", Secret: false},
+	}
+}
+
+func TestMergeCatalogEnvForUpdate_KeepSecretWhenEmpty(t *testing.T) {
+	got, err := mergeCatalogEnvForUpdate(postgresManifest(), map[string]string{
+		"POSTGRES_USER": "admin",
+	}, existingPostgresEnv("old-secret"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	byKey := map[string]string{}
+	for _, e := range got {
+		byKey[e.Key] = e.Value
+	}
+	if byKey["POSTGRES_USER"] != "admin" {
+		t.Fatalf("user: %v", byKey)
+	}
+	if byKey["POSTGRES_PASSWORD"] != "old-secret" {
+		t.Fatalf("password should be kept, got %q", byKey["POSTGRES_PASSWORD"])
+	}
+}
+
+func TestMergeCatalogEnvForUpdate_ReplacesSecretWhenProvided(t *testing.T) {
+	got, err := mergeCatalogEnvForUpdate(postgresManifest(), map[string]string{
+		"POSTGRES_PASSWORD": "new-secret",
+	}, existingPostgresEnv("old-secret"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range got {
+		if e.Key == "POSTGRES_PASSWORD" && e.Value != "new-secret" {
+			t.Fatalf("want new-secret, got %q", e.Value)
+		}
+	}
+}
+
+func TestMergeCatalogEnvForUpdate_RequiredSecretMissingWithoutExisting(t *testing.T) {
+	_, err := mergeCatalogEnvForUpdate(postgresManifest(), map[string]string{
+		"POSTGRES_USER": "admin",
+	}, nil)
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}
+func TestMergeCatalogEnvForUpdate_UnknownKey(t *testing.T) {
+	_, err := mergeCatalogEnvForUpdate(postgresManifest(), map[string]string{
+		"POSTGRES_PASSWORD": "x",
+		"BAD":               "y",
+	}, existingPostgresEnv("old"))
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}

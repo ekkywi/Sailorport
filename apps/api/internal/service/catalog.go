@@ -189,10 +189,41 @@ func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateService
 	if err != nil {
 		return model.Service{}, err
 	}
+	if req.CatalogEnv != nil {
+		if existing.SourceType != "catalog_app" {
+			return model.Service{}, fmt.Errorf("%w: catalog_env is only allowed for source_type=catalog_app", ErrInvalid)
+		}
+		m, err := c.catalogAppManifest(existing.CatalogAppID)
+		if err != nil {
+			return model.Service{}, err
+		}
+		if c.secrets == nil {
+			return model.Service{}, fmt.Errorf("catalog secrets store not configured")
+		}
+
+		existingPlain, err := c.secrets.ResolveForDeploy(ctx, id)
+		if err != nil {
+			return model.Service{}, fmt.Errorf("load catalog env: %w", err)
+		}
+		existingRows := catalogEnvRowsFromMap(existingPlain, m)
+
+		envEntries, err := mergeCatalogEnvForUpdate(m, req.CatalogEnv, existingRows)
+		if err != nil {
+			return model.Service{}, err
+		}
+		if err := c.secrets.ReplaceAll(ctx, id, envEntries); err != nil {
+			return model.Service{}, fmt.Errorf("save catalog env: %w", err)
+		}
+	}
 	svc, err := c.repo.Update(ctx, id, req)
 	if err != nil {
 		return model.Service{}, mapRepoErr(err)
 	}
+
+	if err := c.attachCatalogEnvPublic(ctx, &svc); err != nil {
+		return model.Service{}, err
+	}
+
 	c.recordService(ctx, actorID, actorEmail, "service.update", svc)
 	return svc, nil
 }
@@ -523,4 +554,33 @@ func resolveCatalogAppImage(m catalogapp.Manifest, clientImage string) (string, 
 		}
 	}
 	return "", fmt.Errorf("%w: image %q is not allowed for catalog_app_id %q", ErrInvalid, clientImage, m.ID)
+}
+
+func (c *Catalog) listCatalogEnvPlaintext(ctx context.Context, serviceID string) ([]model.CatalogEnv, error) {
+	if c.secrets == nil {
+		return nil, fmt.Errorf("catalog secrets store not configured")
+	}
+	rows, err := c.secrets.ResolveForDeploy(ctx, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.CatalogEnv, 0, len(rows))
+	for k, v := range rows {
+		out = append(out, model.CatalogEnv{Key: k, Value: v})
+	}
+	return out, nil
+}
+
+func catalogEnvRowsFromMap(m map[string]string, manifest catalogapp.Manifest) []model.CatalogEnv {
+	secretByName := map[string]bool{}
+	for _, f := range manifest.Env {
+		secretByName[f.Name] = f.Secret
+	}
+	out := make([]model.CatalogEnv, 0, len(m))
+	for k, v := range m {
+		out = append(out, model.CatalogEnv{
+			Key: k, Value: v, Secret: secretByName[k],
+		})
+	}
+	return out
 }

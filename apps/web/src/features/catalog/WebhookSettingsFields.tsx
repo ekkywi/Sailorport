@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Environment } from "../environments/types";
 import {
+  catalogOptionClassName,
+  catalogSelectClassName,
+} from "./selectClassName";
+import {
   generateWebhookSecret,
   type ServiceFormValues,
 } from "./types";
@@ -104,10 +108,10 @@ export function WebhookSettingsFields({
           onChange={(e) =>
             onChange("auto_deploy_environment", e.target.value)
           }
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-[13px] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+          className={`${catalogSelectClassName} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           {envOptions.map((slug) => (
-            <option key={slug} value={slug}>
+            <option key={slug} value={slug} className={catalogOptionClassName}>
               {slug}
             </option>
           ))}

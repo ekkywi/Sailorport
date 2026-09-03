@@ -68,6 +68,8 @@ export type UpdateServiceInput = {
   catalog_app_id?: string;
   image?: string;
   container_port?: number;
+  /** When set, API merges/replaces catalog_env (secret empty = keep). */
+  catalog_env?: Record<string, string>;
 };
 
 export type ServiceFormValues = {
@@ -144,6 +146,27 @@ export function defaultCatalogImageFromApp(
   return def?.image ?? app.image;
 }
 
+/** Prefill edit form: non-secret strings from public catalog_env; secrets stay empty. */
+export function catalogEnvFormFromService(
+  app: CatalogApp | undefined,
+  publicEnv: Service["catalog_env"],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const field of app?.env ?? []) {
+    if (field.secret) {
+      out[field.name] = "";
+      continue;
+    }
+    const raw = publicEnv?.[field.name];
+    if (typeof raw === "string") {
+      out[field.name] = raw;
+    } else if (field.default) {
+      out[field.name] = field.default;
+    }
+  }
+  return out;
+}
+
 export const emptyServiceForm: ServiceFormValues = {
   name: "",
   description: "",
@@ -168,6 +191,7 @@ export function serviceToFormValues(svc: Service): ServiceFormValues {
 
 export function formValuesToUpdateInput(
   values: ServiceFormValues,
+  options?: { catalog_env?: Record<string, string> },
 ): UpdateServiceInput {
   const input: UpdateServiceInput = {
     name: values.name.trim(),
@@ -179,6 +203,9 @@ export function formValuesToUpdateInput(
   const secret = values.webhook_secret.trim();
   if (secret) {
     input.webhook_secret = secret;
+  }
+  if (options?.catalog_env) {
+    input.catalog_env = options.catalog_env;
   }
   return input;
 }

@@ -24,6 +24,7 @@ import { CreateServiceForm } from "../scaffold/CreateServiceForm";
 import {
   createService,
   deleteService,
+  listCatalogApps,
   listServices,
   updateService,
 } from "./api";
@@ -33,12 +34,14 @@ import { GitServiceForm } from "./GitServiceForm";
 import { ServiceForm } from "./ServiceForm";
 import { ServiceList } from "./ServiceList";
 import type {
+  CatalogAppEnvField,
   CatalogAppFormValues,
   GitServiceFormValues,
   Service,
   ServiceFormValues,
 } from "./types";
 import {
+  catalogEnvFormFromService,
   emptyServiceForm,
   formValuesToUpdateInput,
   serviceToFormValues,
@@ -94,6 +97,12 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [deleting, setDeleting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingSourceType, setEditingSourceType] = useState("");
+  const [editCatalogEnvFields, setEditCatalogEnvFields] = useState<
+    CatalogAppEnvField[]
+  >([]);
+  const [editCatalogEnv, setEditCatalogEnv] = useState<Record<string, string>>(
+    {},
+  );
   const [dialog, setDialog] = useState<DialogMode>("none");
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
   const [createdPath, setCreatedPath] = useState("");
@@ -206,12 +215,18 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     return () => window.clearInterval(id);
   }, [services]);
 
+  function clearEditCatalogEnv() {
+    setEditCatalogEnvFields([]);
+    setEditCatalogEnv({});
+  }
+
   function closeDialog() {
     setValues(emptyServiceForm);
     setGitValues(emptyGitForm);
     setCatalogValues(emptyCatalogForm);
     setEditingId(null);
     setEditingSourceType("");
+    clearEditCatalogEnv();
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
@@ -222,6 +237,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   function startAdd() {
     setEditingId(null);
     setEditingSourceType("");
+    clearEditCatalogEnv();
     setValues(emptyServiceForm);
     setGitValues(emptyGitForm);
     setCatalogValues(emptyCatalogForm);
@@ -285,7 +301,29 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setEditingSourceType(svc.source_type);
     setValues(serviceToFormValues(svc));
     setFormError("");
+    clearEditCatalogEnv();
     setDialog("edit");
+
+    if (svc.source_type === "catalog_app" && svc.catalog_app_id) {
+      void (async () => {
+        try {
+          const apps = await listCatalogApps();
+          const app = apps.find((a) => a.id === svc.catalog_app_id);
+          setEditCatalogEnvFields(app?.env ?? []);
+          setEditCatalogEnv(catalogEnvFormFromService(app, svc.catalog_env));
+        } catch (err) {
+          setFormError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load catalog app env schema",
+          );
+        }
+      })();
+    }
+  }
+
+  function onEditCatalogEnvChange(name: string, value: string) {
+    setEditCatalogEnv((prev) => ({ ...prev, [name]: value }));
   }
 
   function onChange(
@@ -323,8 +361,19 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setFormError("");
     try {
       if (editingId) {
-        await updateService(editingId, formValuesToUpdateInput(values));
-        toast("Service updated");
+        const updateOpts =
+          editingSourceType === "catalog_app" && editCatalogEnvFields.length > 0
+            ? { catalog_env: editCatalogEnv }
+            : undefined;
+        await updateService(
+          editingId,
+          formValuesToUpdateInput(values, updateOpts),
+        );
+        toast(
+          editingSourceType === "catalog_app" && updateOpts
+            ? "Service updated — redeploy to apply env changes"
+            : "Service updated",
+        );
       } else {
         await createService({
           name: values.name,
@@ -731,7 +780,9 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 <DialogDescription>
                   {editingSourceType === "git"
                     ? "Update catalog metadata and GitHub webhook auto-deploy."
-                    : "Update catalog metadata for this service."}
+                    : editingSourceType === "catalog_app"
+                      ? "Update metadata and catalog environment variables. Redeploy after changing secrets."
+                      : "Update catalog metadata for this service."}
                 </DialogDescription>
               </DialogHeader>
               <ServiceForm
@@ -741,6 +792,13 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 error={formError}
                 showWebhookSettings={editingSourceType === "git"}
                 environments={environments}
+                catalogEnvFields={
+                  editingSourceType === "catalog_app"
+                    ? editCatalogEnvFields
+                    : undefined
+                }
+                catalogEnv={editCatalogEnv}
+                onCatalogEnvChange={onEditCatalogEnvChange}
                 onChange={onChange}
                 onSubmit={onSubmitMetadata}
                 onCancel={closeDialog}

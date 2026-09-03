@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Environment } from "../environments/types";
-import type { ServiceFormValues } from "./types";
+import { CatalogEnvFields } from "./CatalogEnvFields";
+import type { CatalogAppEnvField, ServiceFormValues } from "./types";
 import { WebhookSettingsFields } from "./WebhookSettingsFields";
 
 type ServiceFormProps = {
@@ -14,6 +15,10 @@ type ServiceFormProps = {
   /** Show GitHub webhook controls (edit + git services). */
   showWebhookSettings?: boolean;
   environments?: Environment[];
+  /** Catalog app env schema when editing source_type=catalog_app. */
+  catalogEnvFields?: CatalogAppEnvField[];
+  catalogEnv?: Record<string, string>;
+  onCatalogEnvChange?: (name: string, value: string) => void;
   onChange: (field: keyof ServiceFormValues, value: string | boolean) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
@@ -27,12 +32,19 @@ export function ServiceForm({
   error,
   showWebhookSettings = false,
   environments = [],
+  catalogEnvFields,
+  catalogEnv = {},
+  onCatalogEnvChange,
   onChange,
   onSubmit,
   onCancel,
   onBack,
 }: ServiceFormProps) {
   const isEdit = mode === "edit";
+  const showCatalogEnv =
+    isEdit &&
+    Boolean(catalogEnvFields?.length) &&
+    typeof onCatalogEnvChange === "function";
 
   return (
     <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2">
@@ -87,6 +99,15 @@ export function ServiceForm({
           environments={environments}
           disabled={saving}
           onChange={onChange}
+        />
+      ) : null}
+
+      {showCatalogEnv ? (
+        <CatalogEnvFields
+          fields={catalogEnvFields!}
+          values={catalogEnv}
+          mode="edit"
+          onChange={onCatalogEnvChange!}
         />
       ) : null}
 

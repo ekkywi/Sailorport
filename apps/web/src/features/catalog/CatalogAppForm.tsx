@@ -10,6 +10,11 @@ import {
   type CatalogApp,
   type CatalogAppFormValues,
 } from "./types";
+import { CatalogEnvFields } from "./CatalogEnvFields";
+import {
+  catalogOptionClassName,
+  catalogSelectClassName,
+} from "./selectClassName";
 
 type CatalogAppFormProps = {
   values: CatalogAppFormValues;
@@ -126,10 +131,10 @@ export function CatalogAppForm({
             onCatalogEnvReset(defaultCatalogEnvFromApp(app));
           }}
           required
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-[13px] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className={catalogSelectClassName}
         >
           {apps.map((a) => (
-            <option key={a.id} value={a.id}>
+            <option key={a.id} value={a.id} className={catalogOptionClassName}>
               {a.name} ({a.id})
             </option>
           ))}
@@ -163,10 +168,14 @@ export function CatalogAppForm({
             value={values.image}
             onChange={(e) => onChange("image", e.target.value)}
             required
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-[13px] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className={catalogSelectClassName}
           >
             {selected.versions.map((v) => (
-              <option key={v.tag} value={v.image}>
+              <option
+                key={v.tag}
+                value={v.image}
+                className={catalogOptionClassName}
+              >
                 {v.tag}
                 {v.default ? " (default)" : ""}
               </option>
@@ -222,51 +231,12 @@ export function CatalogAppForm({
       </div>
 
       {selected?.env && selected.env.length > 0 ? (
-        <div className="space-y-3 border-t border-border/60 pt-3 sm:col-span-2">
-          <div>
-            <p className="text-[13px] font-medium text-foreground">
-              Environment variables
-            </p>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Values for the container image. Secrets are stored securely and
-              not shown again after save.
-            </p>
-          </div>
-          {selected.env.map((field) => (
-            <div key={field.name} className="space-y-1.5">
-              <Label
-                htmlFor={`catalog-env-${field.name}`}
-                className="text-[12px] text-muted-foreground"
-              >
-                {field.name}
-                {field.required ? " *" : ""}
-              </Label>
-              <Input
-                id={`catalog-env-${field.name}`}
-                type={field.secret ? "password" : "text"}
-                value={catalogEnv[field.name] ?? ""}
-                onChange={(e) =>
-                  onCatalogEnvChange(field.name, e.target.value)
-                }
-                required={field.required}
-                placeholder={
-                  field.default
-                    ? `Default: ${field.default}`
-                    : field.secret
-                      ? "Required"
-                      : "Optional"
-                }
-                className="h-9 text-[13px]"
-                autoComplete="off"
-              />
-              {field.description ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {field.description}
-                </p>
-              ) : null}
-            </div>
-          ))}
-        </div>
+        <CatalogEnvFields
+          fields={selected.env}
+          values={catalogEnv}
+          mode="create"
+          onChange={onCatalogEnvChange}
+        />
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3 pt-1 sm:col-span-2">

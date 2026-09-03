@@ -54,6 +54,66 @@ func buildCatalogEnvEntries(m catalogapp.Manifest, input map[string]string) ([]m
 	return out, nil
 }
 
+func mergeCatalogEnvForUpdate(
+	m catalogapp.Manifest,
+	input map[string]string,
+	existing []model.CatalogEnv,
+) ([]model.CatalogEnv, error) {
+	normalized := normalizeCatalogEnvInput(input)
+
+	if len(m.Env) == 0 {
+		if len(normalized) > 0 {
+			for k := range normalized {
+				return nil, fmt.Errorf("%w: unknown catalog env key %q", ErrInvalid, k)
+			}
+		}
+		return nil, nil
+	}
+
+	existingByKey := make(map[string]string, len(existing))
+	for _, e := range existing {
+		existingByKey[e.Key] = e.Value
+	}
+
+	allowed := make(map[string]catalogapp.EnvField, len(m.Env))
+	for _, f := range m.Env {
+		allowed[f.Name] = f
+	}
+
+	out := make([]model.CatalogEnv, 0, len(m.Env))
+	for _, f := range m.Env {
+		val := normalized[f.Name]
+
+		if val == "" && f.Secret {
+			if prev, ok := existingByKey[f.Name]; ok && prev != "" {
+				val = prev
+			}
+		}
+		if val == "" {
+			val = f.Default
+		}
+		if f.Required && val == "" {
+			return nil, fmt.Errorf("%w: catalog env %q is required", ErrInvalid, f.Name)
+		}
+		if val == "" {
+			continue
+		}
+		out = append(out, model.CatalogEnv{
+			Key: f.Name,
+			Value: val,
+			Secret: f.Secret,
+		})
+	}
+
+	for k := range normalized {
+		if _, ok := allowed[k]; !ok {
+			return nil, fmt.Errorf("%w: unknown catalog env key %q", ErrInvalid, k)
+		}
+	}
+	
+	return out, nil
+}
+
 func normalizeCatalogEnvInput(input map[string]string) map[string]string {
 	if len(input) == 0 {
 		return map[string]string{}

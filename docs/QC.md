@@ -49,6 +49,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 12. **Catalog app (Step 22):** Portal Add service → From catalog → PostgreSQL → Deploy dev → `running`; agent log `catalog_app pull` (bukan git/build). Stop / Start / Logs / History OK. Atau curl di `docs/PROGRESS.md` tes 22c–22d.
 13. **Catalog app versions (Step 24):** Portal Add from catalog → pilih **15-alpine** → create → Deploy dev → agent log `pull image=postgres:15-alpine`; `docker inspect` container = `postgres:15-alpine`. Default tanpa pilih versi = `postgres:16-alpine`. Curl invalid image → **400** (`docs/PROGRESS.md` tes 24c).
 14. **Encrypt catalog env (Step 25):** Set `SAILORPORT_SECRETS_KEY=$(openssl rand -hex 32)`, restart API → log `encrypted at rest`. Create catalog service dengan password → DB row `POSTGRES_PASSWORD` prefix `enc:1…`; GET API redact `*_set`; deploy → container env plaintext benar. Regression: unset key di dev → plaintext store OK (`docs/PROGRESS.md` tes 25d).
+15. **Update catalog env (Step 26):** Edit service catalog_app di portal → ubah `POSTGRES_USER`, biarkan password kosong → Save → GET `catalog_env` user berubah + `POSTGRES_PASSWORD_set: true`. PUT secret baru → password diganti. PUT `catalog_env` pada service Git → **400**. Dark mode: Version dropdown From catalog tetap terbaca. Setelah ubah env → Redeploy supaya container ikut (`docs/PROGRESS.md` tes 26c–26e).
 
 ---
 
@@ -95,6 +96,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | 2026-08-26 | **A-H4** `PATCH /api/v1/deployments/{id}` terbuka untuk role writer, padahal itu endpoint laporan status agent → developer bisa mengarang `status`/`git_sha`/`container_id` | Route portal dihapus dari `router.go`; laporan status hanya lewat `PATCH /api/v1/agent/deployments/{id}` (`withAgentToken`). Portal tidak pernah memakainya (`features/deployments/api.ts` hanya `POST …/redeploy`) |
 | 2026-08-26 | **A-H3** `RequireRole` percaya `role`/`disabled` dari klaim JWT (TTL 24 jam) → user yang di-disable, di-soft-delete, atau diturunkan role tetap punya akses sampai token kedaluwarsa | `RequireAuth(secret, currentUserLookup)` memuat user dari DB (`service.Auth.Me` → tolak disabled / `deleted_at`), lalu menimpa `claims.Role` + `claims.Email` dengan nilai DB sebelum `RequireRole` berjalan. Biaya: satu query user per request ber-JWT |
 | 2026-09-01 | Catalog app: `POSTGRES_PASSWORD=changeme` hardcoded di agent | Step 23d–23f: `catalog_env` dari claim job + portal form; agent `docker run -e` dari map env user |
+| 2026-09-03 | Tidak bisa update `catalog_env` service existing | Step 26: PUT merge + portal `CatalogEnvFields`; secret kosong = keep; redeploy setelah ubah |
 
 ---
 

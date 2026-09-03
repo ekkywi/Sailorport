@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 25 — encrypt catalog env secrets at-rest (25a–25f)
+- **Step selesai:** 26 — update `catalog_env` on existing services (26a–26f)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** (belum ditetapkan) — opsional: Redis manifest, update catalog_env on existing services, Pass B/C QC
-- **Terakhir dikerjakan:** 2026-09-02 — Step 25f (encrypt catalog env at-rest + docs/smoke)
+- **Step berikutnya:** (belum ditetapkan) — opsional: Redis manifest, Pass B/C QC, worker admin lite
+- **Terakhir dikerjakan:** 2026-09-03 — Step 26f (update catalog_env API + portal edit + docs)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -86,6 +86,12 @@
 - [x] Step 25d — Smoke: DB ciphertext + deploy plaintext + API redact
 - [x] Step 25e — Docs + compose env example
 - [x] Step 25f — QC + commit
+- [x] Step 26a — `UpdateServiceRequest.CatalogEnv` + `mergeCatalogEnvForUpdate` (secret kosong = keep)
+- [x] Step 26b — Wire `Catalog.Update` + unit tests
+- [x] Step 26c — Smoke curl PUT `catalog_env`
+- [x] Step 26d — Portal edit env untuk `catalog_app` (`CatalogEnvFields`)
+- [x] Step 26e — Dark-mode select/option styling (version dropdown)
+- [x] Step 26f — Docs + QC + commit
 
 ## Yang sudah jalan
 
@@ -721,7 +727,61 @@ curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/services
 # Harapan: POSTGRES_PASSWORD_set: true, tanpa nilai password
 ```
 
-**Known debt (catalog env):** Update `catalog_env` pada service existing (belum ada API); manifest app tambahan (Redis).
+**Known debt (catalog env):** Manifest app tambahan (Redis). Update env pada service existing → Step 26 ✅.
+
+### Step 26 — Update `catalog_env` on existing services ✅
+
+PUT `/api/v1/services/{id}` boleh mengirim `catalog_env` untuk `source_type=catalog_app`. Secret kosong pada update = pertahankan nilai lama; non-secret dikirim ulang. Tanpa field `catalog_env` → env tidak berubah. Setelah ubah env, **redeploy** diperlukan agar container mendapat nilai baru.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 26a Model + merge | ✅ | `UpdateServiceRequest.CatalogEnv`; `mergeCatalogEnvForUpdate` |
+| 26b Catalog.Update | ✅ | Hanya `catalog_app`; `secrets.ReplaceAll`; response redact via `attachCatalogEnvPublic` |
+| 26c Smoke curl | ✅ | PUT non-secret + secret keep/replace |
+| 26d Portal edit | ✅ | `CatalogEnvFields` di edit form; prefill + optional secret |
+| 26e Dark select | ✅ | `selectClassName` + `.dark select/option` di `index.css` |
+| 26f Docs + QC | ✅ | Progress, RESUME-PROMPT, QC |
+
+**Tes 26a–26b (unit):**
+
+```bash
+cd apps/api && go test ./internal/service/ -run CatalogEnv -v
+```
+
+**Tes 26c (API update):**
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@sailorport.com","password":"changeme"}' | jq -r .token)
+
+# Ganti $ID dengan service catalog_app existing
+curl -sS -X PUT "http://localhost:8080/api/v1/services/$ID" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"pg-existing","owner":"you","catalog_env":{"POSTGRES_USER":"admin","POSTGRES_DB":"appdb","POSTGRES_PASSWORD":""}}' \
+  | jq .catalog_env
+# Harapan: POSTGRES_USER=admin, POSTGRES_DB=appdb, POSTGRES_PASSWORD_set: true (password lama tetap)
+
+# Secret baru mengganti yang lama
+curl -sS -X PUT "http://localhost:8080/api/v1/services/$ID" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"pg-existing","owner":"you","catalog_env":{"POSTGRES_USER":"admin","POSTGRES_DB":"appdb","POSTGRES_PASSWORD":"new-secret"}}' \
+  | jq .catalog_env
+
+# catalog_env pada non–catalog_app → 400
+curl -sS -o /dev/null -w "%{http_code}\n" -X PUT "http://localhost:8080/api/v1/services/$GIT_ID" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"git-svc","owner":"you","catalog_env":{"FOO":"bar"}}'
+```
+
+**Tes 26d–26e (portal):**
+
+```bash
+# Mode dark di portal → Catalog → Add from catalog → Version dropdown: teks option terbaca
+# Edit service catalog_app → ubah POSTGRES_USER → biarkan password kosong → Save
+# → toast/redeploy note; GET service: user berubah, password_set tetap true
+# Redeploy → container env sesuai nilai baru
+```
 
 ### Step 25 — Encrypt catalog env at-rest ✅
 
@@ -861,7 +921,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** update env pada service existing; app catalog tambahan (Redis).
+**Yang belum di kode:** app catalog tambahan (Redis); Pass B/C QC.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
@@ -874,7 +934,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 ## Next action
 
 1. Pass B/C QC sebelum expose publik (`docs/QC.md`)
-2. Opsional: manifest Redis / update `catalog_env` on existing services
+2. Opsional: manifest Redis / worker admin lite
 
 ## Cara lanjut di mesin lain
 

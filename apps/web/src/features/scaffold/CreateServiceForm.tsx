@@ -5,6 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { listTemplates, scaffoldService } from "./api";
 import type { TemplateManifest } from "./types";
+import {
+  catalogOptionClassName,
+  catalogSelectClassName,
+} from "../catalog/selectClassName";
 
 type CreateServiceFormProps = {
   onSuccess: (workspacePath: string) => void;
@@ -108,10 +112,10 @@ export function CreateServiceForm({
           value={templateId}
           onChange={(e) => setTemplateId(e.target.value)}
           required
-          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-[13px] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className={catalogSelectClassName}
         >
           {templates.map((t) => (
-            <option key={t.id} value={t.id}>
+            <option key={t.id} value={t.id} className={catalogOptionClassName}>
               {t.name} ({t.id})
             </option>
           ))}

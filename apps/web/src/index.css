@@ -141,6 +141,15 @@
   html {
     @apply font-sans;
   }
+  /* Native <select> dropdown options: avoid white popup on dark theme */
+  select {
+    color-scheme: light dark;
+  }
+  .dark select,
+  .dark select option {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
 }
 
 @layer utilities {
