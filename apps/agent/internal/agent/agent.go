@@ -160,7 +160,7 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 			return err
 		}
 
-		cid, err := docker.Run(containerName, image, port, containerPort, env)
+		cid, err := docker.Run(containerName, image, port, containerPort, env, job.CatalogCommand)
 		if err != nil {
 			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
 				Status: "failed", ErrorMessage: err.Error(),
@@ -192,7 +192,7 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 		return err
 	}
 
-	cid, err := docker.Run(containerName, imageTag, port, 8080, nil)
+	cid, err := docker.Run(containerName, imageTag, port, 8080, nil, nil)
 	if err != nil {
 		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
 			Status: "failed", ErrorMessage: err.Error(),

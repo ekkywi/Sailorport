@@ -39,6 +39,7 @@ type DeploymentJob struct {
 	Image           string            `json:"image"`
 	ContainerPort   int               `json:"container_port"`
 	CatalogEnv      map[string]string `json:"catalog_env,omitempty"`
+	CatalogCommand  []string          `json:"catalog_command,omitempty"`
 }
 
 type UpdateDeploymentRequest struct {

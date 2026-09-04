@@ -33,7 +33,7 @@ func Pull(image string) error {
 	return nil
 }
 
-func Run(containerName, imageTag string, hostPort, containerPort int, env []string) (containerID string, err error) {
+func Run(containerName, imageTag string, hostPort, containerPort int, env []string, cmdArgs []string) (containerID string, err error) {
 	if err := Remove(containerName); err != nil {
 		return "", err
 	}
@@ -57,9 +57,18 @@ func Run(containerName, imageTag string, hostPort, containerPort int, env []stri
 	}
 	args = append(args, imageTag)
 
+	for _, a := range cmdArgs {
+		a = strings.TrimSpace(a)
+		if a == "" {
+			continue
+		}
+		args = append(args, a)
+	}
 	out, err := runDocker(args...)
 	if err != nil {
+
 		return "", err
 	}
+
 	return strings.TrimSpace(string(out)), nil
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ekkywi/sailorport/apps/api/internal/catalogapp"
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
 	"github.com/ekkywi/sailorport/apps/api/internal/secrets"
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
@@ -177,6 +178,19 @@ func (d *Deployments) attachCatalogEnvForJob(ctx context.Context, job *model.Dep
 		return fmt.Errorf("%w: catalog_app service has no env configured", ErrInvalid)
 	}
 	job.CatalogEnv = env
+
+	if d.catalog == nil {
+		return fmt.Errorf("catalog service not configured")
+	}
+	m, err := d.catalog.catalogAppManifest(job.CatalogAppID)
+	if err != nil {
+		return err
+	}
+	cmd, err := catalogapp.ResolveCommand(m.Command, env)
+	if err != nil {
+		return fmt.Errorf("%w: resolve catalog command: %v", ErrInvalid, err)
+	}
+	job.CatalogCommand = cmd
 	return nil
 }
 

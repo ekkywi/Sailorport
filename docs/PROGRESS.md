@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 26 — update `catalog_env` on existing services (26a–26f)
+- **Step selesai:** 27 — catalog `command` + Redis manifest (27a–27f)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** (belum ditetapkan) — opsional: Redis manifest, Pass B/C QC, worker admin lite
-- **Terakhir dikerjakan:** 2026-09-03 — Step 26f (update catalog_env API + portal edit + docs)
+- **Step berikutnya:** (belum ditetapkan) — opsional: Pass B/C QC, worker admin lite, catalog app lain (Gitea, …)
+- **Terakhir dikerjakan:** 2026-09-04 — Step 27f (catalog command + Redis + docs)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -92,6 +92,12 @@
 - [x] Step 26d — Portal edit env untuk `catalog_app` (`CatalogEnvFields`)
 - [x] Step 26e — Dark-mode select/option styling (version dropdown)
 - [x] Step 26f — Docs + QC + commit
+- [x] Step 27a — Manifest `command[]` + validate placeholders vs `env[]`
+- [x] Step 27b — `ResolveCommand` + claim job `catalog_command`
+- [x] Step 27c — Agent `docker.Run` append argv setelah image
+- [x] Step 27d — `catalog-apps/redis/manifest.json` (requirepass)
+- [x] Step 27e — Smoke create/deploy Redis + `redis-cli PING`
+- [x] Step 27f — Docs + QC + commit
 
 ## Yang sudah jalan
 
@@ -727,7 +733,65 @@ curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/services
 # Harapan: POSTGRES_PASSWORD_set: true, tanpa nilai password
 ```
 
-**Known debt (catalog env):** Manifest app tambahan (Redis). Update env pada service existing → Step 26 ✅.
+**Known debt (catalog env):** Update env pada service existing → Step 26 ✅. Redis + `command` → Step 27 ✅. App catalog tambahan (Gitea, …) masih opsional.
+
+### Step 27 — Catalog `command` + Redis app ✅
+
+Manifest boleh mendefinisikan `command` (argv setelah image) dengan placeholder `${ENV_NAME}` yang merujuk ke `env[]`. API me-resolve saat claim job → `catalog_command`; agent menempelkan argv di `docker run` tanpa shell. Redis memakai pola resmi `redis-server --requirepass` (bukan env inventaran Sailorport). Postgres tanpa `command` tetap entrypoint default.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 27a Schema + validasi | ✅ | `Manifest.Command`; `validateCommand` (placeholder vs env) |
+| 27b Resolve + claim | ✅ | `ResolveCommand`; ClaimNext `catalog_app_id`; job `catalog_command` |
+| 27c Agent docker | ✅ | `docker.Run(..., cmdArgs)`; wire `job.CatalogCommand` |
+| 27d Redis manifest | ✅ | `catalog-apps/redis/` — versions 6/7, `REDIS_PASSWORD`, command requirepass |
+| 27e Smoke | ✅ | Create/deploy + inspect Cmd + `redis-cli -a … PING` → PONG |
+| 27f Docs + QC | ✅ | Progress, RESUME-PROMPT, QC |
+
+**Tes 27a–27b (unit):**
+
+```bash
+cd apps/api && go test ./internal/catalogapp/ -v
+```
+
+**Tes 27c (agent):**
+
+```bash
+cd apps/agent && go build ./... && go vet ./... && go test ./...
+```
+
+**Tes 27d (manifest API):**
+
+```bash
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/catalog-apps/redis | jq '{id, image, command, env, versions}'
+```
+
+**Tes 27e (create → deploy → PING):**
+
+```bash
+PASS='smoke-redis-pass-1'
+ID=$(curl -sS -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"name\":\"redis-smoke\",\"owner\":\"you\",\"source_type\":\"catalog_app\",\"catalog_app_id\":\"redis\",\"catalog_env\":{\"REDIS_PASSWORD\":\"$PASS\"}}" \
+  | jq -r .id)
+
+curl -sS -X POST "http://localhost:8080/api/v1/services/$ID/deployments" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"environment":"dev"}' | jq '{id, status}'
+
+# Tunggu agent → running, lalu:
+docker inspect sailorport-redis-smoke-dev --format 'Image={{.Config.Image}} Cmd={{json .Config.Cmd}}'
+# Harapan Cmd: ["redis-server","--requirepass","smoke-redis-pass-1"]
+
+HOST_PORT=$(docker inspect sailorport-redis-smoke-dev \
+  --format '{{(index (index .NetworkSettings.Ports "6379/tcp") 0).HostPort}}')
+docker run --rm --network host redis:7-alpine \
+  redis-cli -h 127.0.0.1 -p "$HOST_PORT" -a "$PASS" PING
+# Harapan: PONG
+```
+
+**Portal:** Catalog → From catalog → Redis → isi password → Deploy now → dev.
 
 ### Step 26 — Update `catalog_env` on existing services ✅
 
@@ -921,20 +985,20 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** app catalog tambahan (Redis); Pass B/C QC.
+**Yang belum di kode:** Pass B/C QC; worker admin lite; catalog app lain (Gitea, …).
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
 | — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
-| — | Catalog apps | Redis manifest, dll. |
+| — | Catalog apps | Gitea / app lain (pola `command` + env sudah siap) |
 | — | Production hardening | Pass B/C QC (`docs/QC.md`) |
 
 ## Next action
 
 1. Pass B/C QC sebelum expose publik (`docs/QC.md`)
-2. Opsional: manifest Redis / worker admin lite
+2. Opsional: catalog app lain / worker admin lite
 
 ## Cara lanjut di mesin lain
 

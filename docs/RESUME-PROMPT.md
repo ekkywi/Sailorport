@@ -17,14 +17,14 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 26 (26a–26f)** — update `catalog_env` pada service existing (API merge + portal edit + dark-mode select).
+**Step terakhir selesai:** **Step 27 (27a–27f)** — catalog app `command` (argv + `${ENV}` resolve on claim) + Redis manifest (`requirepass`).
 
-**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: Redis manifest, Pass B/C QC, worker admin lite).
+**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: Pass B/C QC, worker admin lite, catalog app lain).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
 - **Jalur utama:** Git + Dockerfile → agent sync → build → run
-- **Jalur sekunder:** catalog apps (Postgres, …) → pull image → run + env dari portal
+- **Jalur sekunder:** catalog apps (Postgres, Redis, …) → pull image → run + env/command dari manifest
 - **Scaffold** = opsional; **Register only** = metadata tanpa deploy
 - `catalog-apps/` ≠ `templates/`
 
@@ -36,19 +36,23 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Step 24 catalog app versions (manifest, API image pick, portal dropdown, smoke)
 - Step 25 encrypt catalog env at-rest (`EncryptedStore`, `SAILORPORT_SECRETS_KEY`)
 - Step 26 update `catalog_env` on existing services (PUT merge + portal edit)
+- Step 27 catalog `command` + Redis (`requirepass` via resolved argv)
 - Migrasi `00017`–`00021`
 
 **Yang belum / opsional:**
-- Manifest app tambahan (Redis, …)
 - Pass B/C production review sebelum expose publik
 - Worker admin lite (edit labels / decommission)
+- Catalog app lain (Gitea, …) — pola `env` + `versions` + `command` sudah siap
 
 **Catatan teknis:**
-- Tambah catalog app: folder `catalog-apps/<id>/manifest.json` + optional `env[]` + optional `versions[]`
+- Tambah catalog app: folder `catalog-apps/<id>/manifest.json` + optional `env[]` + `versions[]` + `command[]`
+- `command` = argv setelah image; placeholder `${NAME}` harus ada di `env[]`; API resolve saat claim → `catalog_command`
+- Agent: `docker run … image [catalog_command…]` (bukan shell string)
+- Redis: `redis-server --requirepass ${REDIS_PASSWORD}` (standar image, bukan env inventaran)
 - Portal **From catalog** baca schema env dari API; password = field `secret: true`; versi = dropdown `versions[]` → kirim `image`
 - Edit catalog_app: `catalog_env` di PUT; secret kosong = keep; setelah ubah env → **redeploy**
-- Agent dapat env penuh lewat `POST /api/v1/agent/jobs/next` → `catalog_env` map
-- Redact secret di GET user: `POSTGRES_PASSWORD_set: true` (bukan nilai asli)
+- Agent claim: `catalog_env` + optional `catalog_command`
+- Redact secret di GET user: `*_set: true` (bukan nilai asli)
 - Encrypt at-rest: `SAILORPORT_SECRETS_KEY` (hex 64 chars); hanya baris `secret: true`; dev kosong = plaintext OK
 - Env: `SAILORPORT_CATALOG_APPS`, `SAILORPORT_TEMPLATES`, `SAILORPORT_AGENT_TOKEN`, `SAILORPORT_SECRETS_KEY`
 

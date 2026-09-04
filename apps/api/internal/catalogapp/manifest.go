@@ -31,6 +31,7 @@ type Manifest struct {
 	ContainerPort int        `json:"container_port"`
 	Tags          []string   `json:"tags,omitempty"`
 	Env           []EnvField `json:"env,omitempty"`
+	Command       []string   `json:"command,omitempty"`
 }
 
 func validateEnvFields(appID string, fields []EnvField) error {
@@ -108,6 +109,60 @@ func validateVersions(appID string, topImage string, versions []Version) error {
 	return nil
 }
 
+func validateCommand(appID string, env []EnvField, command []string) error {
+	if len(command) == 0 {
+		return nil
+	}
+
+	allowed := make(map[string]struct{}, len(env))
+	for _, f := range env {
+		name := strings.TrimSpace(f.Name)
+		if name != "" {
+			allowed[name] = struct{}{}
+		}
+	}
+
+	for i, raw := range command {
+		arg := strings.TrimSpace(raw)
+		if arg == "" {
+			return fmt.Errorf("catalog app %q: command[%d]: empty argument", appID, i)
+		}
+
+		rest := arg
+		for {
+			start := strings.Index(rest, "${")
+			if start < 0 {
+				break
+			}
+			end := strings.Index(rest[start:], "}")
+			if end < 0 {
+				return fmt.Errorf("catalog app %q: command[%d]: unclosed placeholder in %q", appID, i, arg)
+			}
+			end = start + end
+			name := rest[start+2 : end]
+			if name == "" {
+				return fmt.Errorf("catalog app %q: command[%d]: empty placeholder in %q", appID, i, arg)
+			}
+			for j, r := range name {
+				ok := (r >= 'A' && r <= 'Z') ||
+					(r == '_' && j > 0) ||
+					(r >= '0' && r <= '9' && j > 0)
+				if !ok {
+					return fmt.Errorf("catalog app %q: command[%d]: invalid placeholder %q", appID, i, name)
+				}
+			}
+			if _, ok := allowed[name]; !ok {
+				return fmt.Errorf(
+					"catalog app %q: command[%d]: placeholder ${%s} is not defined in env",
+					appID, i, name,
+				)
+			}
+			rest = rest[end+1:]
+		}
+	}
+	return nil
+}
+
 type Registry struct {
 	root string
 }
@@ -177,5 +232,13 @@ func (r *Registry) Get(id string) (Manifest, error) {
 	if err := validateVersions(id, m.Image, m.Versions); err != nil {
 		return Manifest{}, err
 	}
+
+	for i := range m.Command {
+		m.Command[i] = strings.TrimSpace(m.Command[i])
+	}
+	if err := validateCommand(id, m.Env, m.Command); err != nil {
+		return Manifest{}, err
+	}
+
 	return m, nil
 }

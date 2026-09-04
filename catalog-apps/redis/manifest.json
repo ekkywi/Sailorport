@@ -1,0 +1,25 @@
+{
+  "id": "redis",
+  "name": "Redis",
+  "description": "Managed Redis container from a public image. Password via redis-server --requirepass (official style). No git clone or docker build.",
+  "image": "redis:7-alpine",
+  "versions": [
+    { "tag": "6-alpine", "image": "redis:6-alpine" },
+    { "tag": "7-alpine", "image": "redis:7-alpine", "default": true }
+  ],
+  "container_port": 6379,
+  "tags": ["cache", "redis", "database"],
+  "env": [
+    {
+      "name": "REDIS_PASSWORD",
+      "description": "Requirepass password (passed to redis-server --requirepass)",
+      "required": true,
+      "secret": true
+    }
+  ],
+  "command": [
+    "redis-server",
+    "--requirepass",
+    "${REDIS_PASSWORD}"
+  ]
+}

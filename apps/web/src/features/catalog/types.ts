@@ -114,6 +114,8 @@ export type CatalogApp = {
   container_port: number;
   tags: string[];
   env?: CatalogAppEnvField[];
+  /** Optional argv after image; placeholders like ${REDIS_PASSWORD} resolved on claim */
+  command?: string[];
 };
 
 export type CatalogAppFormValues = {

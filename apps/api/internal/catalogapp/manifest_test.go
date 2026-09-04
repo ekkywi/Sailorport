@@ -117,3 +117,79 @@ func TestValidateVersions_OK(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestValidteCommand_EmptyOK(t *testing.T) {
+	if err := validateCommand("postgres", nil, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateCommand_LiteralOk(t *testing.T) {
+	err := validateCommand("redis", []EnvField{{Name: "REDIS_PASSWORD"}}, []string{
+		"redis-server",
+		"--requirepass",
+		"${REDIS_PASSWORD}",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateCommand_UnkownPlaceholder(t *testing.T) {
+	err := validateCommand("redis", []EnvField{{Name: "REDIS_PASSWORD"}}, []string{
+		"${UNKNOWN}",
+	})
+	if err == nil || !strings.Contains(err.Error(), "not defined in env") {
+		t.Fatalf("expected undefined placeholder error, got %v", err)
+	}
+}
+
+func TestValidateCommand_Unclosed(t *testing.T) {
+	err := validateCommand("redis", []EnvField{{Name: "REDIS_PASSWORD"}}, []string{
+		"${REDIS_PASSWORD",
+	})
+	if err == nil || !strings.Contains(err.Error(), "unclosed") {
+		t.Fatalf("expected unclosed error, got %v", err)
+	}
+}
+
+func TestValidateCommand_EmptyArg(t *testing.T) {
+	err := validateCommand("redis", nil, []string{"redis-server", " "})
+	if err == nil || !strings.Contains(err.Error(), "empty argument") {
+		t.Fatalf("expected empty argument error, got %v", err)
+	}
+}
+
+func TestRegistry_GetPostgresStillOK(t *testing.T) {
+	root := findCatalogAppsRoot(t)
+	m, err := NewRegistry(root).Get("postgres")
+	if err != nil {
+		t.Fatalf("postgres must remain valid without command: %v", err)
+	}
+	if len(m.Command) != 0 {
+		t.Fatalf("postgres should have no command, got %#v", m.Command)
+	}
+}
+
+func TestRegistry_GetRedisManifest(t *testing.T) {
+	root := findCatalogAppsRoot(t)
+	m, err := NewRegistry(root).Get("redis")
+	if err != nil {
+		t.Fatalf("Get redis: %v", err)
+	}
+	if m.ContainerPort != 6379 {
+		t.Fatalf("port: want 6379, got %d", m.ContainerPort)
+	}
+	if len(m.Command) < 3 {
+		t.Fatalf("expected command with requirepass, got %#v", m.Command)
+	}
+	var hasPass bool
+	for _, f := range m.Env {
+		if f.Name == "REDIS_PASSWORD" && f.Secret && f.Required {
+			hasPass = true
+		}
+	}
+	if !hasPass {
+		t.Fatal("missing REDIS_PASSWORD secret required")
+	}
+}
