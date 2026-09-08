@@ -4,7 +4,7 @@ import type { Worker } from "./types";
 export async function listWorkers(): Promise<Worker[]> {
   const res = await apiFetch("/api/v1/workers");
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal list workers: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to list workers: ${res.status}`));
   }
   return res.json();
 }
@@ -18,7 +18,7 @@ export async function updateWorkerLabels(
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal update labels: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to update labels: ${res.status}`));
   }
   return res.json();
 }
@@ -28,7 +28,7 @@ export async function decommissionWorker(id: string): Promise<Worker> {
     method: "POST",
   });
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal decommission: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to decommission: ${res.status}`));
   }
   return res.json();
 }
@@ -38,7 +38,7 @@ export async function restoreWorker(id: string): Promise<Worker> {
     method: "POST",
   });
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal restore: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to restore: ${res.status}`));
   }
   return res.json();
 }

@@ -11,12 +11,20 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
-type Workers struct {
-	store *store.WorkersStore
+// Allowed admin-editable worker tiers (empty = unset).
+var allowedWorkerTiers = map[string]struct{}{
+	"":        {},
+	"nonprod": {},
+	"prod":    {},
 }
 
-func NewWorkers(s *store.WorkersStore) *Workers {
-	return &Workers{store: s}
+type Workers struct {
+	store *store.WorkersStore
+	envs  *store.EnvironmentsStore
+}
+
+func NewWorkers(s *store.WorkersStore, envs *store.EnvironmentsStore) *Workers {
+	return &Workers{store: s, envs: envs}
 }
 
 func (w *Workers) Register(ctx context.Context, req model.RegisterWorkerRequest) (model.Worker, error) {
@@ -78,6 +86,58 @@ func mergeWorkerCapabilityLabels(existing map[string]any, req model.UpdateWorker
 	return out
 }
 
+// normalizeWorkerEnvironmentsInput parses a comma-separated env list into
+// unique lowercase slugs (preserving first-seen order).
+func normalizeWorkerEnvironmentsInput(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := map[string]struct{}{}
+	for _, p := range parts {
+		slug := strings.ToLower(strings.TrimSpace(p))
+		if slug == "" {
+			continue
+		}
+		if _, ok := seen[slug]; ok {
+			continue
+		}
+		seen[slug] = struct{}{}
+		out = append(out, slug)
+	}
+	return out
+}
+
+func validateWorkerTier(tier string) error {
+	tier = strings.TrimSpace(tier)
+	if _, ok := allowedWorkerTiers[tier]; !ok {
+		return fmt.Errorf("%w: tier must be empty, \"nonprod\", or \"prod\"", ErrInvalid)
+	}
+	return nil
+}
+
+func (w *Workers) validateWorkerEnvironments(ctx context.Context, raw string) (string, error) {
+	slugs := normalizeWorkerEnvironmentsInput(raw)
+	if len(slugs) == 0 {
+		return "", nil // empty = allow all environments
+	}
+	if w.envs == nil {
+		return "", fmt.Errorf("environments store not configured")
+	}
+	envs, err := w.envs.List(ctx)
+	if err != nil {
+		return "", err
+	}
+	known := make(map[string]struct{}, len(envs))
+	for _, e := range envs {
+		known[strings.ToLower(strings.TrimSpace(e.Slug))] = struct{}{}
+	}
+	for _, slug := range slugs {
+		if _, ok := known[slug]; !ok {
+			return "", fmt.Errorf("%w: unknown environment %q", ErrInvalid, slug)
+		}
+	}
+	return strings.Join(slugs, ","), nil
+}
+
 func (w *Workers) UpdateLabels(ctx context.Context, id string, req model.UpdateWorkerLabelsRequest) (model.Worker, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
@@ -88,6 +148,16 @@ func (w *Workers) UpdateLabels(ctx context.Context, id string, req model.UpdateW
 	if err != nil {
 		return model.Worker{}, err
 	}
+
+	req.Tier = strings.TrimSpace(req.Tier)
+	if err := validateWorkerTier(req.Tier); err != nil {
+		return model.Worker{}, err
+	}
+	normalizedEnvs, err := w.validateWorkerEnvironments(ctx, req.Environments)
+	if err != nil {
+		return model.Worker{}, err
+	}
+	req.Environments = normalizedEnvs
 
 	merged := mergeWorkerCapabilityLabels(existing.Labels, req)
 	out, err := w.store.UpdateLabels(ctx, id, merged)

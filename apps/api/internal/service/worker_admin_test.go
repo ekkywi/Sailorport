@@ -12,7 +12,7 @@ func TestMergeWorkerCapabilityLabels(t *testing.T) {
 		"tier": "old",
 	}
 	got := mergeWorkerCapabilityLabels(existing, model.UpdateWorkerLabelsRequest{
-		Tier: "nonprod",
+		Tier:         "nonprod",
 		Environments: "dev,staging",
 	})
 	if got["role"] != "agent" {
@@ -26,5 +26,30 @@ func TestMergeWorkerCapabilityLabels(t *testing.T) {
 	}
 	if existing["tier"] != "old" {
 		t.Fatalf("merge must not mutate existing map")
+	}
+}
+
+func TestValidateWorkerTier(t *testing.T) {
+	if err := validateWorkerTier(""); err != nil {
+		t.Fatalf("empty tier OK: %v", err)
+	}
+	if err := validateWorkerTier("nonprod"); err != nil {
+		t.Fatalf("nonprod OK: %v", err)
+	}
+	if err := validateWorkerTier("prod"); err != nil {
+		t.Fatalf("prod OK: %v", err)
+	}
+	if err := validateWorkerTier("gold"); err == nil {
+		t.Fatal("expected error for unknown tier")
+	}
+}
+
+func TestNormalizeWorkerEnvironmentsInput(t *testing.T) {
+	got := normalizeWorkerEnvironmentsInput(" Dev, staging,dev , ")
+	if len(got) != 2 || got[0] != "dev" || got[1] != "staging" {
+		t.Fatalf("got %#v", got)
+	}
+	if len(normalizeWorkerEnvironmentsInput("")) != 0 {
+		t.Fatal("empty should yield no slugs")
 	}
 }

@@ -28,10 +28,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { me } from "@/features/auth/api";
+import { listEnvironments } from "@/features/environments/api";
+import type { Environment } from "@/features/environments/types";
+import {
+  catalogOptionClassName,
+  catalogSelectClassName,
+} from "@/features/catalog/selectClassName";
 import { isAdmin } from "@/lib/rbac";
 import {
   decommissionWorker,
@@ -41,11 +46,17 @@ import {
 } from "./api";
 import {
   formatWorkerEnvironments,
+  workerEnvironments,
   workerExtraLabels,
-  workerLabelString,
   workerTier,
 } from "./labels";
 import type { Worker } from "./types";
+
+const WORKER_TIERS = [
+  { value: "", label: "Unset" },
+  { value: "nonprod", label: "nonprod" },
+  { value: "prod", label: "prod" },
+] as const;
 
 function LabelChips({
   labels,
@@ -116,7 +127,8 @@ export function WorkersPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<Worker | null>(null);
   const [editTier, setEditTier] = useState("");
-  const [editEnvs, setEditEnvs] = useState("");
+  const [editEnvSlugs, setEditEnvSlugs] = useState<string[]>([]);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
   const [decommissionTarget, setDecommissionTarget] = useState<Worker | null>(
     null,
   );
@@ -125,9 +137,14 @@ export function WorkersPage() {
     setLoading(true);
     setError("");
     try {
-      const [meUser, list] = await Promise.all([me(), listWorkers()]);
+      const [meUser, list, envs] = await Promise.all([
+        me(),
+        listWorkers(),
+        listEnvironments(),
+      ]);
       setIsAdminUser(isAdmin(meUser.role));
       setWorkers(list);
+      setEnvironments(envs);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load workers");
     } finally {
@@ -141,8 +158,15 @@ export function WorkersPage() {
 
   function openEdit(w: Worker) {
     setEditTarget(w);
-    setEditTier(workerTier(w));
-    setEditEnvs(workerLabelString(w.labels, "environments"));
+    const tier = workerTier(w);
+    setEditTier(tier === "prod" || tier === "nonprod" ? tier : "");
+    setEditEnvSlugs(workerEnvironments(w));
+  }
+
+  function toggleEditEnv(slug: string) {
+    setEditEnvSlugs((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
   }
 
   async function onSaveLabels(e: FormEvent) {
@@ -153,7 +177,7 @@ export function WorkersPage() {
     try {
       const updated = await updateWorkerLabels(editTarget.id, {
         tier: editTier.trim(),
-        environments: editEnvs.trim(),
+        environments: editEnvSlugs.join(","),
       });
       setWorkers((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
       setEditTarget(null);
@@ -350,24 +374,59 @@ export function WorkersPage() {
           <form className="space-y-3" onSubmit={(e) => void onSaveLabels(e)}>
             <div className="space-y-1.5">
               <Label htmlFor="worker-tier">Tier</Label>
-              <Input
+              <select
                 id="worker-tier"
+                className={catalogSelectClassName}
                 value={editTier}
                 onChange={(e) => setEditTier(e.target.value)}
-                placeholder="nonprod"
-              />
+              >
+                {WORKER_TIERS.map((t) => (
+                  <option
+                    key={t.value || "unset"}
+                    value={t.value}
+                    className={catalogOptionClassName}
+                  >
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                Display convention only; does not change deploy policy.
+              </p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="worker-envs">Environments</Label>
-              <Input
-                id="worker-envs"
-                value={editEnvs}
-                onChange={(e) => setEditEnvs(e.target.value)}
-                placeholder="dev,staging"
-              />
+              <Label>Environments</Label>
+              <div className="space-y-2 rounded-md border border-border p-3">
+                {environments.length === 0 ? (
+                  <p className="text-[12px] text-muted-foreground">
+                    No environments loaded.
+                  </p>
+                ) : (
+                  environments.map((env) => {
+                    const checked = editEnvSlugs.includes(env.slug);
+                    return (
+                      <label
+                        key={env.id}
+                        className="flex cursor-pointer items-center gap-2 text-[13px]"
+                      >
+                        <input
+                          type="checkbox"
+                          className="size-3.5 accent-foreground"
+                          checked={checked}
+                          onChange={() => toggleEditEnv(env.slug)}
+                        />
+                        <span className="font-mono text-[12px] uppercase">
+                          {env.slug}
+                        </span>
+                        <span className="text-muted-foreground">{env.name}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
               <p className="text-[11px] text-muted-foreground">
-                Comma-separated slugs (same as agent ENVIRONMENTS). Empty allows
-                all.
+                None selected = allow all environments. Selection limits which
+                envs this worker may deploy to.
               </p>
             </div>
             <div className="flex justify-end gap-2 pt-2">

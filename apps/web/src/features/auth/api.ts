@@ -7,7 +7,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, "Login gagal"));
+    throw new Error(await readErrorMessage(res, "Login failed"));
   }
   const data = (await res.json()) as LoginResponse;
   setToken(data.token);
@@ -24,7 +24,7 @@ export async function register(
     body: JSON.stringify({ email, password, name }),
   });
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, "Register gagal"));
+    throw new Error(await readErrorMessage(res, "Registration failed"));
   }
   return res.json();
 }

@@ -751,8 +751,10 @@ Admin dapat mengedit capability labels dan men-decommission worker tanpa menyent
 | 28b Store/service | ✅ | `UpdateLabels` / `SetStatus`; heartbeat `CASE` keep draining |
 | 28c API admin | ✅ | `PATCH /workers/{id}`; `POST …/decommission`; `POST …/restore` |
 | 28d Deploy gate | ✅ | `validateWorkerForDeploy` tolak `draining` |
-| 28e Portal | ✅ | Workers page: Edit labels + Decommission/Restore (admin) |
+| 28e Portal | ✅ | Workers page: Edit labels + Decommission/Restore (admin); tier select + env checkboxes |
 | 28f Docs + QC | ✅ | Progress, RESUME-PROMPT, QC |
+
+**Keputusan labels (admin edit):** `tier` ∈ {empty, `nonprod`, `prod`}; `environments` = subset slug dari `GET /environments` (kosong = allow all). Agent register tetap boleh kirim label bebas; PATCH admin divalidasi API.
 
 **Tes 28a–28b (unit):**
 

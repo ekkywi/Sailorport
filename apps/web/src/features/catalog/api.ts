@@ -4,7 +4,7 @@ import type { CatalogApp, CreateServiceInput, Service, UpdateServiceInput } from
 export async function listServices(): Promise<Service[]> {
   const res = await apiFetch("/api/v1/services");
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal list services: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to list services: ${res.status}`));
   }
   return res.json();
 }
@@ -15,7 +15,7 @@ export async function createService(input: CreateServiceInput): Promise<Service>
     body: JSON.stringify(input),
   });
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal create: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to create service: ${res.status}`));
   }
   return res.json();
 }
@@ -29,7 +29,7 @@ export async function updateService(
     body: JSON.stringify(input),
   });
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal update: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to update service: ${res.status}`));
   }
   return res.json();
 }
@@ -39,14 +39,14 @@ export async function deleteService(id: string): Promise<void> {
     method: "DELETE",
   });
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal delete: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to delete service: ${res.status}`));
   }
 }
 
 export async function listCatalogApps(): Promise<CatalogApp[]> {
   const res = await apiFetch("/api/v1/catalog-apps");
   if (!res.ok) {
-    throw new Error(await readErrorMessage(res, `Gagal list catalog apps: ${res.status}`));
+    throw new Error(await readErrorMessage(res, `Failed to list catalog apps: ${res.status}`));
   }
   return res.json();
 }
