@@ -259,12 +259,21 @@ func (d *Deployments) validateWorkerForDeploy(
 	if err != nil {
 		return nil, err
 	}
-	if requireOnline && w.Status != "online" {
+
+	if w.Status == model.WorkerStatusDraining {
+		return nil, fmt.Errorf(
+			"%w: worker %q is decommissioned (draining)",
+			ErrConflict, w.Name,
+		)
+	}
+
+	if requireOnline && !model.WorkerAcceptsDeploy(w.Status) {
 		return nil, fmt.Errorf(
 			"%w: worker %q is %s (must be online)",
 			ErrConflict, w.Name, w.Status,
 		)
 	}
+
 	if err := workerEnvConflict(w, envSlug); err != nil {
 		return nil, err
 	}

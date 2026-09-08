@@ -46,7 +46,6 @@ func NewRouter(api API) http.Handler {
 
 	mux.Handle("/healthz", health)
 
-	// Public: GitHub cannot send a portal JWT (signature check in Step 20c).
 	mux.HandleFunc("POST /api/v1/webhooks/github", webhooksH.GitHub)
 
 	mux.HandleFunc("POST /api/v1/auth/register", authH.Register)
@@ -77,6 +76,9 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("POST /api/v1/workers/register", withAgentToken(token, workersH.Register))
 	mux.Handle("POST /api/v1/workers/{id}/heartbeat", withAgentToken(token, workersH.Heartbeat))
 	mux.Handle("GET /api/v1/workers", withRole(secret, currentUser, reader, workersH.List))
+	mux.Handle("PATCH /api/v1/workers/{id}", withRole(secret, currentUser, admin, workersH.UpdateLabels))
+	mux.Handle("POST /api/v1/workers/{id}/decommission", withRole(secret, currentUser, admin, workersH.Decommission))
+	mux.Handle("POST /api/v1/workers/{id}/restore", withRole(secret, currentUser, admin, workersH.Restore))
 
 	mux.Handle("GET /api/v1/environments", withRole(secret, currentUser, reader, envsH.List))
 
@@ -85,8 +87,6 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("GET /api/v1/deployments", withRole(secret, currentUser, reader, deploymentsH.List))
 	mux.Handle("GET /api/v1/deployments/{id}", withRole(secret, currentUser, reader, deploymentsH.Get))
 	mux.Handle("POST /api/v1/deployments/{id}/redeploy", withRole(secret, currentUser, writer, deploymentsH.Redeploy))
-	// Update status deployment hanya lewat route agent di bawah: kalau portal boleh
-	// PATCH, riwayat dan git_sha (dasar redeploy) bisa dikarang dari sisi user.
 
 	mux.Handle("POST /api/v1/services/{id}/runtime/stop", withRole(secret, currentUser, writer, runtimeH.Stop))
 	mux.Handle("POST /api/v1/services/{id}/runtime/start", withRole(secret, currentUser, writer, runtimeH.Start))

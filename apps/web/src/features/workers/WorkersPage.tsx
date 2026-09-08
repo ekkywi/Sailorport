@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { RefreshCw, Server } from "lucide-react";
 import {
   DataPanel,
@@ -9,13 +9,40 @@ import {
   formatAbsoluteTime,
   formatRelativeTime,
   skeletonClass,
+  useToast,
 } from "@/components/app";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { listWorkers } from "./api";
+import { me } from "@/features/auth/api";
+import { isAdmin } from "@/lib/rbac";
+import {
+  decommissionWorker,
+  listWorkers,
+  restoreWorker,
+  updateWorkerLabels,
+} from "./api";
 import {
   formatWorkerEnvironments,
   workerExtraLabels,
+  workerLabelString,
   workerTier,
 } from "./labels";
 import type { Worker } from "./types";
@@ -81,15 +108,26 @@ function WorkersTableSkeleton() {
 }
 
 export function WorkersPage() {
+  const { toast } = useToast();
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<Worker | null>(null);
+  const [editTier, setEditTier] = useState("");
+  const [editEnvs, setEditEnvs] = useState("");
+  const [decommissionTarget, setDecommissionTarget] = useState<Worker | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      setWorkers(await listWorkers());
+      const [meUser, list] = await Promise.all([me(), listWorkers()]);
+      setIsAdminUser(isAdmin(meUser.role));
+      setWorkers(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load workers");
     } finally {
@@ -101,12 +139,72 @@ export function WorkersPage() {
     void load();
   }, [load]);
 
+  function openEdit(w: Worker) {
+    setEditTarget(w);
+    setEditTier(workerTier(w));
+    setEditEnvs(workerLabelString(w.labels, "environments"));
+  }
+
+  async function onSaveLabels(e: FormEvent) {
+    e.preventDefault();
+    if (!editTarget) return;
+    setBusyId(editTarget.id);
+    setError("");
+    try {
+      const updated = await updateWorkerLabels(editTarget.id, {
+        tier: editTier.trim(),
+        environments: editEnvs.trim(),
+      });
+      setWorkers((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
+      setEditTarget(null);
+      toast(`Labels updated for ${updated.name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update labels");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onDecommission() {
+    if (!decommissionTarget) return;
+    const id = decommissionTarget.id;
+    setBusyId(id);
+    setError("");
+    try {
+      const updated = await decommissionWorker(id);
+      setWorkers((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
+      setDecommissionTarget(null);
+      toast(`${updated.name} decommissioned (draining)`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to decommission");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onRestore(w: Worker) {
+    setBusyId(w.id);
+    setError("");
+    try {
+      const updated = await restoreWorker(w.id);
+      setWorkers((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+      toast(`${updated.name} restored (offline until next heartbeat)`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to restore");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const online = workers.filter((w) => w.status === "online").length;
+  const draining = workers.filter((w) => w.status === "draining").length;
   const meta =
     loading && workers.length === 0
       ? "Loading…"
       : workers.length > 0
-        ? `${workers.length} worker${workers.length === 1 ? "" : "s"} · ${online} online`
+        ? `${workers.length} worker${workers.length === 1 ? "" : "s"} · ${online} online${
+            draining > 0 ? ` · ${draining} draining` : ""
+          }`
         : "No workers registered";
 
   return (
@@ -156,6 +254,9 @@ export function WorkersPage() {
                   <th className="px-4 py-2.5 font-medium">Environments</th>
                   <th className="px-4 py-2.5 font-medium">Last seen</th>
                   <th className="px-4 py-2.5 font-medium">Other labels</th>
+                  {isAdminUser ? (
+                    <th className="px-4 py-2.5 font-medium">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -185,6 +286,45 @@ export function WorkersPage() {
                     <td className="px-4 py-2.5">
                       <LabelChips labels={workerExtraLabels(w.labels)} />
                     </td>
+                    {isAdminUser ? (
+                      <td className="px-4 py-2.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[12px]"
+                            disabled={busyId === w.id}
+                            onClick={() => openEdit(w)}
+                          >
+                            Edit labels
+                          </Button>
+                          {w.status === "draining" ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[12px]"
+                              disabled={busyId === w.id}
+                              onClick={() => void onRestore(w)}
+                            >
+                              Restore
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[12px] text-amber-700 dark:text-amber-400"
+                              disabled={busyId === w.id}
+                              onClick={() => setDecommissionTarget(w)}
+                            >
+                              Decommission
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -192,6 +332,100 @@ export function WorkersPage() {
           </div>
         ) : null}
       </DataPanel>
+
+      <Dialog
+        open={editTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit labels</DialogTitle>
+            <DialogDescription>
+              Soft override for {editTarget?.name}. Agent re-register may
+              overwrite these values.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="space-y-3" onSubmit={(e) => void onSaveLabels(e)}>
+            <div className="space-y-1.5">
+              <Label htmlFor="worker-tier">Tier</Label>
+              <Input
+                id="worker-tier"
+                value={editTier}
+                onChange={(e) => setEditTier(e.target.value)}
+                placeholder="nonprod"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="worker-envs">Environments</Label>
+              <Input
+                id="worker-envs"
+                value={editEnvs}
+                onChange={(e) => setEditEnvs(e.target.value)}
+                placeholder="dev,staging"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Comma-separated slugs (same as agent ENVIRONMENTS). Empty allows
+                all.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={busyId === editTarget?.id}>
+                Save
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={decommissionTarget != null}
+        onOpenChange={(open) => {
+          if (!open && busyId === null) setDecommissionTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Decommission worker?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-foreground">
+                {decommissionTarget?.name}
+              </span>{" "}
+              will be set to draining and cannot be targeted for new deploys
+              until restored. Heartbeats will not bring it back online.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busyId === decommissionTarget?.id}
+                />
+              }
+            >
+              Cancel
+            </AlertDialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={busyId === decommissionTarget?.id}
+              onClick={() => void onDecommission()}
+            >
+              Decommission
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

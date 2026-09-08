@@ -2,6 +2,12 @@ package model
 
 import "time"
 
+const (
+	WorkerStatusOnline   = "online"
+	WorkerStatusOffline  = "offline"
+	WorkerStatusDraining = "draining"
+)
+
 type Worker struct {
 	ID         string         `json:"id"`
 	Name       string         `json:"name"`
@@ -21,4 +27,26 @@ type RegisterWorkerRequest struct {
 
 type HeartbeatRequest struct {
 	Status string `json:"status"`
+}
+
+type UpdateWorkerLabelsRequest struct {
+	Tier         string `json:"tier"`
+	Environments string `json:"environments"`
+}
+
+type DecommissionWorkerRequest struct{}
+
+type RestoreWorkerRequest struct{}
+
+func IsWorkerStatus(s string) bool {
+	switch s {
+	case WorkerStatusOnline, WorkerStatusOffline, WorkerStatusDraining:
+		return true
+	default:
+		return false
+	}
+}
+
+func WorkerAcceptsDeploy(status string) bool {
+	return status == WorkerStatusOnline
 }

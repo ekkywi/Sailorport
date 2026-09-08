@@ -105,7 +105,7 @@ Berlaku untuk **semua jalur** deploy ke depan.
 | Webhook auto-deploy | ✅ Step 20 (20a–20e) |
 | Rollback / redeploy commit | ✅ Step 21 |
 | Catalog apps (Postgres, Redis, …) | ✅ Step 22 (22a–22f) |
-| Admin edit worker labels | ⬜ post-MVP |
+| Admin edit worker labels / decommission | ✅ Step 28 |
 
 ## Keputusan produk (jangan dilanggar di MVP berikutnya)
 

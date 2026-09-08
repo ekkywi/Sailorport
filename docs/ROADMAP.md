@@ -63,7 +63,7 @@ Urutan berikutnya: lihat **Next action** di `docs/PROGRESS.md` (opsional polish 
 
 ## Fase 3 — Ops & polish
 
-- Worker admin lite (edit labels, decommission)
+- [x] Worker admin lite (edit labels, decommission) — Step 28
 - Stuck deploy reconcile + notifikasi
 - Docs-as-code, CI visibility, scorecards ringan
 - Secrets management

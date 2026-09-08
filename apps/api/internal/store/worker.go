@@ -41,15 +41,65 @@ func (s *WorkersStore) UpsertByName(ctx context.Context, name, hostname string, 
 func (s *WorkersStore) Heartbeat(ctx context.Context, id, status string) (model.Worker, error) {
 	const q = `
 		UPDATE workers
-		SET status = $2, last_seen_at = NOW(), updated_at = NOW()
+		SET
+			status = CASE
+				WHEN status = 'draining' THEN status
+				ELSE $2
+			END,
+			last_seen_at = NOW(),
+			updated_at = NOW()
 		WHERE id = $1
 		RETURNING id, name, hostname, status, labels, last_seen_at, created_at, updated_at
-		`
+	`
+
 	w, err := scanWorker(s.db.QueryRowContext(ctx, q, id, status))
 	if errors.Is(err, sql.ErrNoRows) {
 		return model.Worker{}, sql.ErrNoRows
 	}
 	return w, err
+}
+
+func (s *WorkersStore) UpdateLabels(ctx context.Context, id string, labels map[string]any) (model.Worker, error) {
+	if labels == nil {
+		labels = map[string]any{}
+	}
+	raw, err := json.Marshal(labels)
+	if err != nil {
+		return model.Worker{}, err
+	}
+	const q = `
+		UPDATE workers
+		SET labels = $2::jsonb, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, name, hostname, status, labels, last_seen_at, created_at, updated_at
+	`
+
+	w, err := scanWorker(s.db.QueryRowContext(ctx, q, id, raw))
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.Worker{}, ErrNotFound
+	}
+	if err != nil {
+		return model.Worker{}, err
+	}
+	return w, nil
+}
+
+func (s *WorkersStore) SetStatus(ctx context.Context, id, status string) (model.Worker, error) {
+	const q = `
+		UPDATE workers
+		SET status = $2, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, name, hostname, status, labels, last_seen_at, created_at, updated_at
+	`
+
+	w, err := scanWorker(s.db.QueryRowContext(ctx, q, id, status))
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.Worker{}, ErrNotFound
+	}
+	if err != nil {
+		return model.Worker{}, err
+	}
+	return w, nil
 }
 
 func (s *WorkersStore) List(ctx context.Context) ([]model.Worker, error) {

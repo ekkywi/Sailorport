@@ -17,9 +17,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 27 (27a–27f)** — catalog app `command` (argv + `${ENV}` resolve on claim) + Redis manifest (`requirepass`).
+**Step terakhir selesai:** **Step 28 (28a–28f)** — worker admin lite (edit labels, decommission=`draining`, restore, deploy gate, portal).
 
-**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: Pass B/C QC, worker admin lite, catalog app lain).
+**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: Pass B/C QC, catalog app lain).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -37,11 +37,11 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Step 25 encrypt catalog env at-rest (`EncryptedStore`, `SAILORPORT_SECRETS_KEY`)
 - Step 26 update `catalog_env` on existing services (PUT merge + portal edit)
 - Step 27 catalog `command` + Redis (`requirepass` via resolved argv)
+- Step 28 worker admin lite (labels PATCH, draining decommission, portal)
 - Migrasi `00017`–`00021`
 
 **Yang belum / opsional:**
 - Pass B/C production review sebelum expose publik
-- Worker admin lite (edit labels / decommission)
 - Catalog app lain (Gitea, …) — pola `env` + `versions` + `command` sudah siap
 
 **Catatan teknis:**
@@ -49,6 +49,8 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - `command` = argv setelah image; placeholder `${NAME}` harus ada di `env[]`; API resolve saat claim → `catalog_command`
 - Agent: `docker run … image [catalog_command…]` (bukan shell string)
 - Redis: `redis-server --requirepass ${REDIS_PASSWORD}` (standar image, bukan env inventaran)
+- Worker admin: `PATCH /workers/{id}` labels (soft override); decommission → `draining`; heartbeat tidak clear draining; restore → `offline`; deploy ke draining → 409
+- Portal Workers (admin): Edit labels / Decommission / Restore
 - Portal **From catalog** baca schema env dari API; password = field `secret: true`; versi = dropdown `versions[]` → kirim `image`
 - Edit catalog_app: `catalog_env` di PUT; secret kosong = keep; setelah ubah env → **redeploy**
 - Agent claim: `catalog_env` + optional `catalog_command`

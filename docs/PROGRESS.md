@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 27 — catalog `command` + Redis manifest (27a–27f)
+- **Step selesai:** 28 — worker admin lite (28a–28f)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** (belum ditetapkan) — opsional: Pass B/C QC, worker admin lite, catalog app lain (Gitea, …)
-- **Terakhir dikerjakan:** 2026-09-04 — Step 27f (catalog command + Redis + docs)
+- **Step berikutnya:** (belum ditetapkan) — opsional: Pass B/C QC, catalog app lain (Gitea, …)
+- **Terakhir dikerjakan:** 2026-09-08 — Step 28f (worker admin lite + docs)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -98,6 +98,12 @@
 - [x] Step 27d — `catalog-apps/redis/manifest.json` (requirepass)
 - [x] Step 27e — Smoke create/deploy Redis + `redis-cli PING`
 - [x] Step 27f — Docs + QC + commit
+- [x] Step 28a — Model: status constants, labels/decommission request, `WorkerAcceptsDeploy`
+- [x] Step 28b — Store/service: UpdateLabels, SetStatus, heartbeat keeps `draining`
+- [x] Step 28c — Admin routes: PATCH labels, decommission, restore
+- [x] Step 28d — Deploy rejects `draining` workers (explicit + affinity)
+- [x] Step 28e — Portal Workers: edit labels + decommission/restore (admin)
+- [x] Step 28f — Docs + QC + commit
 
 ## Yang sudah jalan
 
@@ -508,7 +514,7 @@ Portal: Deploy dialog → pilih environment + worker (Any available atau worker 
 - Worker **self-register** via agent (`POST /workers/register`); **tidak** perlu admin CRUD tambah/hapus worker di MVP.
 - **Environment** (dev/staging/prod) ≠ **Worker** (node Docker); satu worker boleh menampung banyak env (container terpisah).
 - Pola infra umum: nonprod VM (dev+staging) + prod VM terpisah — didukung dengan **labels** (Step 18), bukan 1 worker = 1 env.
-- Portal `/worker` = **monitoring** (read-only); admin edit labels / decommission = post-MVP.
+- Portal `/worker` = monitoring + **admin lite** (edit labels / decommission) — Step 28 ✅.
 
 ### Step 18 — Worker capabilities ✅
 
@@ -734,6 +740,49 @@ curl -sS -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/services
 ```
 
 **Known debt (catalog env):** Update env pada service existing → Step 26 ✅. Redis + `command` → Step 27 ✅. App catalog tambahan (Gitea, …) masih opsional.
+
+### Step 28 — Worker admin lite ✅
+
+Admin dapat mengedit capability labels dan men-decommission worker tanpa menyentuh env agent. Decommission memakai status DB yang sudah ada: `draining`. Heartbeat **tidak** mengembalikan worker draining ke `online`. Deploy (eksplisit maupun affinity) menolak worker draining → **409**. Edit labels = soft override (agent re-register boleh menimpa lagi).
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 28a Model | ✅ | Konstanta status; `UpdateWorkerLabelsRequest`; `WorkerAcceptsDeploy` |
+| 28b Store/service | ✅ | `UpdateLabels` / `SetStatus`; heartbeat `CASE` keep draining |
+| 28c API admin | ✅ | `PATCH /workers/{id}`; `POST …/decommission`; `POST …/restore` |
+| 28d Deploy gate | ✅ | `validateWorkerForDeploy` tolak `draining` |
+| 28e Portal | ✅ | Workers page: Edit labels + Decommission/Restore (admin) |
+| 28f Docs + QC | ✅ | Progress, RESUME-PROMPT, QC |
+
+**Tes 28a–28b (unit):**
+
+```bash
+cd apps/api && go test ./internal/model/ ./internal/service/ -run 'Worker|MergeWorker' -v
+```
+
+**Tes 28c–28d (curl, admin token):**
+
+```bash
+# PATCH labels
+curl -sS -X PATCH "http://localhost:8080/api/v1/workers/$WID" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"tier":"nonprod","environments":"dev,staging"}' | jq '{name, labels, status}'
+
+# Decommission → heartbeat tetap draining → deploy ke worker itu → 409
+curl -sS -X POST "http://localhost:8080/api/v1/workers/$WID/decommission" \
+  -H "Authorization: Bearer $TOKEN" | jq '{name, status}'
+
+curl -sS -X POST "http://localhost:8080/api/v1/services/$SERVICE_ID/deployments" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"environment\":\"dev\",\"worker_id\":\"$WID\"}"
+# Harapan: 409 decommissioned (draining)
+
+curl -sS -X POST "http://localhost:8080/api/v1/workers/$WID/restore" \
+  -H "Authorization: Bearer $TOKEN" | jq '{name, status}'
+# Harapan: offline
+```
+
+**Tes 28e (portal):** Login admin → Workers → Edit labels / Decommission / Restore. Login developer → tanpa kolom Actions.
 
 ### Step 27 — Catalog `command` + Redis app ✅
 
@@ -985,20 +1034,19 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** Pass B/C QC; worker admin lite; catalog app lain (Gitea, …).
+**Yang belum di kode:** Pass B/C QC; catalog app lain (Gitea, …).
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| — | Worker admin lite | Edit labels, decommission stale worker (post-MVP) |
 | — | Catalog apps | Gitea / app lain (pola `command` + env sudah siap) |
 | — | Production hardening | Pass B/C QC (`docs/QC.md`) |
 
 ## Next action
 
 1. Pass B/C QC sebelum expose publik (`docs/QC.md`)
-2. Opsional: catalog app lain / worker admin lite
+2. Opsional: catalog app lain (Gitea, …)
 
 ## Cara lanjut di mesin lain
 
