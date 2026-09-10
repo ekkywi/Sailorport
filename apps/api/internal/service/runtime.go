@@ -35,15 +35,15 @@ func NewRuntime(s *store.RuntimeStore, deployments *Deployments, catalog *Catalo
 	return &Runtime{store: s, deployments: deployments, catalog: catalog}
 }
 
-func (r *Runtime) RequestStop(ctx context.Context, serviceID, environment string) (model.RuntimeJob, error) {
-	return r.enqueue(ctx, serviceID, environment, "stop", "running")
+func (r *Runtime) RequestStop(ctx context.Context, serviceID, environment, actorID, role string) (model.RuntimeJob, error) {
+	return r.enqueue(ctx, serviceID, environment, "stop", "running", actorID, role)
 }
 
-func (r *Runtime) RequestStart(ctx context.Context, serviceID, environment string) (model.RuntimeJob, error) {
-	return r.enqueue(ctx, serviceID, environment, "start", "stopped")
+func (r *Runtime) RequestStart(ctx context.Context, serviceID, environment, actorID, role string) (model.RuntimeJob, error) {
+	return r.enqueue(ctx, serviceID, environment, "start", "stopped", actorID, role)
 }
 
-func (r *Runtime) RequestLogs(ctx context.Context, serviceID, environment string) (model.RuntimeJob, error) {
+func (r *Runtime) RequestLogs(ctx context.Context, serviceID, environment, actorID, role string) (model.RuntimeJob, error) {
 	serviceID = strings.TrimSpace(serviceID)
 	if serviceID == "" {
 		return model.RuntimeJob{}, fmt.Errorf("%w: service_id is required", ErrInvalid)
@@ -54,12 +54,15 @@ func (r *Runtime) RequestLogs(ctx context.Context, serviceID, environment string
 		slug = "dev"
 	}
 
-	svc, err := r.catalog.Get(ctx, serviceID)
+	svc, err := r.catalog.getService(ctx, serviceID)
 	if err != nil {
 		return model.RuntimeJob{}, err
 	}
+	if err := canAccessService(svc, actorID, role); err != nil {
+		return model.RuntimeJob{}, err
+	}
 
-	deps, err := r.deployments.ListByService(ctx, serviceID)
+	deps, err := r.deployments.ListByService(ctx, serviceID, "", "")
 	if err != nil {
 		return model.RuntimeJob{}, err
 	}
@@ -92,7 +95,7 @@ func (r *Runtime) RequestLogs(ctx context.Context, serviceID, environment string
 	return job, nil
 }
 
-func (r *Runtime) enqueue(ctx context.Context, serviceID, environment, action, requiredStatus string) (model.RuntimeJob, error) {
+func (r *Runtime) enqueue(ctx context.Context, serviceID, environment, action, requiredStatus, actorID, role string) (model.RuntimeJob, error) {
 	serviceID = strings.TrimSpace(serviceID)
 	if serviceID == "" {
 		return model.RuntimeJob{}, fmt.Errorf("%w: service_id is required", ErrInvalid)
@@ -103,12 +106,15 @@ func (r *Runtime) enqueue(ctx context.Context, serviceID, environment, action, r
 		slug = "dev"
 	}
 
-	svc, err := r.catalog.Get(ctx, serviceID)
+	svc, err := r.catalog.getService(ctx, serviceID)
 	if err != nil {
 		return model.RuntimeJob{}, err
 	}
+	if err := canAccessService(svc, actorID, role); err != nil {
+		return model.RuntimeJob{}, err
+	}
 
-	deps, err := r.deployments.ListByService(ctx, serviceID)
+	deps, err := r.deployments.ListByService(ctx, serviceID, "", "")
 	if err != nil {
 		return model.RuntimeJob{}, err
 	}
@@ -164,7 +170,7 @@ func (r *Runtime) ClaimNext(ctx context.Context, workerID string) (model.Runtime
 	return job, nil
 }
 
-func (r *Runtime) Get(ctx context.Context, id string) (model.RuntimeJob, error) {
+func (r *Runtime) Get(ctx context.Context, id, actorID, role string) (model.RuntimeJob, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return model.RuntimeJob{}, fmt.Errorf("%w: id is required", ErrInvalid)
@@ -172,6 +178,13 @@ func (r *Runtime) Get(ctx context.Context, id string) (model.RuntimeJob, error) 
 	job, err := r.store.Get(ctx, id)
 	if err != nil {
 		return model.RuntimeJob{}, mapRepoErr(err)
+	}
+	svc, err := r.catalog.getService(ctx, job.ServiceID)
+	if err != nil {
+		return model.RuntimeJob{}, err
+	}
+	if err := canAccessService(svc, actorID, role); err != nil {
+		return model.RuntimeJob{}, err
 	}
 	return job, nil
 }
@@ -222,7 +235,7 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 }
 
 func (r *Runtime) ValidateDelete(ctx context.Context, svc model.Service) error {
-	deps, err := r.deployments.ListByService(ctx, svc.ID)
+	deps, err := r.deployments.ListByService(ctx, svc.ID, "", "")
 	if err != nil {
 		return err
 	}
@@ -258,7 +271,7 @@ func (r *Runtime) ValidateDelete(ctx context.Context, svc model.Service) error {
 }
 
 func (r *Runtime) EnqueueRemove(ctx context.Context, svc model.Service) error {
-	deps, err := r.deployments.ListByService(ctx, svc.ID)
+	deps, err := r.deployments.ListByService(ctx, svc.ID, "", "")
 	if err != nil {
 		return err
 	}

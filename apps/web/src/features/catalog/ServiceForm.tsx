@@ -72,10 +72,15 @@ export function ServiceForm({
         <Input
           id="svc-owner"
           value={values.owner}
-          onChange={(e) => onChange("owner", e.target.value)}
-          placeholder="platform-team"
+          readOnly
+          disabled
           className="h-9 text-[13px]"
         />
+        {!isEdit ? (
+          <p className="text-[11px] text-muted-foreground">
+            Set to your account automatically. Ownership can be transferred from the catalog list.
+          </p>
+        ) : null}
       </div>
       <div className="space-y-1.5">
         <Label

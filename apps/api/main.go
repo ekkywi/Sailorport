@@ -90,6 +90,7 @@ func main() {
 	catalog.SetAudit(auditSvc)
 	usersSvc.SetAudit(auditSvc)
 	webhookSvc := service.NewWebhook(catalog, deploymentsSvc)
+	catalog.SetTransferUsers(usersSvc)
 
 	router := handler.NewRouter(handler.API{
 		Version:      cfg.Version,

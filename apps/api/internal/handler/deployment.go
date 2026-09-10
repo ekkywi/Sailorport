@@ -21,6 +21,11 @@ func NewDeploymentsHandler(d *service.Deployments) *DeploymentsHandler {
 }
 
 func (h *DeploymentsHandler) Create(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	serviceID := r.PathValue("id")
 
 	var req model.CreateDeploymentRequest
@@ -30,7 +35,7 @@ func (h *DeploymentsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	out, err := h.deployments.Create(r.Context(), serviceID, req)
+	out, err := h.deployments.Create(r.Context(), serviceID, req, claims.UserID, claims.Role)
 	if err != nil {
 		writeDeploymentError(w, "Create deployment", err)
 		return
@@ -49,8 +54,13 @@ func (h *DeploymentsHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DeploymentsHandler) ListByService(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	serviceID := r.PathValue("id")
-	out, err := h.deployments.ListByService(r.Context(), serviceID)
+	out, err := h.deployments.ListByService(r.Context(), serviceID, claims.UserID, claims.Role)
 	if err != nil {
 		writeDeploymentError(w, "List deployments by service", err)
 		return
@@ -59,7 +69,12 @@ func (h *DeploymentsHandler) ListByService(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *DeploymentsHandler) Get(w http.ResponseWriter, r *http.Request) {
-	out, err := h.deployments.Get(r.Context(), r.PathValue("id"))
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	out, err := h.deployments.Get(r.Context(), r.PathValue("id"), claims.UserID, claims.Role)
 	if err != nil {
 		writeDeploymentError(w, "Get deployment", err)
 		return
@@ -106,7 +121,12 @@ func (h *DeploymentsHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DeploymentsHandler) Redeploy(w http.ResponseWriter, r *http.Request) {
-	out, err := h.deployments.Redeploy(r.Context(), r.PathValue("id"))
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	out, err := h.deployments.Redeploy(r.Context(), r.PathValue("id"), claims.UserID, claims.Role)
 	if err != nil {
 		writeDeploymentError(w, "Redeploy", err)
 		return
@@ -130,6 +150,12 @@ func writeDeploymentError(w http.ResponseWriter, op string, err error) {
 			msg = msg[i+2:]
 		}
 		writeError(w, http.StatusConflict, msg)
+	case errors.Is(err, service.ErrForbidden):
+		msg := err.Error()
+		if i := strings.Index(msg, ": "); i >= 0 {
+			msg = msg[i+2:]
+		}
+		writeError(w, http.StatusForbidden, msg)
 	default:
 		log.Printf("%s: %v", op, err)
 		writeError(w, http.StatusInternalServerError, "Internal server error")

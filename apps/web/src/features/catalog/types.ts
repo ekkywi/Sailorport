@@ -17,6 +17,7 @@ export type Service = {
   name: string;
   description: string;
   owner: string;
+  owner_user_id: string;
   template_id: string;
   workspace_path: string;
   source_type: string;

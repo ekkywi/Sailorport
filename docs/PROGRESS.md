@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 28 — worker admin lite (28a–28f)
+- **Step selesai:** 29e — transfer service ownership (API + portal)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** (belum ditetapkan) — opsional: Pass B/C QC, catalog app lain (Gitea, …)
-- **Terakhir dikerjakan:** 2026-09-08 — Step 28f (worker admin lite + docs)
+- **Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …)
+- **Terakhir dikerjakan:** 2026-09-10 — Step 29e (transfer ownership)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -104,6 +104,11 @@
 - [x] Step 28d — Deploy rejects `draining` workers (explicit + affinity)
 - [x] Step 28e — Portal Workers: edit labels + decommission/restore (admin)
 - [x] Step 28f — Docs + QC + commit
+- [x] Step 29a — `owner_user_id` migration + model/store + web types
+- [x] Step 29b — Create sets owner from JWT; portal Owner read-only
+- [x] Step 29c — Authorize Get/Update/Delete/Deploy/runtime: owner or admin
+- [x] Step 29d — List filter: non-admin own only; admin all
+- [x] Step 29e — Transfer ownership API + portal
 
 ## Yang sudah jalan
 
@@ -786,6 +791,65 @@ curl -sS -X POST "http://localhost:8080/api/v1/workers/$WID/restore" \
 
 **Tes 28e (portal):** Login admin → Workers → Edit labels / Decommission / Restore. Login developer → tanpa kolom Actions.
 
+### Step 29 — Service ownership (in progress)
+
+Owner = user yang create (`owner_user_id` FK + label `owner` = email). Client tidak boleh memilih owner saat create. Transfer via `POST …/transfer` (owner atau admin).
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 29a Schema | ✅ | Migrasi `owner_user_id` + backfill by email; model/store/JSON |
+| 29b Create owner | ✅ | `applyCreateOwner`; portal Owner read-only + prefill email |
+| 29c ACL mutations | ✅ | Get/Update/Delete/Deploy/runtime: owner atau admin; webhook skip ACL |
+| 29d List filter | ✅ | Non-admin `ListByOwner`; admin + webhook `ListAll` |
+| 29e Transfer | ✅ | `POST …/transfer` by email; portal dialog |
+
+**Tes 29e (smoke transfer):**
+
+```bash
+curl -sS -X POST "http://localhost:8080/api/v1/services/$ID/transfer" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"email":"bambang@sailorport.com"}' \
+  | jq '{name, owner, owner_user_id}'
+```
+
+**Tes 29d (smoke list):**
+
+```bash
+# Developer: hanya service milik sendiri
+curl -sS http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN_DEV" | jq '[.[] | {name, owner_user_id}]'
+
+# Admin: semua
+curl -sS http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN_ADMIN" | jq 'length'
+```
+
+**Tes 29c (unit):**
+
+```bash
+cd apps/api && go test ./internal/service/ -run CanAccessService -v
+```
+
+**Tes 29b (unit):**
+
+```bash
+cd apps/api && go test ./internal/service/ -run ApplyCreateOwner -v
+```
+
+**Tes 29b (smoke create):**
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"DEV_EMAIL","password":"DEV_PASSWORD"}' | jq -r .token)
+
+curl -sS -X POST http://localhost:8080/api/v1/services \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"own-smoke-1","owner":"hacker@evil.com","description":"29b"}' \
+  | jq '{name, owner, owner_user_id}'
+# Harapan: owner = email login; owner_user_id = UUID user (bukan hacker)
+```
+
 ### Step 27 — Catalog `command` + Redis app ✅
 
 Manifest boleh mendefinisikan `command` (argv setelah image) dengan placeholder `${ENV_NAME}` yang merujuk ke `env[]`. API me-resolve saat claim job → `catalog_command`; agent menempelkan argv di `docker run` tanpa shell. Redis memakai pola resmi `redis-server --requirepass` (bukan env inventaran Sailorport). Postgres tanpa `command` tetap entrypoint default.
@@ -1047,8 +1111,9 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 
 ## Next action
 
-1. Pass B/C QC sebelum expose publik (`docs/QC.md`)
+1. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`)
 2. Opsional: catalog app lain (Gitea, …)
+3. Opsional: filter `GET /api/v1/deployments` global by owner
 
 ## Cara lanjut di mesin lain
 

@@ -32,6 +32,15 @@ func (f *fakeUserAdminRepo) GetByID(ctx context.Context, id string) (model.User,
 	return model.User{}, store.ErrNotFound
 }
 
+func (f *fakeUserAdminRepo) GetByEmail(ctx context.Context, email string) (model.UserRecord, error) {
+	for _, u := range f.users {
+		if u.Email == email {
+			return model.UserRecord{User: u}, nil
+		}
+	}
+	return model.UserRecord{}, store.ErrNotFound
+}
+
 func (f *fakeUserAdminRepo) Create(ctx context.Context, email, name, passwordHash, role string) (model.User, error) {
 	for _, u := range f.users {
 		if u.Email == email {

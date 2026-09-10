@@ -12,6 +12,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,7 @@ import {
   deleteService,
   listCatalogApps,
   listServices,
+  transferService,
   updateService,
 } from "./api";
 import { AddServiceChooser } from "./AddServiceChooser";
@@ -85,6 +88,20 @@ type DialogMode =
 export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const canWrite = canWriteCatalog(currentUser.role);
   const { toast } = useToast();
+  const ownerEmail = currentUser.email;
+
+  function emptyOwnedServiceForm(): ServiceFormValues {
+    return { ...emptyServiceForm, owner: ownerEmail };
+  }
+
+  function emptyOwnedGitForm(): GitServiceFormValues {
+    return { ...emptyGitForm, owner: ownerEmail };
+  }
+
+  function emptyOwnedCatalogForm(): CatalogAppFormValues {
+    return { ...emptyCatalogForm, owner: ownerEmail };
+  }
+
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -105,6 +122,10 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   );
   const [dialog, setDialog] = useState<DialogMode>("none");
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
+  const [transferTarget, setTransferTarget] = useState<Service | null>(null);
+  const [transferEmail, setTransferEmail] = useState("");
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState("");
   const [createdPath, setCreatedPath] = useState("");
   const [gitCreated, setGitCreated] = useState<Service | null>(null);
   const [catalogCreated, setCatalogCreated] = useState<Service | null>(null);
@@ -221,9 +242,9 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   }
 
   function closeDialog() {
-    setValues(emptyServiceForm);
-    setGitValues(emptyGitForm);
-    setCatalogValues(emptyCatalogForm);
+    setValues(emptyOwnedServiceForm());
+    setGitValues(emptyOwnedGitForm());
+    setCatalogValues(emptyOwnedCatalogForm());
     setEditingId(null);
     setEditingSourceType("");
     clearEditCatalogEnv();
@@ -238,9 +259,9 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     setEditingId(null);
     setEditingSourceType("");
     clearEditCatalogEnv();
-    setValues(emptyServiceForm);
-    setGitValues(emptyGitForm);
-    setCatalogValues(emptyCatalogForm);
+    setValues(emptyOwnedServiceForm());
+    setGitValues(emptyOwnedGitForm());
+    setCatalogValues(emptyOwnedCatalogForm());
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
@@ -251,9 +272,9 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   function startCreate() {
     setEditingId(null);
     setEditingSourceType("");
-    setValues(emptyServiceForm);
-    setGitValues(emptyGitForm);
-    setCatalogValues(emptyCatalogForm);
+    setValues(emptyOwnedServiceForm());
+    setGitValues(emptyOwnedGitForm());
+    setCatalogValues(emptyOwnedCatalogForm());
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
@@ -264,7 +285,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   function startRegister() {
     setEditingId(null);
     setEditingSourceType("");
-    setValues(emptyServiceForm);
+    setValues(emptyOwnedServiceForm());
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
@@ -275,8 +296,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   function startGit() {
     setEditingId(null);
     setEditingSourceType("");
-    setGitValues(emptyGitForm);
-    setCatalogValues(emptyCatalogForm);
+    setGitValues(emptyOwnedGitForm());
+    setCatalogValues(emptyOwnedCatalogForm());
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
@@ -287,8 +308,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   function startCatalog() {
     setEditingId(null);
     setEditingSourceType("");
-    setCatalogValues(emptyCatalogForm);
-    setGitValues(emptyGitForm);
+    setCatalogValues(emptyOwnedCatalogForm());
+    setGitValues(emptyOwnedGitForm());
     setFormError("");
     setCreatedPath("");
     setGitCreated(null);
@@ -353,6 +374,30 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
       ...prev,
       catalog_env: env,
     }));
+  }
+
+  function canManageService(user: AuthUser, svc: Service): boolean {
+    return user.role === "admin" || svc.owner_user_id === user.id;
+  }
+
+  async function onTransferSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!transferTarget) return;
+    setTransferring(true);
+    setTransferError("");
+    try {
+      await transferService(transferTarget.id, {
+        email: transferEmail.trim(),
+      });
+      toast(`Transferred "${transferTarget.name}"`);
+      setTransferTarget(null);
+      setTransferEmail("");
+      await load();
+    } catch (err) {
+      setTransferError(err instanceof Error ? err.message : "Transfer failed");
+    } finally {
+      setTransferring(false);
+    }
   }
 
   async function onSubmitMetadata(e: FormEvent) {
@@ -537,6 +582,16 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         canWrite={canWrite}
         onEdit={startEdit}
         onDelete={setDeleteTarget}
+        onTransfer={
+          canWrite
+            ? (svc) => {
+                if (!canManageService(currentUser, svc)) return;
+                setTransferError("");
+                setTransferEmail("");
+                setTransferTarget(svc);
+              }
+            : undefined
+        }
         onDeploy={setDeployDialogTarget}
         onOpenHistory={openHistory}
         onStop={(svc, environment) =>
@@ -608,6 +663,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 </div>
               ) : (
                 <CreateServiceForm
+                  ownerEmail={ownerEmail}
                   onSuccess={(path) => {
                     setCreatedPath(path);
                     toast("Service created");
@@ -805,6 +861,77 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               />
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={transferTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !transferring) {
+            setTransferTarget(null);
+            setTransferEmail("");
+            setTransferError("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!transferring}>
+          <DialogHeader>
+            <DialogTitle>Transfer ownership</DialogTitle>
+            <DialogDescription>
+              Move{" "}
+              <span className="font-medium text-foreground">
+                {transferTarget?.name}
+              </span>{" "}
+              to another Sailorport user. You will lose access unless you are an admin.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={onTransferSubmit} className="space-y-3">
+            {transferError ? (
+              <p className="text-[13px] text-destructive">{transferError}</p>
+            ) : null}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="transfer-email"
+                className="text-[12px] text-muted-foreground"
+              >
+                New owner email
+              </Label>
+              <Input
+                id="transfer-email"
+                type="email"
+                required
+                value={transferEmail}
+                onChange={(e) => setTransferEmail(e.target.value)}
+                placeholder="developer@example.com"
+                disabled={transferring}
+                className="h-9 text-[13px]"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-[13px]"
+                disabled={transferring}
+                onClick={() => {
+                  setTransferTarget(null);
+                  setTransferEmail("");
+                  setTransferError("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-8 text-[13px]"
+                disabled={transferring || !transferEmail.trim()}
+              >
+                {transferring ? "Transferring…" : "Transfer"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 

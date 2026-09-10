@@ -8,6 +8,36 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
 )
 
+func TestApplyCreateOwner_SetsFromActor(t *testing.T) {
+	req, err := applyCreateOwner(model.CreateServiceRequest{
+		Owner:       "hacker",
+		OwnerUserID: "evil-uuid",
+	}, "user-1", "dev@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.OwnerUserID != "user-1" || req.Owner != "dev@example.com" {
+		t.Fatalf("got owner=%q owner_user_id=%q", req.Owner, req.OwnerUserID)
+	}
+}
+
+func TestApplyCreateOwner_RequiresActorID(t *testing.T) {
+	_, err := applyCreateOwner(model.CreateServiceRequest{}, "", "a@b.com")
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected ErrInvalid, got %v", err)
+	}
+}
+
+func TestApplyCreateOwner_FallsBackToActorID(t *testing.T) {
+	req, err := applyCreateOwner(model.CreateServiceRequest{}, "user-2", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.Owner != "user-2" || req.OwnerUserID != "user-2" {
+		t.Fatalf("got owner=%q owner_user_id=%q", req.Owner, req.OwnerUserID)
+	}
+}
+
 func TestNormalizeCreate_RequiresName(t *testing.T) {
 	_, err := normalizeCreate(model.CreateServiceRequest{
 		Name:        "   ",

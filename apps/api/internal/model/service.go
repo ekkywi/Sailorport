@@ -7,6 +7,7 @@ type Service struct {
 	Name                  string                `json:"name"`
 	Description           string                `json:"description"`
 	Owner                 string                `json:"owner"`
+	OwnerUserID           string                `json:"owner_user_id"`
 	TemplateID            string                `json:"template_id"`
 	WorkspacePath         string                `json:"workspace_path"`
 	CreatedAt             time.Time             `json:"created_at"`
@@ -31,6 +32,7 @@ type CreateServiceRequest struct {
 	Name                  string            `json:"name"`
 	Description           string            `json:"description"`
 	Owner                 string            `json:"owner"`
+	OwnerUserID           string            `json:"owner_user_id,omitempty"`
 	TemplateID            string            `json:"template_id"`
 	WorkspacePath         string            `json:"workspace_path"`
 	SourceType            string            `json:"source_type"`
@@ -61,4 +63,9 @@ type UpdateServiceRequest struct {
 	Image                 string            `json:"image"`
 	ContainerPort         int               `json:"container_port"`
 	CatalogEnv            map[string]string `json:"catalog_env,omitempty"`
+}
+
+type TransferServiceRequest struct {
+	UserID string `json:"user_id"`
+	Email  string `json:"email"`
 }

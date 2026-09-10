@@ -22,6 +22,7 @@ var validUserRoles = map[string]struct{}{
 type UserAdminRepository interface {
 	List(ctx context.Context) ([]model.User, error)
 	GetByID(ctx context.Context, id string) (model.User, error)
+	GetByEmail(ctx context.Context, email string) (model.UserRecord, error)
 	Create(ctx context.Context, email, name, passwordHash, role string) (model.User, error)
 	UpdateRole(ctx context.Context, id, role string) (model.User, error)
 	UpdateDisabled(ctx context.Context, id string, disabled bool) (model.User, error)
@@ -253,4 +254,36 @@ func mapUserAdminErr(err error) error {
 		return ErrConflict
 	}
 	return err
+}
+
+func (u *Users) GetActiveByEmail(ctx context.Context, email string) (model.User, error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email == "" {
+		return model.User{}, fmt.Errorf("%w: email is required", ErrInvalid)
+	}
+	rec, err := u.repo.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return model.User{}, ErrNotFound
+		}
+		return model.User{}, err
+	}
+	if rec.Disabled {
+		return model.User{}, fmt.Errorf("%w: user is disabled", ErrInvalid)
+	}
+	return rec.User, nil
+}
+
+func (u *Users) GetByID(ctx context.Context, id string) (model.User, error) {
+	out, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return model.User{}, ErrNotFound
+		}
+		return model.User{}, err
+	}
+	if out.Disabled {
+		return model.User{}, fmt.Errorf("%w: user is disabled", ErrInvalid)
+	}
+	return out, nil
 }

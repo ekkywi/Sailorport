@@ -31,9 +31,11 @@ var (
 
 type Repository interface {
 	List(ctx context.Context) ([]model.Service, error)
+	ListByOwner(ctx context.Context, ownerUserID string) ([]model.Service, error)
 	Get(ctx context.Context, id string) (model.Service, error)
 	Create(ctx context.Context, req model.CreateServiceRequest) (model.Service, error)
 	Update(ctx context.Context, id string, req model.UpdateServiceRequest) (model.Service, error)
+	UpdateOwner(ctx context.Context, id, ownerUserID, ownerLabel string) (model.Service, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -50,6 +52,12 @@ type Catalog struct {
 	audit        *Audit
 	apps         *catalogapp.Registry
 	secrets      secrets.Store
+	users        transferUserLookup
+}
+
+type transferUserLookup interface {
+	GetByID(ctx context.Context, id string) (model.User, error)
+	GetActiveByEmail(ctx context.Context, email string) (model.User, error)
 }
 
 func (c *Catalog) SetCleanupEnqueue(e CleanupEnqueue) {
@@ -58,6 +66,10 @@ func (c *Catalog) SetCleanupEnqueue(e CleanupEnqueue) {
 
 func (c *Catalog) SetAudit(a *Audit) {
 	c.audit = a
+}
+
+func (c *Catalog) SetTransferUsers(u transferUserLookup) {
+	c.users = u
 }
 
 func NewCatalog(
@@ -76,11 +88,7 @@ func NewCatalog(
 	}
 }
 
-func (c *Catalog) List(ctx context.Context) ([]model.Service, error) {
-	services, err := c.repo.List(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list services: %w", err)
-	}
+func (c *Catalog) enrichServices(ctx context.Context, services []model.Service) ([]model.Service, error) {
 	if len(services) == 0 {
 		return services, nil
 	}
@@ -111,7 +119,37 @@ func (c *Catalog) List(ctx context.Context) ([]model.Service, error) {
 	return services, nil
 }
 
-func (c *Catalog) Get(ctx context.Context, id string) (model.Service, error) {
+func (c *Catalog) ListAll(ctx context.Context) ([]model.Service, error) {
+	services, err := c.repo.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list services: %w", err)
+	}
+	return c.enrichServices(ctx, services)
+}
+
+func (c *Catalog) List(ctx context.Context, actorID, role string) ([]model.Service, error) {
+	role = strings.TrimSpace(role)
+	actorID = strings.TrimSpace(actorID)
+
+	var (
+		services []model.Service
+		err      error
+	)
+	if role == "admin" {
+		services, err = c.repo.List(ctx)
+	} else {
+		if actorID == "" {
+			return nil, fmt.Errorf("%w: missing authenticated user", ErrForbidden)
+		}
+		services, err = c.repo.ListByOwner(ctx, actorID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list services: %w", err)
+	}
+	return c.enrichServices(ctx, services)
+}
+
+func (c *Catalog) getService(ctx context.Context, id string) (model.Service, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return model.Service{}, fmt.Errorf("%w: id is required", ErrInvalid)
@@ -120,14 +158,43 @@ func (c *Catalog) Get(ctx context.Context, id string) (model.Service, error) {
 	if err != nil {
 		return model.Service{}, mapRepoErr(err)
 	}
+	return svc, nil
+}
+
+func (c *Catalog) Get(ctx context.Context, id, actorID, role string) (model.Service, error) {
+	svc, err := c.getService(ctx, id)
+	if err != nil {
+		return model.Service{}, err
+	}
+	if err := canAccessService(svc, actorID, role); err != nil {
+		return model.Service{}, err
+	}
 	if err := c.attachCatalogEnvPublic(ctx, &svc); err != nil {
 		return model.Service{}, err
 	}
 	return svc, nil
 }
 
+func applyCreateOwner(req model.CreateServiceRequest, actorID, actorEmail string) (model.CreateServiceRequest, error) {
+	actorID = strings.TrimSpace(actorID)
+	actorEmail = strings.TrimSpace(actorEmail)
+	if actorID == "" {
+		return req, fmt.Errorf("%w: missing authenticated user", ErrInvalid)
+	}
+	req.OwnerUserID = actorID
+	req.Owner = actorEmail
+	if req.Owner == "" {
+		req.Owner = actorID
+	}
+	return req, nil
+}
+
 func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest, actorID, actorEmail string) (model.Service, error) {
 	req, err := normalizeCreate(req)
+	if err != nil {
+		return model.Service{}, err
+	}
+	req, err = applyCreateOwner(req, actorID, actorEmail)
 	if err != nil {
 		return model.Service{}, err
 	}
@@ -174,7 +241,7 @@ func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest, ac
 	return svc, nil
 }
 
-func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateServiceRequest, actorID, actorEmail string) (model.Service, error) {
+func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateServiceRequest, actorID, actorEmail, role string) (model.Service, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return model.Service{}, fmt.Errorf("%w: id is required", ErrInvalid)
@@ -184,11 +251,17 @@ func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateService
 	if err != nil {
 		return model.Service{}, mapRepoErr(err)
 	}
+	if err := canAccessService(existing, actorID, role); err != nil {
+		return model.Service{}, err
+	}
 
 	req, err = normalizeUpdate(req, existing)
 	if err != nil {
 		return model.Service{}, err
 	}
+
+	req.Owner = existing.Owner
+
 	if req.CatalogEnv != nil {
 		if existing.SourceType != "catalog_app" {
 			return model.Service{}, fmt.Errorf("%w: catalog_env is only allowed for source_type=catalog_app", ErrInvalid)
@@ -228,7 +301,7 @@ func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateService
 	return svc, nil
 }
 
-func (c *Catalog) Delete(ctx context.Context, id, actorID, actorEmail string) error {
+func (c *Catalog) Delete(ctx context.Context, id, actorID, actorEmail, role string) error {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("%w: id is required", ErrInvalid)
@@ -237,6 +310,9 @@ func (c *Catalog) Delete(ctx context.Context, id, actorID, actorEmail string) er
 	svc, err := c.repo.Get(ctx, id)
 	if err != nil {
 		return mapRepoErr(err)
+	}
+	if err := canAccessService(svc, actorID, role); err != nil {
+		return err
 	}
 
 	if c.cleanup != nil {
@@ -583,4 +659,69 @@ func catalogEnvRowsFromMap(m map[string]string, manifest catalogapp.Manifest) []
 		})
 	}
 	return out
+}
+
+func (c *Catalog) Transfer(
+	ctx context.Context,
+	id string,
+	req model.TransferServiceRequest,
+	actorID, actorEmail, role string,
+) (model.Service, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return model.Service{}, fmt.Errorf("%w: id is required", ErrInvalid)
+	}
+	if c.users == nil {
+		return model.Service{}, fmt.Errorf("transfer user lookup not configured")
+	}
+
+	existing, err := c.repo.Get(ctx, id)
+	if err != nil {
+		return model.Service{}, mapRepoErr(err)
+	}
+	if err := canAccessService(existing, actorID, role); err != nil {
+		return model.Service{}, err
+	}
+
+	target, err := c.resolveTransferTarget(ctx, req)
+	if err != nil {
+		return model.Service{}, err
+	}
+	if target.ID == strings.TrimSpace(existing.OwnerUserID) {
+		return model.Service{}, fmt.Errorf("%w: already owned by that user", ErrInvalid)
+	}
+
+	svc, err := c.repo.UpdateOwner(ctx, id, target.ID, target.Email)
+	if err != nil {
+		return model.Service{}, mapRepoErr(err)
+	}
+	if err := c.attachCatalogEnvPublic(ctx, &svc); err != nil {
+		return model.Service{}, err
+	}
+
+	c.recordService(ctx, actorID, actorEmail, "service.transfer", svc)
+	return svc, nil
+}
+
+func (c *Catalog) resolveTransferTarget(ctx context.Context, req model.TransferServiceRequest) (model.User, error) {
+	userID := strings.TrimSpace(req.UserID)
+	email := strings.TrimSpace(strings.ToLower(req.Email))
+
+	switch {
+	case userID != "" && email != "":
+		return model.User{}, fmt.Errorf("%w: provide only one of user_id or email", ErrInvalid)
+	case userID != "":
+		u, err := c.users.GetByID(ctx, userID)
+		if err != nil {
+			return model.User{}, err
+		}
+		if u.Disabled {
+			return model.User{}, fmt.Errorf("%w: user is disabled", ErrInvalid)
+		}
+		return u, nil
+	case email != "":
+		return c.users.GetActiveByEmail(ctx, email)
+	default:
+		return model.User{}, fmt.Errorf("%w: user_id or email is required", ErrInvalid)
+	}
 }

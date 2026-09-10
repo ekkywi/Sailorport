@@ -16,7 +16,7 @@ type fakeWebhookCatalog struct {
 	err      error
 }
 
-func (f *fakeWebhookCatalog) List(ctx context.Context) ([]model.Service, error) {
+func (f *fakeWebhookCatalog) ListAll(ctx context.Context) ([]model.Service, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -31,7 +31,7 @@ type fakeWebhookDeployer struct {
 	called        bool
 }
 
-func (f *fakeWebhookDeployer) Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest) (model.Deployment, error) {
+func (f *fakeWebhookDeployer) Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest, actorID, role string) (model.Deployment, error) {
 	f.called = true
 	f.lastServiceID = serviceID
 	f.lastEnv = req.Environment

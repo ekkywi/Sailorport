@@ -1,4 +1,4 @@
-import { Boxes, History, Pencil, Play, Rocket, ScrollText, Square, Trash2 } from "lucide-react";
+import { Boxes, History, Pencil, Play, Rocket, ScrollText, Square, Trash2, UserRoundPen } from "lucide-react";
 import {
   DataPanel,
   DeployedPortInfo,
@@ -20,6 +20,7 @@ type ServiceListProps = {
   canWrite: boolean;
   onEdit: (svc: Service) => void;
   onDelete: (svc: Service) => void;
+  onTransfer?: (svc: Service) => void;
   onCreate?: () => void;
   onCreateFromGit?: () => void;
   onDeploy: (svc: Service) => void;
@@ -260,6 +261,7 @@ function RowActions({
   onDeploy,
   onEdit,
   onDelete,
+  onTransfer,
   onOpenHistory,
 }: {
   svc: Service;
@@ -267,6 +269,7 @@ function RowActions({
   onDeploy: (svc: Service) => void;
   onEdit: (svc: Service) => void;
   onDelete: (svc: Service) => void;
+  onTransfer?: (svc: Service) => void;
   onOpenHistory: (svc: Service) => void;
 }) {
   return (
@@ -305,6 +308,18 @@ function RowActions({
           >
             <Pencil className="size-3.5" />
           </Button>
+          {onTransfer ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
+              aria-label={`Transfer ${svc.name}`}
+              onClick={() => onTransfer(svc)}
+            >
+              <UserRoundPen className="size-3.5" />
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"
@@ -328,6 +343,7 @@ export function ServiceList({
   canWrite,
   onEdit,
   onDelete,
+  onTransfer,
   onDeploy,
   onOpenHistory,
   onStop,
@@ -462,6 +478,7 @@ export function ServiceList({
                     onDeploy={onDeploy}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onTransfer={onTransfer}
                     onOpenHistory={onOpenHistory}
                   />
                 </td>
@@ -493,6 +510,7 @@ export function ServiceList({
                     onDeploy={onDeploy}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onTransfer={onTransfer}
                     onOpenHistory={onOpenHistory}
                   />
                 </div>

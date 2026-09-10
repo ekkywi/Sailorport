@@ -20,10 +20,14 @@ func NewServicesHandler(catalog *service.Catalog) *ServicesHandler {
 }
 
 func (h *ServicesHandler) List(w http.ResponseWriter, r *http.Request) {
-	services, err := h.catalog.List(r.Context())
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	services, err := h.catalog.List(r.Context(), claims.UserID, claims.Role)
 	if err != nil {
-		log.Printf("list services: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		writeCatalogError(w, "list services", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, service.PublicServices(services))
@@ -51,7 +55,12 @@ func (h *ServicesHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ServicesHandler) Get(w http.ResponseWriter, r *http.Request) {
-	svc, err := h.catalog.Get(r.Context(), r.PathValue("id"))
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	svc, err := h.catalog.Get(r.Context(), r.PathValue("id"), claims.UserID, claims.Role)
 	if err != nil {
 		writeCatalogError(w, "get service", err)
 		return
@@ -72,7 +81,7 @@ func (h *ServicesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	svc, err := h.catalog.Update(r.Context(), r.PathValue("id"), req, claims.UserID, claims.Email)
+	svc, err := h.catalog.Update(r.Context(), r.PathValue("id"), req, claims.UserID, claims.Email, claims.Role)
 	if err != nil {
 		writeCatalogError(w, "update service", err)
 		return
@@ -86,7 +95,7 @@ func (h *ServicesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	if err := h.catalog.Delete(r.Context(), r.PathValue("id"), claims.UserID, claims.Email); err != nil {
+	if err := h.catalog.Delete(r.Context(), r.PathValue("id"), claims.UserID, claims.Email, claims.Role); err != nil {
 		writeCatalogError(w, "delete service", err)
 		return
 	}
@@ -117,4 +126,32 @@ func catalogClientMessage(err error) string {
 		return msg[i+2:]
 	}
 	return msg
+}
+
+func (h *ServicesHandler) Transfer(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	var req model.TransferServiceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	defer r.Body.Close()
+
+	svc, err := h.catalog.Transfer(
+		r.Context(),
+		r.PathValue("id"),
+		req,
+		claims.UserID,
+		claims.Email,
+		claims.Role,
+	)
+	if err != nil {
+		writeCatalogError(w, "transfer service", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, service.PublicService(svc))
 }

@@ -11,18 +11,19 @@ import {
 } from "../catalog/selectClassName";
 
 type CreateServiceFormProps = {
+  ownerEmail: string;
   onSuccess: (workspacePath: string) => void;
   onBack?: () => void;
 };
 
 export function CreateServiceForm({
+  ownerEmail,
   onSuccess,
   onBack,
 }: CreateServiceFormProps) {
   const [templates, setTemplates] = useState<TemplateManifest[]>([]);
   const [templateId, setTemplateId] = useState("");
   const [name, setName] = useState("");
-  const [owner, setOwner] = useState("");
   const [description, setDescription] = useState("");
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,7 +56,7 @@ export function CreateServiceForm({
       const result = await scaffoldService({
         template_id: templateId,
         name,
-        owner,
+        owner: ownerEmail,
         description,
       });
       onSuccess(result.service.workspace_path);
@@ -142,11 +143,14 @@ export function CreateServiceForm({
         </Label>
         <Input
           id="create-owner"
-          value={owner}
-          onChange={(e) => setOwner(e.target.value)}
-          placeholder="platform-team"
+          value={ownerEmail}
+          readOnly
+          disabled
           className="h-9 text-[13px]"
         />
+        <p className="text-[11px] text-muted-foreground">
+          Set to your account automatically. Ownership can be transferred from the catalog list.
+        </p>
       </div>
 
       <div className="space-y-1.5 sm:col-span-2">

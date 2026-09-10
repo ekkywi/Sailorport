@@ -66,6 +66,7 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("GET /api/v1/services/{id}", withRole(secret, currentUser, reader, services.Get))
 	mux.Handle("PUT /api/v1/services/{id}", withRole(secret, currentUser, writer, services.Update))
 	mux.Handle("DELETE /api/v1/services/{id}", withRole(secret, currentUser, writer, services.Delete))
+	mux.Handle("POST /api/v1/services/{id}/transfer", withRole(secret, currentUser, writer, services.Transfer))
 
 	mux.Handle("GET /api/v1/templates", withRole(secret, currentUser, reader, scaffold.ListTemplates))
 	mux.Handle("POST /api/v1/scaffold", withRole(secret, currentUser, writer, scaffold.Create))

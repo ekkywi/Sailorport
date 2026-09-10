@@ -11,11 +11,11 @@ import (
 
 // webhookCatalog is the catalog surface needed for webhook matching.
 type webhookCatalog interface {
-	List(ctx context.Context) ([]model.Service, error)
+	ListAll(ctx context.Context) ([]model.Service, error)
 }
 
 type webhookDeployer interface {
-	Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest) (model.Deployment, error)
+	Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest, actorID, role string) (model.Deployment, error)
 }
 
 type Webhook struct {
@@ -102,7 +102,7 @@ func (w *Webhook) HandleGitHub(
 
 	dep, err := w.deployments.Create(ctx, target.ID, model.CreateDeploymentRequest{
 		Environment: env,
-	})
+	}, "", "")
 	if err != nil {
 		return model.WebhookAck{}, err
 	}
@@ -132,7 +132,7 @@ func (w *Webhook) findServicesByCloneURL(ctx context.Context, cloneURL string) (
 	if w.catalog == nil {
 		return nil, fmt.Errorf("webhook catalog not configured")
 	}
-	all, err := w.catalog.List(ctx)
+	all, err := w.catalog.ListAll(ctx)
 	if err != nil {
 		return nil, err
 	}

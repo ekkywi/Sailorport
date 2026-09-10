@@ -43,6 +43,20 @@ export async function deleteService(id: string): Promise<void> {
   }
 }
 
+export async function transferService(
+  id: string,
+  input: { email: string },
+): Promise<Service> {
+  const res = await apiFetch(`/api/v1/services/${id}/transfer`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, `Failed to transfer: ${res.status}`));
+  }
+  return res.json();
+}
+
 export async function listCatalogApps(): Promise<CatalogApp[]> {
   const res = await apiFetch("/api/v1/catalog-apps");
   if (!res.ok) {

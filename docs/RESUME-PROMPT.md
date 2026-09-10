@@ -17,9 +17,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 28 (28a–28f)** — worker admin lite (edit labels, decommission=`draining`, restore, deploy gate, portal).
+**Step terakhir selesai:** **Step 29e** — transfer service ownership (owner/admin → email); Step 29 ownership complete.
 
-**Step berikutnya:** belum ditetapkan — lihat **Next action** di `docs/PROGRESS.md` (opsional: Pass B/C QC, catalog app lain).
+**Step berikutnya:** opsional — Pass B/C QC atau catalog app lain (lihat `docs/PROGRESS.md`).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat

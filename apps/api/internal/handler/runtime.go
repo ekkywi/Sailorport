@@ -21,6 +21,12 @@ func NewRuntimeHandler(r *service.Runtime) *RuntimeHandler {
 }
 
 func (h *RuntimeHandler) Stop(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	var req model.RuntimeActionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
 		writeError(w, http.StatusBadRequest, "Invalid request body")
@@ -28,7 +34,7 @@ func (h *RuntimeHandler) Stop(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	job, err := h.runtime.RequestStop(r.Context(), r.PathValue("id"), req.Environment)
+	job, err := h.runtime.RequestStop(r.Context(), r.PathValue("id"), req.Environment, claims.UserID, claims.Role)
 	if err != nil {
 		writeRuntimeError(w, "Stop service", err)
 		return
@@ -37,6 +43,11 @@ func (h *RuntimeHandler) Stop(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RuntimeHandler) Start(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	var req model.RuntimeActionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
 		writeError(w, http.StatusBadRequest, "Invalid request body")
@@ -44,7 +55,7 @@ func (h *RuntimeHandler) Start(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	job, err := h.runtime.RequestStart(r.Context(), r.PathValue("id"), req.Environment)
+	job, err := h.runtime.RequestStart(r.Context(), r.PathValue("id"), req.Environment, claims.UserID, claims.Role)
 	if err != nil {
 		writeRuntimeError(w, "Start service", err)
 		return
@@ -53,6 +64,11 @@ func (h *RuntimeHandler) Start(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RuntimeHandler) Logs(w http.ResponseWriter, r *http.Request) {
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	var req model.RuntimeActionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
 		writeError(w, http.StatusBadRequest, "Invalid request body")
@@ -60,7 +76,7 @@ func (h *RuntimeHandler) Logs(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	job, err := h.runtime.RequestLogs(r.Context(), r.PathValue("id"), req.Environment)
+	job, err := h.runtime.RequestLogs(r.Context(), r.PathValue("id"), req.Environment, claims.UserID, claims.Role)
 	if err != nil {
 		writeRuntimeError(w, "Request logs", err)
 		return
@@ -69,7 +85,12 @@ func (h *RuntimeHandler) Logs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RuntimeHandler) Get(w http.ResponseWriter, r *http.Request) {
-	job, err := h.runtime.Get(r.Context(), r.PathValue("id"))
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	job, err := h.runtime.Get(r.Context(), r.PathValue("id"), claims.UserID, claims.Role)
 	if err != nil {
 		writeRuntimeError(w, "Get runtime job", err)
 		return
@@ -125,6 +146,12 @@ func writeRuntimeError(w http.ResponseWriter, op string, err error) {
 		writeError(w, http.StatusBadRequest, msg)
 	case errors.Is(err, service.ErrNotFound):
 		writeError(w, http.StatusNotFound, "Not found")
+	case errors.Is(err, service.ErrForbidden):
+		msg := err.Error()
+		if i := strings.Index(msg, ": "); i >= 0 {
+			msg = msg[i+2:]
+		}
+		writeError(w, http.StatusForbidden, msg)
 	default:
 		log.Printf("%s: %v", op, err)
 		writeError(w, http.StatusInternalServerError, "Internal server error")

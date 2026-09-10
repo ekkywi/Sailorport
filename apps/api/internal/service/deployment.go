@@ -37,16 +37,27 @@ func NewDeployments(
 	}
 }
 
-func (d *Deployments) Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest) (model.Deployment, error) {
+func (d *Deployments) Create(
+	ctx context.Context,
+	serviceID string,
+	req model.CreateDeploymentRequest,
+	actorID, role string,
+) (model.Deployment, error) {
 	serviceID = strings.TrimSpace(serviceID)
 	if serviceID == "" {
 		return model.Deployment{}, fmt.Errorf("%w: service_id is required", ErrInvalid)
 	}
 
-	svc, err := d.catalog.Get(ctx, serviceID)
+	svc, err := d.catalog.getService(ctx, serviceID)
 	if err != nil {
 		return model.Deployment{}, err
 	}
+	if strings.TrimSpace(actorID) != "" || strings.TrimSpace(role) != "" {
+		if err := canAccessService(svc, actorID, role); err != nil {
+			return model.Deployment{}, err
+		}
+	}
+
 	hasWorkspace := strings.TrimSpace(svc.WorkspacePath) != ""
 	isGit := svc.SourceType == "git" && strings.TrimSpace(svc.RepoURL) != ""
 	isCatalogApp := svc.SourceType == "catalog_app" && strings.TrimSpace(svc.Image) != ""
@@ -88,9 +99,10 @@ func (d *Deployments) Create(ctx context.Context, serviceID string, req model.Cr
 		return model.Deployment{}, fmt.Errorf("Create deployment: %w", err)
 	}
 	return out, nil
+
 }
 
-func (d *Deployments) Redeploy(ctx context.Context, deploymentID string) (model.Deployment, error) {
+func (d *Deployments) Redeploy(ctx context.Context, deploymentID, actorID, role string) (model.Deployment, error) {
 	deploymentID = strings.TrimSpace(deploymentID)
 	if deploymentID == "" {
 		return model.Deployment{}, fmt.Errorf("%w: id is required", ErrInvalid)
@@ -112,17 +124,25 @@ func (d *Deployments) Redeploy(ctx context.Context, deploymentID string) (model.
 	return d.Create(ctx, src.ServiceID, model.CreateDeploymentRequest{
 		Environment: src.EnvironmentSlug,
 		GitSHA:      sha,
-	})
+	}, actorID, role)
 }
 
-func (d *Deployments) Get(ctx context.Context, id string) (model.Deployment, error) {
+func (d *Deployments) Get(ctx context.Context, id, actorID, role string) (model.Deployment, error) {
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return model.Deployment{}, fmt.Errorf("%w: id is required", ErrInvalid)
 	}
+
 	out, err := d.store.Get(ctx, id)
 	if err != nil {
 		return model.Deployment{}, mapRepoErr(err)
+	}
+	svc, err := d.catalog.getService(ctx, out.ServiceID)
+	if err != nil {
+		return model.Deployment{}, err
+	}
+	if err := canAccessService(svc, actorID, role); err != nil {
+		return model.Deployment{}, err
 	}
 	return out, nil
 }
@@ -131,13 +151,20 @@ func (d *Deployments) List(ctx context.Context) ([]model.Deployment, error) {
 	return d.store.List(ctx)
 }
 
-func (d *Deployments) ListByService(ctx context.Context, serviceID string) ([]model.Deployment, error) {
+func (d *Deployments) ListByService(ctx context.Context, serviceID, actorID, role string) ([]model.Deployment, error) {
 	serviceID = strings.TrimSpace(serviceID)
 	if serviceID == "" {
 		return nil, fmt.Errorf("%w: service_id is required", ErrInvalid)
 	}
-	if _, err := d.catalog.Get(ctx, serviceID); err != nil {
+	svc, err := d.catalog.getService(ctx, serviceID)
+	if err != nil {
 		return nil, err
+	}
+	// Empty actor = internal caller (delete cleanup / runtime after access already checked).
+	if strings.TrimSpace(actorID) != "" || strings.TrimSpace(role) != "" {
+		if err := canAccessService(svc, actorID, role); err != nil {
+			return nil, err
+		}
 	}
 	return d.store.ListByService(ctx, serviceID)
 }
