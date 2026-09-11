@@ -53,3 +53,10 @@ type CreateUserRequest struct {
 type ResetUserPasswordRequest struct {
 	Password string `json:"password"`
 }
+
+// UserDirectoryEntry is a public, minimal user row for pickers (e.g. transfer ownership).
+type UserDirectoryEntry struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}

@@ -114,6 +114,22 @@ func TestUsers_List_ok(t *testing.T) {
 	}
 }
 
+func TestUsers_Directory_SkipsDisabled(t *testing.T) {
+	svc := NewUsers(&fakeUserAdminRepo{
+		users: []model.User{
+			{ID: testAdminID, Email: "a@x.com", Name: "Admin", Role: "admin"},
+			{ID: testDevID, Email: "d@x.com", Name: "Dev", Role: "developer", Disabled: true},
+		},
+	})
+	out, err := svc.Directory(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 1 || out[0].ID != testAdminID || out[0].Email != "a@x.com" {
+		t.Fatalf("unexpected directory: %+v", out)
+	}
+}
+
 func TestUsers_Create_ok(t *testing.T) {
 	svc := NewUsers(&fakeUserAdminRepo{})
 	out, err := svc.Create(context.Background(), model.CreateUserRequest{

@@ -29,6 +29,16 @@ func (h *UsersHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
+func (h *UsersHandler) Directory(w http.ResponseWriter, r *http.Request) {
+	out, err := h.users.Directory(r.Context())
+	if err != nil {
+		log.Printf("List user directory: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
 func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 	claims := UserFromContext(r.Context())
 	if claims == nil {

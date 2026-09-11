@@ -82,6 +82,8 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | Dua register serentak di instalasi kosong bisa jadi dua admin | Rendah | Efek fix A-C2. Gate-nya `COUNT(*)` lalu INSERT (bukan atomik); praktis tidak relevan karena siapa pun yang duluan register tetap dapat admin |
 | Portal tidak auto-logout saat 401 di tengah sesi | Rendah | Efek fix A-H3. Token user yang di-disable langsung ditolak API, tapi portal baru menghapus token saat `me()` gagal (refresh / buka ulang); interceptor 401 global = Pass C |
 | Satu query user tambahan per request ber-JWT | Rendah (by design) | Efek fix A-H3. Alternatif `token_version`/cache sengaja tidak dipakai supaya disable & ganti role langsung berlaku |
+| Transfer owner: native `<select>` + `GET /users/directory` tanpa search/limit | Rendah (MVP) | Step 29e. Cocok puluhan user; ratusan+ → combobox searchable + `?q=`/`limit` di directory. Estetika option list native terbatas |
+| `GET /api/v1/deployments` global belum difilter by owner | Sedang | Step 29d filter list services saja; metadata deploy service orang lain masih bisa terlihat lewat list global jika endpoint dipanggil |
 
 ---
 

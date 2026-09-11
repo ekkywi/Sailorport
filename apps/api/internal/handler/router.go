@@ -55,6 +55,7 @@ func NewRouter(api API) http.Handler {
 	usersH := NewUsersHandler(api.Users)
 	auditH := NewAuditHandler(api.Audit)
 	mux.Handle("GET /api/v1/audit", withRole(secret, currentUser, admin, auditH.List))
+	mux.Handle("GET /api/v1/users/directory", withRole(secret, currentUser, writer, usersH.Directory))
 	mux.Handle("GET /api/v1/users", withRole(secret, currentUser, admin, usersH.List))
 	mux.Handle("POST /api/v1/users", withRole(secret, currentUser, admin, usersH.Create))
 	mux.Handle("PATCH /api/v1/users/{id}", withRole(secret, currentUser, admin, usersH.Update))

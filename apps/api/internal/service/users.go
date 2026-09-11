@@ -77,6 +77,26 @@ func (u *Users) List(ctx context.Context) ([]model.User, error) {
 	return users, nil
 }
 
+// Directory returns active (non-disabled) users for ownership transfer pickers.
+func (u *Users) Directory(ctx context.Context) ([]model.UserDirectoryEntry, error) {
+	users, err := u.repo.List(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list users directory: %w", err)
+	}
+	out := make([]model.UserDirectoryEntry, 0, len(users))
+	for _, user := range users {
+		if user.Disabled {
+			continue
+		}
+		out = append(out, model.UserDirectoryEntry{
+			ID:    user.ID,
+			Email: user.Email,
+			Name:  user.Name,
+		})
+	}
+	return out, nil
+}
+
 func (u *Users) Create(ctx context.Context, req model.CreateUserRequest, actorID, actorEmail string) (model.User, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.Name = strings.TrimSpace(req.Name)

@@ -343,6 +343,8 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - **Template management** belum CRUD di DB/portal
 - **Workspace lama** (path `/tmp/...`) tidak ikut terhapus saat delete (di luar root baru); scaffold ulang ke `data/workspaces`
 - **Self-host API + agent host:** path workspace di DB adalah path container; agent host perlu API lokal untuk E2E deploy (atau solusi path-mapping nanti)
+- **Transfer owner picker:** native `<select>` + directory penuh tanpa search — OK untuk tim kecil; scale-up → combobox + query `q`/`limit` (lihat `docs/QC.md`)
+- **`GET /deployments` global** belum di-scope by `owner_user_id` (list catalog sudah)
 
 ### Debt yang sudah diperbaiki
 
@@ -801,11 +803,15 @@ Owner = user yang create (`owner_user_id` FK + label `owner` = email). Client ti
 | 29b Create owner | ✅ | `applyCreateOwner`; portal Owner read-only + prefill email |
 | 29c ACL mutations | ✅ | Get/Update/Delete/Deploy/runtime: owner atau admin; webhook skip ACL |
 | 29d List filter | ✅ | Non-admin `ListByOwner`; admin + webhook `ListAll` |
-| 29e Transfer | ✅ | `POST …/transfer` by email; portal dialog |
+| 29e Transfer | ✅ | `POST …/transfer` by email; portal dialog + user directory select |
 
 **Tes 29e (smoke transfer):**
 
 ```bash
+# Directory (developer OK)
+curl -sS http://localhost:8080/api/v1/users/directory \
+  -H "Authorization: Bearer $TOKEN_DEV" | jq .
+
 curl -sS -X POST "http://localhost:8080/api/v1/services/$ID/transfer" \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"email":"bambang@sailorport.com"}' \

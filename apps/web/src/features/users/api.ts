@@ -1,10 +1,20 @@
 import { apiFetch, readErrorMessage } from "../../lib/http";
-import type { CreateUserInput, User, UserRole } from "./type";
+import type { CreateUserInput, User, UserDirectoryEntry, UserRole } from "./type";
 
 export async function listUsers(): Promise<User[]> {
   const res = await apiFetch("/api/v1/users");
   if (!res.ok) {
     throw new Error(await readErrorMessage(res, `Failed to list users: ${res.status}`));
+  }
+  return res.json();
+}
+
+export async function listUserDirectory(): Promise<UserDirectoryEntry[]> {
+  const res = await apiFetch("/api/v1/users/directory");
+  if (!res.ok) {
+    throw new Error(
+      await readErrorMessage(res, `Failed to list user directory: ${res.status}`),
+    );
   }
   return res.json();
 }

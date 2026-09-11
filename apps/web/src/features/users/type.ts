@@ -16,3 +16,10 @@ export type CreateUserInput = {
   password: string;
   role: UserRole;
 };
+
+/** Minimal user row for pickers (transfer ownership). */
+export type UserDirectoryEntry = {
+  id: string;
+  email: string;
+  name: string;
+};

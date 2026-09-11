@@ -12,7 +12,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -36,6 +35,10 @@ import { CatalogAppForm } from "./CatalogAppForm";
 import { GitServiceForm } from "./GitServiceForm";
 import { ServiceForm } from "./ServiceForm";
 import { ServiceList } from "./ServiceList";
+import {
+  catalogOptionClassName,
+  catalogSelectClassName,
+} from "./selectClassName";
 import type {
   CatalogAppEnvField,
   CatalogAppFormValues,
@@ -57,6 +60,8 @@ import type { AuthUser } from "@/features/auth/types";
 import { canWriteCatalog } from "@/lib/rbac";
 import { listEnvironments } from "../environments/api";
 import type { Environment } from "../environments/types";
+import { listUserDirectory } from "../users/api";
+import type { UserDirectoryEntry } from "../users/type";
 
 const emptyGitForm: GitServiceFormValues = {
   name: "",
@@ -126,6 +131,11 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
   const [transferEmail, setTransferEmail] = useState("");
   const [transferring, setTransferring] = useState(false);
   const [transferError, setTransferError] = useState("");
+  const [transferDirectory, setTransferDirectory] = useState<
+    UserDirectoryEntry[]
+  >([]);
+  const [transferDirectoryLoading, setTransferDirectoryLoading] =
+    useState(false);
   const [createdPath, setCreatedPath] = useState("");
   const [gitCreated, setGitCreated] = useState<Service | null>(null);
   const [catalogCreated, setCatalogCreated] = useState<Service | null>(null);
@@ -380,6 +390,31 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
     return user.role === "admin" || svc.owner_user_id === user.id;
   }
 
+  async function openTransfer(svc: Service) {
+    if (!canManageService(currentUser, svc)) return;
+    setTransferError("");
+    setTransferEmail("");
+    setTransferDirectory([]);
+    setTransferTarget(svc);
+    setTransferDirectoryLoading(true);
+    try {
+      const entries = await listUserDirectory();
+      const options = entries.filter(
+        (u) => u.id !== currentUser.id && u.id !== svc.owner_user_id,
+      );
+      setTransferDirectory(options);
+      if (options.length === 1) {
+        setTransferEmail(options[0].email);
+      }
+    } catch (err) {
+      setTransferError(
+        err instanceof Error ? err.message : "Failed to load users",
+      );
+    } finally {
+      setTransferDirectoryLoading(false);
+    }
+  }
+
   async function onTransferSubmit(e: FormEvent) {
     e.preventDefault();
     if (!transferTarget) return;
@@ -582,16 +617,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         canWrite={canWrite}
         onEdit={startEdit}
         onDelete={setDeleteTarget}
-        onTransfer={
-          canWrite
-            ? (svc) => {
-                if (!canManageService(currentUser, svc)) return;
-                setTransferError("");
-                setTransferEmail("");
-                setTransferTarget(svc);
-              }
-            : undefined
-        }
+        onTransfer={canWrite ? openTransfer : undefined}
         onDeploy={setDeployDialogTarget}
         onOpenHistory={openHistory}
         onStop={(svc, environment) =>
@@ -871,6 +897,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
             setTransferTarget(null);
             setTransferEmail("");
             setTransferError("");
+            setTransferDirectory([]);
           }
         }}
       >
@@ -882,7 +909,8 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
               <span className="font-medium text-foreground">
                 {transferTarget?.name}
               </span>{" "}
-              to another Sailorport user. You will lose access unless you are an admin.
+              to another Sailorport user. You will lose access unless you are an
+              admin.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={onTransferSubmit} className="space-y-3">
@@ -891,21 +919,36 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
             ) : null}
             <div className="space-y-1.5">
               <Label
-                htmlFor="transfer-email"
+                htmlFor="transfer-user"
                 className="text-[12px] text-muted-foreground"
               >
-                New owner email
+                New owner
               </Label>
-              <Input
-                id="transfer-email"
-                type="email"
+              <select
+                id="transfer-user"
                 required
                 value={transferEmail}
                 onChange={(e) => setTransferEmail(e.target.value)}
-                placeholder="developer@example.com"
-                disabled={transferring}
-                className="h-9 text-[13px]"
-              />
+                disabled={transferring || transferDirectoryLoading}
+                className={catalogSelectClassName}
+              >
+                <option value="" className={catalogOptionClassName}>
+                  {transferDirectoryLoading
+                    ? "Loading users…"
+                    : transferDirectory.length === 0
+                      ? "No other users available"
+                      : "Select a user…"}
+                </option>
+                {transferDirectory.map((u) => (
+                  <option
+                    key={u.id}
+                    value={u.email}
+                    className={catalogOptionClassName}
+                  >
+                    {u.name ? `${u.name} (${u.email})` : u.email}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button
@@ -918,6 +961,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                   setTransferTarget(null);
                   setTransferEmail("");
                   setTransferError("");
+                  setTransferDirectory([]);
                 }}
               >
                 Cancel
@@ -926,7 +970,11 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 type="submit"
                 size="sm"
                 className="h-8 text-[13px]"
-                disabled={transferring || !transferEmail.trim()}
+                disabled={
+                  transferring ||
+                  transferDirectoryLoading ||
+                  !transferEmail.trim()
+                }
               >
                 {transferring ? "Transferring…" : "Transfer"}
               </Button>
