@@ -1,6 +1,5 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -38,12 +37,12 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
   return (
     <div className="space-y-6">
-      {error && (
+      {error ? (
         <Alert variant="destructive">
           <AlertCircle />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
       <form onSubmit={onSubmit} className="space-y-5">
         <div className="space-y-1.5">
@@ -82,16 +81,6 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
           )}
         </Button>
       </form>
-
-      <p className="text-center text-[13px] text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Link
-          to="/register"
-          className="font-medium text-foreground transition-colors hover:text-foreground/80"
-        >
-          Sign up
-        </Link>
-      </p>
     </div>
   );
 }

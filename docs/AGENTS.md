@@ -75,7 +75,7 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 | `/users` | admin: list, create, role, disable/enable (confirm), reset password, soft-delete |
 | `/audit` | admin: jejak aksi (catalog + user admin) |
 
-Auth: `/login`, `/register` — layout terpisah (`AuthLayout`).
+Auth: `/login`, `/setup` (first-run) — layout `AuthLayout`. Register publik ditutup (Step 30); user baru lewat admin Users.
 
 ## Catalog — mental model (penting)
 

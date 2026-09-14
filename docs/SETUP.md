@@ -149,7 +149,7 @@ npm install
 npm run dev
 ```
 
-Buka `http://localhost:5173` — login/register, lalu portal dengan sidebar (collapse di desktop):
+Buka `http://localhost:5173` — instalasi kosong diarahkan ke `/setup`; setelah ada admin, login lalu portal dengan sidebar (collapse di desktop):
 
 - **Workspace:** Overview  
 - **Platform:** Catalog, Workers  
@@ -159,11 +159,11 @@ Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
 Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** (badge environment) + dialog **Deploy** pilih dev/staging/prod + **Stop/Start** runtime (konfirmasi) + **History** / **Deploy** terpisah (dialog deployments; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin: create, role, disable/enable, reset password). Layout app shell **full width** untuk tabel dan data padat.
 
-## Admin user & user management (Step 12a + 12b)
+## Admin user & user management (Step 12a + 12b + Step 30)
 
-`POST /api/v1/auth/register` hanya jalan selama tabel `users` **kosong**, dan akun pertama itu otomatis role `admin` — tidak perlu promote lewat SQL. Begitu admin pertama ada, register dijawab **403** (`registration is closed`) dan user berikutnya dibuat admin lewat `POST /api/v1/users` atau halaman **Users** di portal.
+Instalasi kosong: portal diarahkan ke **`/setup`**. Buat admin pertama lewat `POST /api/v1/setup/admin` (role dipaksa `admin`). `POST /api/v1/auth/register` selalu **403**. User berikutnya dibuat admin lewat `POST /api/v1/users` atau halaman **Users** di portal.
 
-Karena register terbuka sampai akun pertama dibuat, **daftarkan akun admin segera setelah API pertama kali jalan** — jangan tinggalkan instalasi kosong yang bisa diakses orang lain.
+Jangan tinggalkan instalasi kosong yang bisa diakses orang lain — selesaikan `/setup` segera setelah API pertama kali jalan.
 
 Sebagai admin:
 

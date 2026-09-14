@@ -13,6 +13,7 @@ type API struct {
 	CatalogApps  *service.CatalogApps
 	Scaffold     *service.Scaffold
 	Auth         *service.Auth
+	Setup        *service.Setup
 	Users        *service.Users
 	Workers      *service.Workers
 	Deployments  *service.Deployments
@@ -31,6 +32,7 @@ func NewRouter(api API) http.Handler {
 
 	health := NewHealthHandler("sailorport-api", api.Version)
 	authH := NewAuthHandler(api.Auth)
+	setupH := NewSetupHandler(api.Setup)
 	services := NewServicesHandler(api.Catalog)
 	scaffold := NewScaffoldHandler(api.Scaffold)
 	catalogAppsH := NewCatalogAppsHandler(api.CatalogApps)
@@ -48,6 +50,8 @@ func NewRouter(api API) http.Handler {
 
 	mux.HandleFunc("POST /api/v1/webhooks/github", webhooksH.GitHub)
 
+	mux.HandleFunc("GET /api/v1/setup/status", setupH.Status)
+	mux.HandleFunc("POST /api/v1/setup/admin", setupH.CreateAdmin)
 	mux.HandleFunc("POST /api/v1/auth/register", authH.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authH.Login)
 	mux.Handle("GET /api/v1/auth/me", withAuth(secret, currentUser, authH.Me))

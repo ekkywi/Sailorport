@@ -253,7 +253,7 @@ export function UsersPage() {
           <EmptyState
             icon={UsersIcon}
             title="No users"
-            description="Create a user here, or they can self-register at /register."
+            description="Create a user here. Public registration is closed; only admins can add accounts."
             action={
               <Button
                 type="button"

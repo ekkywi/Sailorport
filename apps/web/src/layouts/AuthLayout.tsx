@@ -4,17 +4,17 @@ import { BrandMark } from "@/components/app";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 type AuthLayoutProps = {
-  mode: "login" | "register";
+  mode: "login" | "setup";
   children: ReactNode;
 };
 
 export function AuthLayout({ mode, children }: AuthLayoutProps) {
   const headline =
-    mode === "login" ? "Sign in to Sailorport" : "Create your Sailorport account";
+    mode === "login" ? "Sign in to Sailorport" : "Set up Sailorport";
   const support =
     mode === "login"
       ? "Welcome back. Please enter your details."
-      : "Get started with your team's developer port.";
+      : "Create the first admin account for this installation.";
 
   return (
     <div className="auth-harbour relative flex min-h-svh flex-col">

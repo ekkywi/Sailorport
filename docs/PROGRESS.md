@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 29e — transfer service ownership (API + portal)
+- **Step selesai:** 30e — first-run setup (status, create admin, portal /setup, gate, tutup register)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …)
-- **Terakhir dikerjakan:** 2026-09-10 — Step 29e (transfer ownership)
+- **Step berikutnya:** opsional — Settings / registration toggle (31), Pass B/C QC, catalog app lain (Gitea, …)
+- **Terakhir dikerjakan:** 2026-09-14 — Step 30e
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -109,6 +109,11 @@
 - [x] Step 29c — Authorize Get/Update/Delete/Deploy/runtime: owner or admin
 - [x] Step 29d — List filter: non-admin own only; admin all
 - [x] Step 29e — Transfer ownership API + portal
+- [x] Step 30a — GET /api/v1/setup/status
+- [x] Step 30b — POST /api/v1/setup/admin
+- [x] Step 30c — Portal /setup
+- [x] Step 30d — Gate needs_setup → /setup
+- [x] Step 30e — Tutup bootstrap /auth/register + bersihkan UI/docs
 
 ## Yang sudah jalan
 
@@ -145,7 +150,9 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 \
 
 | Endpoint / UI | Auth | Hasil |
 |---------------|------|-------|
-| `POST /api/v1/auth/register` | publik, hanya saat tabel `users` kosong | bootstrap admin pertama (role dipaksa `admin`); sudah ada user → **403** |
+| `GET /api/v1/setup/status` | publik | `{ needs_setup }` — first-run gate |
+| `POST /api/v1/setup/admin` | publik, hanya jika users kosong | buat admin pertama (role dipaksa `admin`) |
+| `POST /api/v1/auth/register` | publik | selalu **403** (bootstrap pindah ke setup) |
 | `POST /api/v1/auth/login` | publik | JWT token |
 | `GET /api/v1/auth/me` | Bearer | profil user |
 | `GET /api/v1/users` | admin | list semua user |
@@ -172,7 +179,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 \
 | `PATCH /api/v1/agent/deployments/{id}` | agent token | agent update deploy status |
 | `POST /api/v1/agent/runtime/next` | agent token | claim 1 runtime job (`stop`/`start`/`logs`) |
 | `PATCH /api/v1/agent/runtime/{id}` | agent token | agent selesai runtime job; API update deployment → `stopped`/`running`; logs → output only |
-| Portal `/login`, `/register` | — | auth gate |
+| Portal `/login`, `/setup` | — | auth + first-run setup gate |
 | Portal `/overview`, `/catalog`, `/worker`, `/users`, `/audit` | JWT | app shell; `/users` dan `/audit` admin-only (redirect non-admin) |
 
 Env API: `AUTH_JWT_SECRET`, `SAILORPORT_AGENT_TOKEN`, dan (opsional dev / wajib production) `SAILORPORT_SECRETS_KEY` — default dev JWT/agent hanya saat `APP_ENV=development`; selain itu `Config.Validate()` membuat API `log.Fatal` saat start. Compose wajib mengisi secret dari `deploy/compose/.env`.
@@ -200,7 +207,7 @@ Env API (catalog env encryption):
 
 Role: `admin`, `developer`, `viewer`
 
-**Admin pertama:** register lewat portal/`POST /api/v1/auth/register` selama belum ada user — akun itu langsung role `admin` (tidak perlu promote SQL lagi). Sesudah itu register dijawab **403**; user baru dibuat admin lewat `POST /api/v1/users`.
+**Admin pertama:** portal `/setup` (`GET /api/v1/setup/status` + `POST /api/v1/setup/admin`) saat tabel `users` kosong — role dipaksa `admin`. `POST /api/v1/auth/register` selalu **403**. User berikutnya lewat `POST /api/v1/users` (admin).
 
 ### Soft-delete user (12f)
 
@@ -1114,12 +1121,14 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 |------|-------|-------------|
 | — | Catalog apps | Gitea / app lain (pola `command` + env sudah siap) |
 | — | Production hardening | Pass B/C QC (`docs/QC.md`) |
+| 31 | App settings (opsional) | Toggle public registration, dll. |
 
 ## Next action
 
 1. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`)
 2. Opsional: catalog app lain (Gitea, …)
 3. Opsional: filter `GET /api/v1/deployments` global by owner
+4. Opsional: Step 31 — admin settings / registration toggle
 
 ## Cara lanjut di mesin lain
 

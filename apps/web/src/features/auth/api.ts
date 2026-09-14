@@ -14,21 +14,6 @@ export async function login(email: string, password: string): Promise<LoginRespo
   return data;
 }
 
-export async function register(
-  email: string,
-  password: string,
-  name: string,
-): Promise<AuthUser> {
-  const res = await apiFetch("/api/v1/auth/register", {
-    method: "POST",
-    body: JSON.stringify({ email, password, name }),
-  });
-  if (!res.ok) {
-    throw new Error(await readErrorMessage(res, "Registration failed"));
-  }
-  return res.json();
-}
-
 export async function me(): Promise<AuthUser> {
   const res = await apiFetch("/api/v1/auth/me");
   if (!res.ok) {

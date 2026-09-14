@@ -76,6 +76,7 @@ func main() {
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
 	usersStore := store.NewUsersStore(sqlDB)
 	authSvc := service.NewAuth(usersStore, cfg.JWTSecret)
+	setupSvc := service.NewSetup(usersStore)
 	usersSvc := service.NewUsers(usersStore)
 	workersStore := store.NewWorkersStore(sqlDB)
 	envsStore := store.NewEnvironmentsStore(sqlDB)
@@ -99,6 +100,7 @@ func main() {
 		CatalogApps:  catalogApps,
 		Scaffold:     scaffold,
 		Auth:         authSvc,
+		Setup:        setupSvc,
 		Users:        usersSvc,
 		Workers:      workersSvc,
 		Deployments:  deploymentsSvc,
