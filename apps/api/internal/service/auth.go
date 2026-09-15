@@ -33,8 +33,6 @@ func NewAuth(users UserRepository, jwtSecret string) *Auth {
 	}
 }
 
-// Register ditutup. Bootstrap admin pertama lewat POST /api/v1/setup/admin
-// (portal /setup). User berikutnya lewat POST /api/v1/users (admin).
 func (a *Auth) Register(ctx context.Context, req model.RegisterRequest) (model.User, error) {
 	_ = ctx
 	_ = req

@@ -22,6 +22,7 @@ type API struct {
 	Environments *service.Environments
 	Audit        *service.Audit
 	Webhooks     *service.Webhook
+	Settings     *service.Settings
 }
 
 func NewRouter(api API) http.Handler {
@@ -41,6 +42,7 @@ func NewRouter(api API) http.Handler {
 	runtimeH := NewRuntimeHandler(api.Runtime)
 	envsH := NewEnvironmentsHandler(api.Environments)
 	webhooksH := NewWebhookHandler(api.Webhooks)
+	settingsH := NewSettingsHandler(api.Settings)
 
 	writer := []string{"developer", "admin"}
 	reader := []string{"viewer", "developer", "admin"}
@@ -54,10 +56,15 @@ func NewRouter(api API) http.Handler {
 	mux.HandleFunc("POST /api/v1/setup/admin", setupH.CreateAdmin)
 	mux.HandleFunc("POST /api/v1/auth/register", authH.Register)
 	mux.HandleFunc("POST /api/v1/auth/login", authH.Login)
+	mux.HandleFunc("GET /api/v1/auth/registration-status", settingsH.RegistrationStatus)
 	mux.Handle("GET /api/v1/auth/me", withAuth(secret, currentUser, authH.Me))
 
 	usersH := NewUsersHandler(api.Users)
 	auditH := NewAuditHandler(api.Audit)
+
+	mux.Handle("GET /api/v1/settings", withRole(secret, currentUser, admin, settingsH.Get))
+	mux.Handle("PATCH /api/v1/settings", withRole(secret, currentUser, admin, settingsH.Update))
+
 	mux.Handle("GET /api/v1/audit", withRole(secret, currentUser, admin, auditH.List))
 	mux.Handle("GET /api/v1/users/directory", withRole(secret, currentUser, writer, usersH.Directory))
 	mux.Handle("GET /api/v1/users", withRole(secret, currentUser, admin, usersH.List))

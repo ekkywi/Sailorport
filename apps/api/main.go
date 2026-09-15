@@ -75,6 +75,8 @@ func main() {
 	templates := template.NewRegistry(cfg.TemplatesDir)
 	scaffold := service.NewScaffold(catalog, templates, cfg.WorkspaceDir)
 	usersStore := store.NewUsersStore(sqlDB)
+	settingsStore := store.NewSettingsStore(sqlDB)
+	settingsSvc := service.NewSettings(settingsStore)
 	authSvc := service.NewAuth(usersStore, cfg.JWTSecret)
 	setupSvc := service.NewSetup(usersStore)
 	usersSvc := service.NewUsers(usersStore)
@@ -109,6 +111,7 @@ func main() {
 		AgentToken:   cfg.AgentToken,
 		Audit:        auditSvc,
 		Webhooks:     webhookSvc,
+		Settings:     settingsSvc,
 	})
 
 	addr := ":" + cfg.Port
