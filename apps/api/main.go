@@ -77,7 +77,7 @@ func main() {
 	usersStore := store.NewUsersStore(sqlDB)
 	settingsStore := store.NewSettingsStore(sqlDB)
 	settingsSvc := service.NewSettings(settingsStore)
-	authSvc := service.NewAuth(usersStore, cfg.JWTSecret)
+	authSvc := service.NewAuth(usersStore, settingsStore, cfg.JWTSecret)
 	setupSvc := service.NewSetup(usersStore)
 	usersSvc := service.NewUsers(usersStore)
 	workersStore := store.NewWorkersStore(sqlDB)

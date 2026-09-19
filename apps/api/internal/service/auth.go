@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -19,27 +20,81 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id string) (model.User, error)
 }
 
+type RegistrationGate interface {
+	RegistrationOpen(ctx context.Context) (bool, error)
+}
+
 type Auth struct {
 	users     UserRepository
+	settings  RegistrationGate
 	jwtSecret string
 	tokenTTL  time.Duration
 }
 
-func NewAuth(users UserRepository, jwtSecret string) *Auth {
+func NewAuth(users UserRepository, settings RegistrationGate, jwtSecret string) *Auth {
 	return &Auth{
 		users:     users,
+		settings:  settings,
 		jwtSecret: jwtSecret,
 		tokenTTL:  24 * time.Hour,
 	}
 }
 
+// Register membuat akun developer jika registration_open.
+// Bootstrap admin pertama tetap lewat POST /api/v1/setup/admin.
 func (a *Auth) Register(ctx context.Context, req model.RegisterRequest) (model.User, error) {
-	_ = ctx
-	_ = req
-	return model.User{}, fmt.Errorf(
-		"%w: registration is closed — use /setup for the first admin, or ask an admin to create your account",
-		ErrForbidden,
-	)
+	count, err := a.users.Count(ctx)
+	if err != nil {
+		return model.User{}, fmt.Errorf("count users: %w", err)
+	}
+	if count == 0 {
+		return model.User{}, fmt.Errorf(
+			"%w: registration is closed — complete /setup to create the first admin",
+			ErrForbidden,
+		)
+	}
+
+	open, err := a.settings.RegistrationOpen(ctx)
+	if err != nil {
+		return model.User{}, fmt.Errorf("registration setting: %w", err)
+	}
+	if !open {
+		return model.User{}, fmt.Errorf(
+			"%w: registration is closed — ask an admin to create your account",
+			ErrForbidden,
+		)
+	}
+
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.Name = strings.TrimSpace(req.Name)
+	req.Password = strings.TrimSpace(req.Password)
+
+	if req.Email == "" || req.Password == "" {
+		return model.User{}, fmt.Errorf("%w: email and password are required", ErrInvalid)
+	}
+	if _, err := mail.ParseAddress(req.Email); err != nil {
+		return model.User{}, fmt.Errorf("%w: invalid email", ErrInvalid)
+	}
+	if len(req.Password) < 8 {
+		return model.User{}, fmt.Errorf("%w: password must be at least 8 characters", ErrInvalid)
+	}
+	if req.Name == "" {
+		req.Name = strings.Split(req.Email, "@")[0]
+	}
+
+	// Self-serve tidak boleh jadi admin — role dari request diabaikan.
+	const role = "developer"
+
+	hash, err := auth.HashPassword(req.Password)
+	if err != nil {
+		return model.User{}, fmt.Errorf("hash password: %w", err)
+	}
+
+	user, err := a.users.Create(ctx, req.Email, req.Name, hash, role)
+	if err != nil {
+		return model.User{}, mapUserErr(err)
+	}
+	return user, nil
 }
 
 func (a *Auth) Login(ctx context.Context, req model.LoginRequest) (model.LoginResponse, error) {

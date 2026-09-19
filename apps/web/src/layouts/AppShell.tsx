@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Menu,
   Server,
+  Settings,
   Users,
   X,
   type LucideIcon,
@@ -71,6 +72,7 @@ const navSections: NavSection[] = [
     label: "Administration",
     items: [
       { to: "/users", label: "Users", icon: Users, adminOnly: true },
+      { to: "/settings", label: "Settings", icon: Settings, adminOnly: true },
       { to: "/audit", label: "Audit", icon: ClipboardList, adminOnly: true },
     ],
   },
@@ -92,6 +94,10 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   "/users": {
     title: "Users",
     description: "Manage accounts and roles",
+  },
+  "/settings": {
+    title: "Settings",
+    description: "Application configuration",
   },
   "/audit": {
     title: "Audit log",

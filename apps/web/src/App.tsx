@@ -15,6 +15,7 @@ import { AuditPage } from "./features/audit/AuditPage";
 import { getSetupStatus } from "./features/setup/api";
 import { SetupPage } from "./features/setup/SetupPage";
 import { UsersPage } from "./features/users/UsersPage";
+import { SettingsPage } from "./features/settings/SettingsPage";
 import { WorkersPage } from "./features/workers/WorkersPage";
 import { AppShell } from "./layouts/AppShell";
 import { AuthLayout } from "./layouts/AuthLayout";
@@ -218,6 +219,16 @@ function App() {
                 element={
                   isAdmin(user.role) ? (
                     <UsersPage />
+                  ) : (
+                    <Navigate to="/overview" replace />
+                  )
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  isAdmin(user.role) ? (
+                    <SettingsPage />
                   ) : (
                     <Navigate to="/overview" replace />
                   )
