@@ -153,15 +153,19 @@ Buka `http://localhost:5173` — instalasi kosong diarahkan ke `/setup`; setelah
 
 - **Workspace:** Overview  
 - **Platform:** Catalog, Workers  
-- **Administration:** Users (hanya role `admin`)
+- **Administration:** Users, Settings, Audit (hanya role `admin`)
 
 Vite mem-proxy `/api` dan `/healthz` ke API di `:8080`. API harus sudah jalan.
 
 Portal mendukung: auth (JWT), catalog CRUD + scaffold + kolom **Deploy** (badge environment) + dialog **Deploy** pilih dev/staging/prod + **Stop/Start** runtime (konfirmasi) + **History** / **Deploy** terpisah (dialog deployments; write actions `admin`/`developer` saja), worker list, overview, **Users** (admin: create, role, disable/enable, reset password). Layout app shell **full width** untuk tabel dan data padat.
 
-## Admin user & user management (Step 12a + 12b + Step 30)
+## Admin user & user management (Step 12 + Step 30–31)
 
-Instalasi kosong: portal diarahkan ke **`/setup`**. Buat admin pertama lewat `POST /api/v1/setup/admin` (role dipaksa `admin`). `POST /api/v1/auth/register` selalu **403**. User berikutnya dibuat admin lewat `POST /api/v1/users` atau halaman **Users** di portal.
+Instalasi kosong: portal diarahkan ke **`/setup`**. Buat admin pertama lewat `POST /api/v1/setup/admin` (role dipaksa `admin`).
+
+User berikutnya:
+- Admin lewat `POST /api/v1/users` atau halaman **Users**
+- Opsional self-register: admin menyalakan **Settings → Allow public registration**, lalu user memakai `/register` (role dipaksa **`developer`**). Default **tertutup**.
 
 Jangan tinggalkan instalasi kosong yang bisa diakses orang lain — selesaikan `/setup` segera setelah API pertama kali jalan.
 

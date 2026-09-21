@@ -73,9 +73,10 @@ Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi
 | `/catalog` | daftar services + deploy terakhir; History; Deploy; **Stop/Start** (runtime); create/edit/delete |
 | `/worker` | daftar workers + status (read-only; self-register via agent) |
 | `/users` | admin: list, create, role, disable/enable (confirm), reset password, soft-delete |
+| `/settings` | admin: toggle public registration (`registration_open`) |
 | `/audit` | admin: jejak aksi (catalog + user admin) |
 
-Auth: `/login`, `/setup` (first-run) — layout `AuthLayout`. Register publik ditutup (Step 30); user baru lewat admin Users.
+Auth: `/login`, `/setup` (first-run), `/register` (hanya jika Settings membuka registrasi) — layout `AuthLayout`.
 
 ## Catalog — mental model (penting)
 

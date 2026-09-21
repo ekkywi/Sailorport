@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 30e — first-run setup (status, create admin, portal /setup, gate, tutup register)
+- **Step selesai:** 31f — conditional public register UI (Settings toggle end-to-end)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** opsional — Settings / registration toggle (31), Pass B/C QC, catalog app lain (Gitea, …)
-- **Terakhir dikerjakan:** 2026-09-14 — Step 30e
+- **Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …), filter deployments by owner
+- **Terakhir dikerjakan:** 2026-09-21 — Step 31f
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -114,6 +114,12 @@
 - [x] Step 30c — Portal /setup
 - [x] Step 30d — Gate needs_setup → /setup
 - [x] Step 30e — Tutup bootstrap /auth/register + bersihkan UI/docs
+- [x] Step 31a — Migrasi + store `app_settings` (`registration_open` default false)
+- [x] Step 31b — Admin GET/PATCH `/api/v1/settings`
+- [x] Step 31c — Publik GET `/api/v1/auth/registration-status`
+- [x] Step 31d — `Auth.Register` honor `registration_open` (role developer)
+- [x] Step 31e — Portal Settings (admin toggle)
+- [x] Step 31f — Portal `/register` + Sign up hanya jika terbuka
 
 ## Yang sudah jalan
 
@@ -152,7 +158,9 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 \
 |---------------|------|-------|
 | `GET /api/v1/setup/status` | publik | `{ needs_setup }` — first-run gate |
 | `POST /api/v1/setup/admin` | publik, hanya jika users kosong | buat admin pertama (role dipaksa `admin`) |
-| `POST /api/v1/auth/register` | publik | selalu **403** (bootstrap pindah ke setup) |
+| `GET /api/v1/auth/registration-status` | publik | `{ registration_open }` |
+| `GET/PATCH /api/v1/settings` | admin | baca/ubah `registration_open` |
+| `POST /api/v1/auth/register` | publik | **403** jika setup belum selesai atau `registration_open=false`; sukses → role **`developer`** |
 | `POST /api/v1/auth/login` | publik | JWT token |
 | `GET /api/v1/auth/me` | Bearer | profil user |
 | `GET /api/v1/users` | admin | list semua user |
@@ -179,7 +187,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 \
 | `PATCH /api/v1/agent/deployments/{id}` | agent token | agent update deploy status |
 | `POST /api/v1/agent/runtime/next` | agent token | claim 1 runtime job (`stop`/`start`/`logs`) |
 | `PATCH /api/v1/agent/runtime/{id}` | agent token | agent selesai runtime job; API update deployment → `stopped`/`running`; logs → output only |
-| Portal `/login`, `/setup` | — | auth + first-run setup gate |
+| Portal `/login`, `/setup`, `/register` (opsional), `/settings` | — | first-run + auth; register UI hanya jika settings membuka |
 | Portal `/overview`, `/catalog`, `/worker`, `/users`, `/audit` | JWT | app shell; `/users` dan `/audit` admin-only (redirect non-admin) |
 
 Env API: `AUTH_JWT_SECRET`, `SAILORPORT_AGENT_TOKEN`, dan (opsional dev / wajib production) `SAILORPORT_SECRETS_KEY` — default dev JWT/agent hanya saat `APP_ENV=development`; selain itu `Config.Validate()` membuat API `log.Fatal` saat start. Compose wajib mengisi secret dari `deploy/compose/.env`.
@@ -207,7 +215,7 @@ Env API (catalog env encryption):
 
 Role: `admin`, `developer`, `viewer`
 
-**Admin pertama:** portal `/setup` (`GET /api/v1/setup/status` + `POST /api/v1/setup/admin`) saat tabel `users` kosong — role dipaksa `admin`. `POST /api/v1/auth/register` selalu **403**. User berikutnya lewat `POST /api/v1/users` (admin).
+**Admin pertama:** portal `/setup` (`GET /api/v1/setup/status` + `POST /api/v1/setup/admin`) saat tabel `users` kosong — role dipaksa `admin`. User berikutnya: admin lewat `POST /api/v1/users` / halaman **Users**, atau self-register lewat `POST /api/v1/auth/register` **hanya** jika Settings `registration_open=true` (role dipaksa **`developer`**). Default registrasi publik **tertutup**.
 
 ### Soft-delete user (12f)
 
@@ -1121,14 +1129,13 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 |------|-------|-------------|
 | — | Catalog apps | Gitea / app lain (pola `command` + env sudah siap) |
 | — | Production hardening | Pass B/C QC (`docs/QC.md`) |
-| 31 | App settings (opsional) | Toggle public registration, dll. |
+| — | Deployments ACL | Filter `GET /api/v1/deployments` global by owner |
 
 ## Next action
 
 1. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`)
 2. Opsional: catalog app lain (Gitea, …)
 3. Opsional: filter `GET /api/v1/deployments` global by owner
-4. Opsional: Step 31 — admin settings / registration toggle
 
 ## Cara lanjut di mesin lain
 

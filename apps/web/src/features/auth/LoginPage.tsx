@@ -1,11 +1,12 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { login } from "./api";
+import { getRegistrationStatus, login } from "./api";
 import { PasswordField } from "./PasswordField";
 import { authFieldClass, authLabelClass, authSubmitClass } from "./styles";
 
@@ -16,6 +17,27 @@ type LoginPageProps = {
 export function LoginPage({ onSuccess }: LoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const st = await getRegistrationStatus();
+        if (!cancelled) {
+          setRegistrationOpen(st.registration_open);
+        }
+      } catch {
+        if (!cancelled) {
+          setRegistrationOpen(false);
+        }
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -81,6 +103,18 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
           )}
         </Button>
       </form>
+
+      {registrationOpen ? (
+        <p className="text-center text-[13px] text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link
+            to="/register"
+            className="font-medium text-foreground transition-colors hover:text-foreground/80"
+          >
+            Sign up
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }

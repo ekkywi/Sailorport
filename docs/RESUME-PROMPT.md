@@ -17,9 +17,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 29e** — transfer service ownership (owner/admin → email); Step 29 ownership complete.
+**Step terakhir selesai:** **Step 31f** — conditional public register UI; Step 31 (app settings / registration toggle) complete.
 
-**Step berikutnya:** opsional — Pass B/C QC atau catalog app lain (lihat `docs/PROGRESS.md`).
+**Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …), filter `GET /deployments` by owner (lihat `docs/PROGRESS.md` Next action).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -31,32 +31,22 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 **Yang sudah jalan (jangan ulang):**
 - MVP core Step 0–18
 - Step 19–21 Git + webhook + redeploy by SHA
-- Step 22 catalog apps (API + agent + portal)
-- Step 23 catalog env (schema, DB, API, agent, portal, smoke)
-- Step 24 catalog app versions (manifest, API image pick, portal dropdown, smoke)
-- Step 25 encrypt catalog env at-rest (`EncryptedStore`, `SAILORPORT_SECRETS_KEY`)
-- Step 26 update `catalog_env` on existing services (PUT merge + portal edit)
-- Step 27 catalog `command` + Redis (`requirepass` via resolved argv)
-- Step 28 worker admin lite (labels PATCH, draining decommission, portal)
-- Migrasi `00017`–`00021`
+- Step 22–27 catalog apps (env, versions, encrypt, command, Redis)
+- Step 28 worker admin lite
+- Step 29 service ownership (ACL + transfer + directory picker)
+- Step 30 first-run `/setup` (status, create admin, gate; bootstrap tidak lewat `/register`)
+- Step 31 app settings: `registration_open`, admin Settings page, public registration-status, Register → developer, portal Sign up kondisional
+- Migrasi melalui `00023_create_app_settings.sql`
 
 **Yang belum / opsional:**
 - Pass B/C production review sebelum expose publik
-- Catalog app lain (Gitea, …) — pola `env` + `versions` + `command` sudah siap
+- Catalog app lain (Gitea, …)
+- Filter global deployments list by owner
 
-**Catatan teknis:**
-- Tambah catalog app: folder `catalog-apps/<id>/manifest.json` + optional `env[]` + `versions[]` + `command[]`
-- `command` = argv setelah image; placeholder `${NAME}` harus ada di `env[]`; API resolve saat claim → `catalog_command`
-- Agent: `docker run … image [catalog_command…]` (bukan shell string)
-- Redis: `redis-server --requirepass ${REDIS_PASSWORD}` (standar image, bukan env inventaran)
-- Worker admin: `PATCH /workers/{id}` labels (soft override); decommission → `draining`; heartbeat tidak clear draining; restore → `offline`; deploy ke draining → 409
-- Portal Workers (admin): Edit labels / Decommission / Restore
-- Portal **From catalog** baca schema env dari API; password = field `secret: true`; versi = dropdown `versions[]` → kirim `image`
-- Edit catalog_app: `catalog_env` di PUT; secret kosong = keep; setelah ubah env → **redeploy**
-- Agent claim: `catalog_env` + optional `catalog_command`
-- Redact secret di GET user: `*_set: true` (bukan nilai asli)
-- Encrypt at-rest: `SAILORPORT_SECRETS_KEY` (hex 64 chars); hanya baris `secret: true`; dev kosong = plaintext OK
-- Env: `SAILORPORT_CATALOG_APPS`, `SAILORPORT_TEMPLATES`, `SAILORPORT_AGENT_TOKEN`, `SAILORPORT_SECRETS_KEY`
+**Auth / setup (ingat):**
+- Instalasi kosong → paksa `/setup` → admin pertama
+- Default `registration_open=false`; buka lewat **Administration → Settings**
+- Self-register selalu role `developer`; admin buat user lewat Users
 
 **Cara jalankan lokal:** `docs/SETUP.md` + `docs/PROGRESS.md` (mode development).
 

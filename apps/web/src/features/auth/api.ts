@@ -1,7 +1,24 @@
 import { apiFetch, clearToken, readErrorMessage, setToken } from "../../lib/http";
 import type { AuthUser, LoginResponse } from "./types";
 
-export async function login(email: string, password: string): Promise<LoginResponse> {
+export type RegistrationStatus = {
+  registration_open: boolean;
+};
+
+export async function getRegistrationStatus(): Promise<RegistrationStatus> {
+  const res = await apiFetch("/api/v1/auth/registration-status");
+  if (!res.ok) {
+    throw new Error(
+      await readErrorMessage(res, "Failed to load registration status"),
+    );
+  }
+  return res.json();
+}
+
+export async function login(
+  email: string,
+  password: string,
+): Promise<LoginResponse> {
   const res = await apiFetch("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
@@ -12,6 +29,21 @@ export async function login(email: string, password: string): Promise<LoginRespo
   const data = (await res.json()) as LoginResponse;
   setToken(data.token);
   return data;
+}
+
+export async function register(
+  email: string,
+  password: string,
+  name: string,
+): Promise<AuthUser> {
+  const res = await apiFetch("/api/v1/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ email, password, name }),
+  });
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, "Registration failed"));
+  }
+  return res.json();
 }
 
 export async function me(): Promise<AuthUser> {

@@ -60,10 +60,11 @@ src/
 | `features/workers/*` | Daftar workers + status |
 | `features/overview/*` | Dashboard ringkasan harbour |
 | `features/scaffold/*` | CreateServiceForm (dipakai dialog catalog) |
-| `features/auth/*` | Login UI |
+| `features/auth/*` | Login + conditional register UI |
 | `features/setup/*` | First-run setup admin |
+| `features/settings/*` | Admin app settings (registration toggle) |
 | `layouts/AppShell` | Sidebar + topbar setelah login |
-| `layouts/AuthLayout` | Gate login/setup |
+| `layouts/AuthLayout` | Gate login/register/setup |
 | `App.tsx` | Session gate + flat routes `/overview`, `/catalog`, `/worker` |
 | `lib/http.ts` | Token + `apiFetch` |
 

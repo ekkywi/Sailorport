@@ -8,6 +8,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { CatalogPage } from "./features/catalog/CatalogPage";
 import { LoginPage } from "./features/auth/LoginPage";
+import { RegisterPage } from "./features/auth/RegisterPage";
 import { logout, me } from "./features/auth/api";
 import type { AuthUser } from "./features/auth/types";
 import { OverviewPage } from "./features/overview/OverviewPage";
@@ -68,6 +69,20 @@ function LoginRoute({ onSuccess }: { onSuccess: () => void }) {
   return (
     <AuthLayout mode="login">
       <LoginPage
+        onSuccess={() => {
+          onSuccess();
+          void navigate("/overview", { replace: true });
+        }}
+      />
+    </AuthLayout>
+  );
+}
+
+function RegisterRoute({ onSuccess }: { onSuccess: () => void }) {
+  const navigate = useNavigate();
+  return (
+    <AuthLayout mode="register">
+      <RegisterPage
         onSuccess={() => {
           onSuccess();
           void navigate("/overview", { replace: true });
@@ -195,6 +210,10 @@ function App() {
               <Route
                 path="/login"
                 element={<LoginRoute onSuccess={() => void reload()} />}
+              />
+              <Route
+                path="/register"
+                element={<RegisterRoute onSuccess={() => void reload()} />}
               />
               <Route
                 path="/setup"
