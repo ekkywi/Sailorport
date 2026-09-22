@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 31f — conditional public register UI (Settings toggle end-to-end)
+- **Step selesai:** 32c — `GET /api/v1/deployments` scoped by owner (store + service + handler)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …), filter deployments by owner
-- **Terakhir dikerjakan:** 2026-09-21 — Step 31f
+- **Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …); 32d unit/smoke tests jika perlu
+- **Terakhir dikerjakan:** 2026-09-22 — Step 32b/32c (deployments list ACL)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -120,6 +120,9 @@
 - [x] Step 31d — `Auth.Register` honor `registration_open` (role developer)
 - [x] Step 31e — Portal Settings (admin toggle)
 - [x] Step 31f — Portal `/register` + Sign up hanya jika terbuka
+- [x] Step 32a — Store `DeploymentsStore.ListByOwner` (JOIN services by `owner_user_id`)
+- [x] Step 32b — Service `Deployments.List(ctx, actorID, role)` — admin all / else by owner
+- [x] Step 32c — Handler `List` kirim claims; `ErrForbidden` → 403
 
 ## Yang sudah jalan
 
@@ -176,7 +179,7 @@ cd apps/agent && SAILORPORT_API_URL=http://localhost:8080 \
 | `GET /api/v1/environments` | viewer+ | list environment (dev/staging/prod) |
 | `POST /api/v1/services/{id}/deployments` | developer+ | buat deploy (`pending`); body `{"environment":"staging"}` (default `dev`); service harus punya `workspace_path` |
 | `GET /api/v1/services/{id}/deployments` | viewer+ | list per service |
-| `GET /api/v1/deployments` | viewer+ | list semua |
+| `GET /api/v1/deployments` | viewer+ | list global: admin semua; non-admin hanya deployment service miliknya |
 | `GET /api/v1/deployments/{id}` | viewer+ | detail |
 | `POST /api/v1/services/{id}/runtime/stop` | developer+ | enqueue stop container (deployment harus `running`) → **202** |
 | `POST /api/v1/services/{id}/runtime/start` | developer+ | enqueue start container (deployment harus `stopped`) → **202** |
@@ -359,7 +362,6 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - **Workspace lama** (path `/tmp/...`) tidak ikut terhapus saat delete (di luar root baru); scaffold ulang ke `data/workspaces`
 - **Self-host API + agent host:** path workspace di DB adalah path container; agent host perlu API lokal untuk E2E deploy (atau solusi path-mapping nanti)
 - **Transfer owner picker:** native `<select>` + directory penuh tanpa search — OK untuk tim kecil; scale-up → combobox + query `q`/`limit` (lihat `docs/QC.md`)
-- **`GET /deployments` global** belum di-scope by `owner_user_id` (list catalog sudah)
 
 ### Debt yang sudah diperbaiki
 
@@ -368,6 +370,7 @@ Setelah `git pull` di mesin baru: `cd apps/web && npm install`
 - Delete service menghapus folder workspace jika path di bawah workspace root
 - **R3:** Delete service enqueue job `remove` → agent `docker rm -f sailorport-{name}`
 - **R4:** Agent alokasi host port unik per container (bukan selalu 18080)
+- **`GET /api/v1/deployments` global** di-scope by owner (Step 32; sama pola list catalog)
 
 ### Multi-port deploy (R4)
 
@@ -808,9 +811,9 @@ curl -sS -X POST "http://localhost:8080/api/v1/workers/$WID/restore" \
 
 **Tes 28e (portal):** Login admin → Workers → Edit labels / Decommission / Restore. Login developer → tanpa kolom Actions.
 
-### Step 29 — Service ownership (in progress)
+### Step 29 — Service ownership ✅
 
-Owner = user yang create (`owner_user_id` FK + label `owner` = email). Client tidak boleh memilih owner saat create. Transfer via `POST …/transfer` (owner atau admin).
+Owner = user yang create (`owner_user_id` FK + label `owner` = email). Client tidak boleh memilih owner saat create. Transfer via `POST …/transfer` (owner atau admin). Global deployments list di-scope di Step 32.
 
 | Sub-step | Status | Isi |
 |----------|--------|-----|
@@ -1111,6 +1114,28 @@ docker inspect sailorport-pg15-dev --format '{{.Config.Image}}'
 
 Agent tidak perlu perubahan: deploy memakai `services.image` dari job claim (sudah dari Step 22).
 
+### Step 32 — Global deployments list ACL ✅
+
+`GET /api/v1/deployments` mengikuti pola catalog list: admin lihat semua; non-admin hanya deployment yang service-nya `owner_user_id` = actor. Portal history tetap pakai `GET /services/{id}/deployments` (sudah ACL di Step 29).
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 32a Store | ✅ | `DeploymentsStore.ListByOwner` — JOIN `services`, `WHERE owner_user_id = $1` |
+| 32b Service | ✅ | `Deployments.List(ctx, actorID, role)` — admin → `List`; else → `ListByOwner` / `ErrForbidden` jika tanpa actor |
+| 32c Handler | ✅ | `UserFromContext` + pass claims; error via `writeDeploymentError` |
+
+**Tes 32 (smoke):**
+
+```bash
+# Admin: semua deployment
+curl -sS http://localhost:8080/api/v1/deployments \
+  -H "Authorization: Bearer $TOKEN_ADMIN" | jq 'length'
+
+# Developer: hanya milik service sendiri (bisa 0)
+curl -sS http://localhost:8080/api/v1/deployments \
+  -H "Authorization: Bearer $TOKEN_DEV" | jq 'map(.service_id) | unique'
+```
+
 ### Checkpoint — Product vision (2026-08-20)
 
 Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
@@ -1121,7 +1146,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** Pass B/C QC; catalog app lain (Gitea, …).
+**Yang belum di kode:** Pass B/C QC; catalog app lain (Gitea, …). Opsional: unit test khusus `Deployments.List` ACL (32d).
 
 ## Rencana step berikutnya (belum dikerjakan)
 
@@ -1129,13 +1154,13 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 |------|-------|-------------|
 | — | Catalog apps | Gitea / app lain (pola `command` + env sudah siap) |
 | — | Production hardening | Pass B/C QC (`docs/QC.md`) |
-| — | Deployments ACL | Filter `GET /api/v1/deployments` global by owner |
+| 32d | Deployments ACL tests | Unit/smoke formal untuk `List` admin vs owner (opsional) |
 
 ## Next action
 
 1. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`)
 2. Opsional: catalog app lain (Gitea, …)
-3. Opsional: filter `GET /api/v1/deployments` global by owner
+3. Opsional: 32d unit tests untuk `Deployments.List` ACL
 
 ## Cara lanjut di mesin lain
 

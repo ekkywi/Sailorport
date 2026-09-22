@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
 )
@@ -82,7 +83,7 @@ func (s *DeploymentsStore) List(ctx context.Context) ([]model.Deployment, error)
 }
 
 func (s *DeploymentsStore) ListByService(ctx context.Context, serviceID string) ([]model.Deployment, error) {
-	const q = `
+		const q = `
 		SELECT
 			d.id, d.service_id, d.environment_id, e.slug,
 			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id, d.port,
@@ -99,6 +100,40 @@ func (s *DeploymentsStore) ListByService(ctx context.Context, serviceID string) 
 	defer rows.Close()
 
 	out := make([]model.Deployment, 0)
+	for rows.Next() {
+		d, err := scanDeployment(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+func (s *DeploymentsStore) ListByOwner(ctx context.Context, ownerUserID string) ([]model.Deployment, error) {
+	ownerUserID = strings.TrimSpace(ownerUserID)	
+	if ownerUserID == "" {
+		return nil, fmt.Errorf("owner_user_id is required")
+	}
+
+	const q = `
+		SELECT
+			d.id, d.service_id, d.environment_id, e.slug,
+			d.target_worker_id, d.worker_id, d.status, d.image_tag, d.git_sha, d.container_id, d.port,
+			d.error_message, d.created_at, d.updated_at
+		FROM deployments d
+		JOIN environments e ON e.id = d.environment_id
+		JOIN services svc ON svc.id = d.service_id
+		WHERE svc.owner_user_id = $1
+		ORDER BY d.created_at DESC`
+	
+	rows, err := s.db.QueryContext(ctx, q, ownerUserID)
+	if err != nil {
+		return nil, fmt.Errorf("List deployments by owner:%w", err)
+	}
+	defer rows.Close()
+
+	out := make ([]model.Deployment, 0)
 	for rows.Next() {
 		d, err := scanDeployment(rows)
 		if err != nil {

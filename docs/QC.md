@@ -83,7 +83,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | Portal tidak auto-logout saat 401 di tengah sesi | Rendah | Efek fix A-H3. Token user yang di-disable langsung ditolak API, tapi portal baru menghapus token saat `me()` gagal (refresh / buka ulang); interceptor 401 global = Pass C |
 | Satu query user tambahan per request ber-JWT | Rendah (by design) | Efek fix A-H3. Alternatif `token_version`/cache sengaja tidak dipakai supaya disable & ganti role langsung berlaku |
 | Transfer owner: native `<select>` + `GET /users/directory` tanpa search/limit | Rendah (MVP) | Step 29e. Cocok puluhan user; ratusan+ → combobox searchable + `?q=`/`limit` di directory. Estetika option list native terbatas |
-| `GET /api/v1/deployments` global belum difilter by owner | Sedang | Step 29d filter list services saja; metadata deploy service orang lain masih bisa terlihat lewat list global jika endpoint dipanggil |
+| `GET /api/v1/deployments` global belum difilter by owner | — | ✅ Fixed Step 32 — admin `List`; non-admin `ListByOwner` |
 
 ---
 
@@ -96,6 +96,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | 2026-08-26 | **A-C2** `POST /api/v1/auth/register` publik tanpa gate dan memberi role `developer` (boleh create service + deploy) | Register jadi jalur bootstrap saja: `UsersStore.Count` (termasuk soft-deleted) → kalau sudah ada user, **403** `registration is closed`; akun pertama otomatis role `admin` dan `role` dari request diabaikan. User berikutnya lewat `POST /api/v1/users` (admin) |
 | 2026-09-14 | Bootstrap masih lewat `/register`; portal menampilkan Sign up | **Step 30:** first-run `/setup` + gate; register publik ditutup sebagai bootstrap |
 | 2026-09-21 | Butuh buka/tutup self-register tanpa ubah kode | **Step 31:** `app_settings.registration_open`; admin Settings; `Auth.Register` → developer; portal Sign up kondisional |
+| 2026-09-22 | `GET /api/v1/deployments` global tidak difilter by owner | **Step 32:** `ListByOwner` + service/handler ACL (admin all / owner scoped) |
 | 2026-08-26 | **A-H1** Webhook membalas beda-beda sebelum HMAC diverifikasi (`no matching service` / `secret not configured` / `no auto-deploy`) → oracle enumerasi repo bagi penyerang tanpa signature | `HandleGitHub` memverifikasi signature dulu; semua kegagalan auth jadi satu `ErrUnauthorized` (**401**) dan `ack` baru diisi setelah terverifikasi. Tes lama yang mengunci `no matching service` diganti `TestHandleGitHub_UnknownRepoIsUnauthorized` |
 | 2026-08-26 | **A-H2** Secret diambil dari service pertama yang punya secret, tapi yang di-deploy `eligible[0]` → secret service A bisa memicu deploy service B pada repo yang sama | `filterVerifiedServices` menyisakan service yang **secret-nya sendiri** cocok dengan body; auto-deploy dan target dipilih hanya dari himpunan itu. Tes baru: `TestHandleGitHub_OtherServiceSecretCannotDeploy`, `TestHandleGitHub_DeploysServiceOwningTheSecret` |
 | 2026-08-26 | **A-H4** `PATCH /api/v1/deployments/{id}` terbuka untuk role writer, padahal itu endpoint laporan status agent → developer bisa mengarang `status`/`git_sha`/`container_id` | Route portal dihapus dari `router.go`; laporan status hanya lewat `PATCH /api/v1/agent/deployments/{id}` (`withAgentToken`). Portal tidak pernah memakainya (`features/deployments/api.ts` hanya `POST …/redeploy`) |

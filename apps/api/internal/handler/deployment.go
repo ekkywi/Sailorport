@@ -44,10 +44,14 @@ func (h *DeploymentsHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DeploymentsHandler) List(w http.ResponseWriter, r *http.Request) {
-	out, err := h.deployments.List(r.Context())
+	claims := UserFromContext(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	out, err := h.deployments.List(r.Context(), claims.UserID, claims.Role)
 	if err != nil {
-		log.Printf("List deployments: %v", err)
-		writeError(w, http.StatusInternalServerError, "Internal server error")
+		writeDeploymentError(w, "List deployments", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, out)

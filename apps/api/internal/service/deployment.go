@@ -147,8 +147,26 @@ func (d *Deployments) Get(ctx context.Context, id, actorID, role string) (model.
 	return out, nil
 }
 
-func (d *Deployments) List(ctx context.Context) ([]model.Deployment, error) {
-	return d.store.List(ctx)
+func (d *Deployments) List(ctx context.Context, actorID, role string) ([]model.Deployment, error) {
+	role = strings.TrimSpace(role)
+	actorID = strings.TrimSpace(actorID)
+
+	var (
+		out []model.Deployment
+		err error
+	)
+	if role == "admin" {
+		out, err = d.store.List(ctx)
+	} else {
+		if actorID == "" {
+			return nil, fmt.Errorf("%w: missing authenticated user", ErrForbidden)
+		}
+		out, err = d.store.ListByOwner(ctx, actorID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list deployments: %w", err)
+	}
+	return out, nil
 }
 
 func (d *Deployments) ListByService(ctx context.Context, serviceID, actorID, role string) ([]model.Deployment, error) {
