@@ -34,9 +34,10 @@ func (h *WebhookHandler) GitHub(w http.ResponseWriter, r *http.Request) {
 	}
 
 	event := r.Header.Get("X-GitHub-Event")
+	deliveryID := r.Header.Get("X-GitHub-Delivery")
 	sig := r.Header.Get("X-Hub-Signature-256")
 
-	ack, err := h.webhooks.HandleGitHub(r.Context(), event, sig, body)
+	ack, err := h.webhooks.HandleGitHub(r.Context(), event, deliveryID, sig, body)
 	if err != nil {
 		writeWebhookError(w, err)
 		return

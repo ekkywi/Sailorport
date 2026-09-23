@@ -9,7 +9,6 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
 )
 
-// webhookCatalog is the catalog surface needed for webhook matching.
 type webhookCatalog interface {
 	ListAll(ctx context.Context) ([]model.Service, error)
 }
@@ -18,31 +17,38 @@ type webhookDeployer interface {
 	Create(ctx context.Context, serviceID string, req model.CreateDeploymentRequest, actorID, role string) (model.Deployment, error)
 }
 
+type webhookDeliveries interface {
+	Exists(ctx context.Context, deliveryID string) (bool, error)
+	Insert(ctx context.Context, deliveryID, serviceID, deploymentID string) (model.WebhookDelivery, error)
+}
+
 type Webhook struct {
 	catalog     webhookCatalog
 	deployments webhookDeployer
+	deliveries  webhookDeliveries
 }
 
-func NewWebhook(catalog webhookCatalog, deployments webhookDeployer) *Webhook {
+func NewWebhook(catalog webhookCatalog, deployments webhookDeployer, deliveries webhookDeliveries) *Webhook {
 	return &Webhook{
 		catalog:     catalog,
 		deployments: deployments,
+		deliveries:  deliveries,
 	}
 }
 
 // HandleGitHub verifies a GitHub push webhook and may create a deployment when auto-deploy is on.
 //
-// Signature diverifikasi sebelum apa pun yang bergantung isi catalog ikut terjawab,
-// dan semua kegagalan auth (repo tidak dikenal, service tanpa secret, signature
-// salah) memakai satu error yang sama — endpoint ini publik, jadi bedanya balasan
-// bisa dipakai orang luar untuk mengintip repo mana yang terdaftar.
+// Signature is verified before catalog-dependent outcomes are returned. Duplicate
+// X-GitHub-Delivery ids are ignored after a successful prior Create+Insert.
 func (w *Webhook) HandleGitHub(
 	ctx context.Context,
 	event string,
+	deliveryID string,
 	signatureHeader string,
 	body []byte,
 ) (model.WebhookAck, error) {
 	event = strings.TrimSpace(event)
+	deliveryID = strings.TrimSpace(deliveryID)
 	if event == "" {
 		return model.WebhookAck{}, fmt.Errorf("%w: missing X-GitHub-Event", ErrInvalid)
 	}
@@ -100,11 +106,32 @@ func (w *Webhook) HandleGitHub(
 		return model.WebhookAck{}, fmt.Errorf("webhook deployer not configured")
 	}
 
+	if deliveryID != "" && w.deliveries != nil {
+		exists, err := w.deliveries.Exists(ctx, deliveryID)
+		if err != nil {
+			return model.WebhookAck{}, err
+		}
+		if exists {
+			ack.Ignored = true
+			ack.Reason = "duplicate delivery"
+			return ack, nil
+		}
+	}
+
 	dep, err := w.deployments.Create(ctx, target.ID, model.CreateDeploymentRequest{
 		Environment: env,
 	}, "", "")
 	if err != nil {
 		return model.WebhookAck{}, err
+	}
+
+	if deliveryID != "" && w.deliveries != nil {
+		if _, err := w.deliveries.Insert(ctx, deliveryID, target.ID, dep.ID); err != nil {
+			// Rare race: another request already recorded this id — OK.
+			if ok, exErr := w.deliveries.Exists(ctx, deliveryID); exErr != nil || !ok {
+				return model.WebhookAck{}, fmt.Errorf("record webhook delivery: %w", err)
+			}
+		}
 	}
 
 	ack.ServiceID = target.ID

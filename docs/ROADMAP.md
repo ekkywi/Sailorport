@@ -59,7 +59,7 @@ Flow yang sudah jalan:
 | 21 | Rollback / redeploy commit or tag | ✅ done |
 | 22 | Catalog apps (Postgres, Redis, Gitea, …) | ✅ 22a–22f done |
 
-Urutan berikutnya: **Step 33 dikunci** — webhook delivery dedupe (`X-GitHub-Delivery`). Detail sub-step di `docs/PROGRESS.md`.
+Urutan berikutnya: **Step 33c** — unit tests duplicate delivery (33a–b sudah wired). Detail di `docs/PROGRESS.md`.
 
 ## Saran pengembangan ke depan (backlog ide)
 
@@ -90,7 +90,7 @@ Urutan berikutnya: **Step 33 dikunci** — webhook delivery dedupe (`X-GitHub-De
 
 | Ide | Kenapa | Status |
 |-----|--------|--------|
-| **Webhook dedupe** (`X-GitHub-Delivery`) | Cegah double deploy dari replay | **Step 33 — dikunci** |
+| **Webhook dedupe** (`X-GitHub-Delivery`) | Cegah double deploy dari replay | **Step 33a–b ✅** — sisa 33c tests |
 | **Login rate limit** | Brute force murah | kandidat (berikutnya setelah 33) |
 | **Pass B** lalu **Pass C** QC | Agent + portal belum review formal | kandidat (setelah 1–2 fix) |
 | **CORS PATCH / origin** | Pecah jika portal tidak lewat proxy | kandidat (QC) |

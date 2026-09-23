@@ -92,7 +92,8 @@ func main() {
 	auditSvc := service.NewAudit(auditStore)
 	catalog.SetAudit(auditSvc)
 	usersSvc.SetAudit(auditSvc)
-	webhookSvc := service.NewWebhook(catalog, deploymentsSvc)
+	webhookDeliveriesStore := store.NewWebhookDeliveriesStore(sqlDB)
+	webhookSvc := service.NewWebhook(catalog, deploymentsSvc, webhookDeliveriesStore)
 	catalog.SetTransferUsers(usersSvc)
 
 	router := handler.NewRouter(handler.API{

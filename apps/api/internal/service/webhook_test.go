@@ -77,7 +77,7 @@ func TestHandleGitHub_PushCreatesDeployment(t *testing.T) {
 	dep := &fakeWebhookDeployer{
 		deployment: model.Deployment{ID: "dep-99"},
 	}
-	ack, err := NewWebhook(cat, dep).HandleGitHub(context.Background(), "push", signBody(secret, body), body)
+	ack, err := NewWebhook(cat, dep, nil).HandleGitHub(context.Background(), "push", "", signBody(secret, body), body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,8 +113,8 @@ func TestHandleGitHub_IgnoresWhenAutoDeployOff(t *testing.T) {
 		}},
 	}
 	dep := &fakeWebhookDeployer{}
-	ack, err := NewWebhook(cat, dep).HandleGitHub(
-		context.Background(), "push", signBody(secret, body), body,
+	ack, err := NewWebhook(cat, dep, nil).HandleGitHub(
+		context.Background(), "push", "", signBody(secret, body), body,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -144,7 +144,7 @@ func TestHandleGitHub_BadSignature(t *testing.T) {
 			WebhookSecret: "test-secret",
 		}},
 	}
-	_, err := NewWebhook(cat, nil).HandleGitHub(context.Background(), "push", "sha256=deadbeef", body)
+	_, err := NewWebhook(cat, nil, nil).HandleGitHub(context.Background(), "push", "", "sha256=deadbeef", body)
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected ErrUnauthorized, got %v", err)
 	}
@@ -162,7 +162,7 @@ func TestHandleGitHub_UnknownRepoIsUnauthorized(t *testing.T) {
 		},
 		"pusher": {"name": "alice"}
 	}`)
-	ack, err := NewWebhook(&fakeWebhookCatalog{}, nil).HandleGitHub(context.Background(), "push", "", body)
+	ack, err := NewWebhook(&fakeWebhookCatalog{}, nil, nil).HandleGitHub(context.Background(), "push", "", "", body)
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected ErrUnauthorized, got %v", err)
 	}
@@ -204,8 +204,8 @@ func TestHandleGitHub_OtherServiceSecretCannotDeploy(t *testing.T) {
 		},
 	}
 	dep := &fakeWebhookDeployer{}
-	ack, err := NewWebhook(cat, dep).HandleGitHub(
-		context.Background(), "push", signBody("secret-a", body), body,
+	ack, err := NewWebhook(cat, dep, nil).HandleGitHub(
+		context.Background(), "push", "", signBody("secret-a", body), body,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -251,8 +251,8 @@ func TestHandleGitHub_DeploysServiceOwningTheSecret(t *testing.T) {
 		},
 	}
 	dep := &fakeWebhookDeployer{}
-	ack, err := NewWebhook(cat, dep).HandleGitHub(
-		context.Background(), "push", signBody("secret-b", body), body,
+	ack, err := NewWebhook(cat, dep, nil).HandleGitHub(
+		context.Background(), "push", "", signBody("secret-b", body), body,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -281,21 +281,21 @@ func TestHandleGitHub_SecretNotConfigured(t *testing.T) {
 			RepoURL:    "https://github.com/acme/hello.git",
 		}},
 	}
-	_, err := NewWebhook(cat, nil).HandleGitHub(context.Background(), "push", "", body)
+	_, err := NewWebhook(cat, nil, nil).HandleGitHub(context.Background(), "push", "", "", body)
 	if !errors.Is(err, ErrUnauthorized) {
 		t.Fatalf("expected ErrUnauthorized, got %v", err)
 	}
 }
 
 func TestHandleGitHub_IgnoresPing(t *testing.T) {
-	ack, err := NewWebhook(nil, nil).HandleGitHub(context.Background(), "ping", "", []byte(`{}`))
+	ack, err := NewWebhook(nil, nil, nil).HandleGitHub(context.Background(), "ping", "", "", []byte(`{}`))
 	if err != nil || !ack.Ignored {
 		t.Fatalf("%+v %v", ack, err)
 	}
 }
 
 func TestHandleGitHub_MissingEvent(t *testing.T) {
-	_, err := NewWebhook(nil, nil).HandleGitHub(context.Background(), "", "", []byte(`{}`))
+	_, err := NewWebhook(nil, nil, nil).HandleGitHub(context.Background(), "", "", "", []byte(`{}`))
 	if err == nil {
 		t.Fatal("expected error")
 	}

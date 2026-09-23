@@ -18,7 +18,7 @@ func NewWebhookDeliveriesStore(db *sql.DB) *WebhookDeliveriesStore {
 	return &WebhookDeliveriesStore{db: db}
 }
 
-func (s *WebhookDeliveriesStore) Exist(ctx context.Context, deliveryID string) (bool, error) {
+func (s *WebhookDeliveriesStore) Exists(ctx context.Context, deliveryID string) (bool, error) {
 	deliveryID = strings.TrimSpace(deliveryID)
 	if deliveryID == "" {
 		return false, fmt.Errorf("delivery_id is required")
