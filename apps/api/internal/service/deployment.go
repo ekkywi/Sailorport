@@ -13,8 +13,18 @@ import (
 	"github.com/ekkywi/sailorport/apps/api/internal/store"
 )
 
+type deploymentsStore interface {
+	Create(ctx context.Context, serviceID, environmentID string, targetWorkerID *string, gitSHA string) (model.Deployment, error)
+	Get(ctx context.Context, id string) (model.Deployment, error)
+	List(ctx context.Context) ([]model.Deployment, error)
+	ListByOwner(ctx context.Context, ownerUserID string) ([]model.Deployment, error)
+	ListByService(ctx context.Context, serviceID string) ([]model.Deployment, error)
+	ClaimNext(ctx context.Context, workerID string) (model.DeploymentJob, error)
+	Update(ctx context.Context, id string, req model.UpdateDeploymentRequest) (model.Deployment, error)
+}
+
 type Deployments struct {
-	store   *store.DeploymentsStore
+	store   deploymentsStore
 	envs    *store.EnvironmentsStore
 	catalog *Catalog
 	workers *Workers
@@ -22,7 +32,7 @@ type Deployments struct {
 }
 
 func NewDeployments(
-	s *store.DeploymentsStore,
+	s deploymentsStore,
 	envs *store.EnvironmentsStore,
 	catalog *Catalog,
 	workers *Workers,

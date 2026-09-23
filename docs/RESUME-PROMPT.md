@@ -17,9 +17,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 32c** — `GET /api/v1/deployments` scoped by owner (32a store / 32b service / 32c handler).
+**Step terakhir selesai:** **Step 32d** — unit tests `Deployments.List` ACL; Step 32 (global deployments list by owner) complete.
 
-**Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …), 32d unit tests ACL (lihat `docs/PROGRESS.md` Next action).
+**Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …) (lihat `docs/PROGRESS.md` Next action).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -36,13 +36,12 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Step 29 service ownership (ACL + transfer + directory picker)
 - Step 30 first-run `/setup` (status, create admin, gate; bootstrap tidak lewat `/register`)
 - Step 31 app settings: `registration_open`, admin Settings page, public registration-status, Register → developer, portal Sign up kondisional
-- Step 32 global deployments list ACL (`ListByOwner` / admin sees all)
+- Step 32 global deployments list ACL (`ListByOwner` / admin sees all) + unit tests
 - Migrasi melalui `00023_create_app_settings.sql`
 
 **Yang belum / opsional:**
 - Pass B/C production review sebelum expose publik
 - Catalog app lain (Gitea, …)
-- 32d unit tests formal untuk `Deployments.List` ACL
 
 **Auth / setup (ingat):**
 - Instalasi kosong → paksa `/setup` → admin pertama

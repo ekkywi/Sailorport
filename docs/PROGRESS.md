@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 32c — `GET /api/v1/deployments` scoped by owner (store + service + handler)
+- **Step selesai:** 32d — unit tests `Deployments.List` ACL (Step 32 complete)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …); 32d unit/smoke tests jika perlu
-- **Terakhir dikerjakan:** 2026-09-22 — Step 32b/32c (deployments list ACL)
+- **Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …)
+- **Terakhir dikerjakan:** 2026-09-23 — Step 32d (deployments list ACL tests)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -123,6 +123,7 @@
 - [x] Step 32a — Store `DeploymentsStore.ListByOwner` (JOIN services by `owner_user_id`)
 - [x] Step 32b — Service `Deployments.List(ctx, actorID, role)` — admin all / else by owner
 - [x] Step 32c — Handler `List` kirim claims; `ErrForbidden` → 403
+- [x] Step 32d — Unit tests `Deployments.List` ACL (`deploymentsStore` + fake)
 
 ## Yang sudah jalan
 
@@ -1123,6 +1124,13 @@ Agent tidak perlu perubahan: deploy memakai `services.image` dari job claim (sud
 | 32a Store | ✅ | `DeploymentsStore.ListByOwner` — JOIN `services`, `WHERE owner_user_id = $1` |
 | 32b Service | ✅ | `Deployments.List(ctx, actorID, role)` — admin → `List`; else → `ListByOwner` / `ErrForbidden` jika tanpa actor |
 | 32c Handler | ✅ | `UserFromContext` + pass claims; error via `writeDeploymentError` |
+| 32d Tests | ✅ | `deploymentsStore` interface + `deployment_list_test.go` (admin / owner / forbidden / trim) |
+
+**Tes 32d (unit):**
+
+```bash
+cd apps/api && go test ./internal/service/ -run 'DeploymentsList_' -v
+```
 
 **Tes 32 (smoke):**
 
@@ -1146,7 +1154,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** Pass B/C QC; catalog app lain (Gitea, …). Opsional: unit test khusus `Deployments.List` ACL (32d).
+**Yang belum di kode:** Pass B/C QC; catalog app lain (Gitea, …).
 
 ## Rencana step berikutnya (belum dikerjakan)
 
@@ -1154,13 +1162,11 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 |------|-------|-------------|
 | — | Catalog apps | Gitea / app lain (pola `command` + env sudah siap) |
 | — | Production hardening | Pass B/C QC (`docs/QC.md`) |
-| 32d | Deployments ACL tests | Unit/smoke formal untuk `List` admin vs owner (opsional) |
 
 ## Next action
 
 1. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`)
 2. Opsional: catalog app lain (Gitea, …)
-3. Opsional: 32d unit tests untuk `Deployments.List` ACL
 
 ## Cara lanjut di mesin lain
 
