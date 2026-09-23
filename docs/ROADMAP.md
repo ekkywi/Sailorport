@@ -59,14 +59,77 @@ Flow yang sudah jalan:
 | 21 | Rollback / redeploy commit or tag | ✅ done |
 | 22 | Catalog apps (Postgres, Redis, Gitea, …) | ✅ 22a–22f done |
 
-Urutan berikutnya: lihat **Next action** di `docs/PROGRESS.md` (opsional polish / Pass B–C).
+Urutan berikutnya: **Step 33 dikunci** — webhook delivery dedupe (`X-GitHub-Delivery`). Detail sub-step di `docs/PROGRESS.md`.
+
+## Saran pengembangan ke depan (backlog ide)
+
+> Dicatat 2026-09-23 agar chat/mesin baru tidak kehilangan state.  
+> **Step 33 dikunci (2026-09-23):** webhook delivery dedupe — jalur hardening Tabel B.  
+> Item lain tetap kandidat; jangan kerjakan bersamaan. Detail Known debt: `docs/QC.md`.
+
+### Cara pakai
+
+1. Baca visi di `docs/PRODUCT.md` (jangan langgar keputusan produk).
+2. Item **dikunci** → kerjakan lewat sub-step di `PROGRESS.md`.
+3. Item lain: pilih setelah Step 33 selesai, lalu pecah jadi Step 34a…
+4. Centang/ubah status di tabel saat selesai.
+
+### A — Fitur produk (nilai user jelas)
+
+| Ide | Kenapa | Estimasi | Status |
+|-----|--------|----------|--------|
+| Catalog app **Gitea** (atau MinIO / AdGuard) | Jalur sekunder siap; pola `command` + env sudah ada | ~1–2 step kecil | kandidat |
+| **Private Git** (deploy key / token) | QC debt: sekarang hanya public clone | medium | kandidat |
+| **Volume persist** catalog apps | Postgres/Redis hilang data saat recreate container | medium (agent + manifest) | kandidat |
+| **Health / open URL** di catalog | Port sudah ada; UX klik buka app | kecil (web) | kandidat |
+| **Notifikasi deploy gagal** (audit + badge/toast) | Audit ada; kurang sinyal ke user | kecil–medium | kandidat |
+| **Service detail page** | Catalog padat; butuh halaman satu service | medium (web) | kandidat |
+| **Invite user** (email / invite link) | Sekarang admin set password manual | medium | kandidat |
+
+### B — Hardening (siap demo / TA / expose)
+
+| Ide | Kenapa | Status |
+|-----|--------|--------|
+| **Webhook dedupe** (`X-GitHub-Delivery`) | Cegah double deploy dari replay | **Step 33 — dikunci** |
+| **Login rate limit** | Brute force murah | kandidat (berikutnya setelah 33) |
+| **Pass B** lalu **Pass C** QC | Agent + portal belum review formal | kandidat (setelah 1–2 fix) |
+| **CORS PATCH / origin** | Pecah jika portal tidak lewat proxy | kandidat (QC) |
+| **Agent identity lebih ketat** | Shared token + `worker_id` self-reported | kandidat (QC) |
+
+### C — Modul belajar (Go/TS naik level)
+
+| Ide | Yang dipelajari | Status |
+|-----|-----------------|--------|
+| Unit test agent `git.Sync` | Test tanpa DB penuh; temporary repo | kandidat |
+| Pagination + search catalog / directory | Query + UI combobox | kandidat |
+| OpenAPI / typed client | Kontrak API (`packages/shared` nanti) | kandidat |
+| Template kedua (mis. `node-api` minimal) | Scaffold path, arsitektur tetap | kandidat |
+| Interceptor **401 logout** portal | Pass C debt; web auth UX | kandidat |
+
+### D — Sengaja jangan dulu
+
+Kecuali keputusan produk baru (diskusi dulu):
+
+- Kubernetes / Helm penuh
+- Multi-tenant SaaS
+- Full Backstage plugin
+- CI runner sendiri (bukan mengganti GitHub Actions)
+- Repo tanpa Dockerfile / buildpack auto-detect (sudah di **Ditunda**)
+
+### Panduan pilih cepat
+
+| Prioritas kamu | Sarankan mulai dari |
+|----------------|---------------------|
+| Produk terlihat berkembang | Gitea catalog app **atau** service detail page |
+| IDP terasa “sungguhan” | Private Git credentials **atau** persistent volumes |
+| TA / keamanan | Webhook dedupe + Pass B; polish modul webhook |
 
 ## Fase 3 — Ops & polish
 
 - [x] Worker admin lite (edit labels, decommission) — Step 28
-- Stuck deploy reconcile + notifikasi
+- Stuck deploy reconcile + notifikasi *(juga ada di tabel A di atas)*
 - Docs-as-code, CI visibility, scorecards ringan
-- Secrets management
+- Secrets management *(encrypt catalog env Step 25 ✅; OIDC / vault menyusul)*
 - OIDC auth
 
 ## Ditunda (jangan di awal)

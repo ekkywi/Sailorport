@@ -1,7 +1,7 @@
 # Sailorport — Product Vision
 
 > Dokumen positioning produk. Baca ini sebelum fitur besar (Git deploy, catalog apps, webhook).
-> Detail implementasi harian: `docs/PROGRESS.md`. Peta step: `docs/ROADMAP.md`.
+> Detail implementasi harian: `docs/PROGRESS.md`. Peta step + **backlog ide pasca-MVP**: `docs/ROADMAP.md`.
 
 ## Apa itu Sailorport?
 

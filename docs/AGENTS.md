@@ -113,12 +113,13 @@ Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sa
 ## Resume workflow
 
 1. Baca `docs/PROGRESS.md` — cek "Step berikutnya"
-2. Lanjutkan dari step itu, jangan ulang step selesai
-3. Setelah step selesai, minta user update `docs/PROGRESS.md` + commit
-4. QC berkala / sebelum production review: `docs/QC.md` (automated + smoke + prompt model mahal)
+2. Kalau next belum dikunci: lihat backlog di `docs/ROADMAP.md` (**Saran pengembangan ke depan**)
+3. Lanjutkan dari step itu, jangan ulang step selesai
+4. Setelah step selesai, minta user update `docs/PROGRESS.md` (+ centang/status ide di ROADMAP jika selesai) + commit
+5. QC berkala / sebelum production review: `docs/QC.md` (automated + smoke + prompt model mahal)
 
 ## MVP v1 success criteria
 
 `docker compose up` → agent → worker online → service di catalog → deploy → status/logs.
 
-**Selesai:** MVP core + Step 18–21 + **Step 22** (catalog apps) + **Step 23** (catalog env) + **Step 24** (catalog versions) + **Step 25** (encrypt catalog env at-rest). **Next:** opsional Redis / Pass B–C (`docs/PRODUCT.md`, `docs/PROGRESS.md`).
+**Selesai:** MVP core + Step 18–32. **Next (dikunci):** Step 33 webhook delivery dedupe (`X-GitHub-Delivery`); lalu kandidat login rate limit. Backlog: `docs/ROADMAP.md`.

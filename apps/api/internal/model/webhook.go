@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 // GitHubPushPayload is a minimal subset of a GitHub push webhook body.
 type GitHubPushPayload struct {
 	Ref        string `json:"ref"`
@@ -32,4 +34,12 @@ type WebhookAck struct {
 	ServiceID    string `json:"service_id,omitempty"`
 	DeploymentID string `json:"deployment_id,omitempty"`
 	Environment  string `json:"environment,omitempty"`
+}
+
+// WebhookDelivery is a recorded GitHub delivery id (dedupe)
+type WebhookDelivery struct {
+	DeliveryID   string    `json:"delivery_id"`
+	ServiceID    string    `json:"service_id,omitempty"`
+	DeploymentID string    `json:"deployment_id,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
 }

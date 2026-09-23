@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Sailorport — Project Rules
 
-Baca `docs/AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/PROGRESS.md` sebelum kerja besar. Ini sumber kebenaran, bukan chat lama.
+Baca `docs/AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/PROGRESS.md` sebelum kerja besar. Backlog ide pasca-MVP: `docs/ROADMAP.md` (**Saran pengembangan ke depan**). Ini sumber kebenaran, bukan chat lama.
 
 ## Learning mode
 

@@ -11,15 +11,16 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 **Baca dulu file ini di repo (urutan penting):**
 - `docs/PRODUCT.md` — **visi produk & dua jalur deploy** (wajib baca)
 - `docs/PROGRESS.md` — step terakhir yang selesai + rencana berikutnya
+- `docs/ROADMAP.md` — peta besar + **Saran pengembangan ke depan** (backlog ide pasca-MVP)
 - `docs/ARCHITECTURE.md` — aturan lapisan (wajib diikuti)
 - `docs/AGENTS.md` — konvensi & konteks proyek
 - `docs/QC.md` — automated/smoke + **prompt Production review** (Pass A/B/C) untuk model mahal
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 32d** — unit tests `Deployments.List` ACL; Step 32 (global deployments list by owner) complete.
+**Step terakhir selesai:** **Step 32d** — unit tests `Deployments.List` ACL; Step 32 complete.
 
-**Step berikutnya:** opsional — Pass B/C QC, catalog app lain (Gitea, …) (lihat `docs/PROGRESS.md` Next action).
+**Step berikutnya (dikunci):** **Step 33** — webhook delivery dedupe (`X-GitHub-Delivery`); mulai **33a**. Backlog lain: `docs/ROADMAP.md`.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -40,8 +41,10 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Migrasi melalui `00023_create_app_settings.sql`
 
 **Yang belum / opsional:**
-- Pass B/C production review sebelum expose publik
-- Catalog app lain (Gitea, …)
+- **Step 33 (dikunci):** webhook delivery dedupe
+- Login rate limit (setelah 33)
+- Pass B/C production review
+- Backlog ide lain: `docs/ROADMAP.md`
 
 **Auth / setup (ingat):**
 - Instalasi kosong → paksa `/setup` → admin pertama
