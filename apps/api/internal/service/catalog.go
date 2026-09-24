@@ -27,6 +27,7 @@ var (
 	ErrConflict     = errors.New("service already exists")
 	ErrUnauthorized = errors.New("unauthorized")
 	ErrForbidden    = errors.New("forbidden")
+	ErrRateLimited  = errors.New("rate limited")
 )
 
 type Repository interface {

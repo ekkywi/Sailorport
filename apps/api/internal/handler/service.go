@@ -114,6 +114,8 @@ func writeCatalogError(w http.ResponseWriter, op string, err error) {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 	case errors.Is(err, service.ErrForbidden):
 		writeError(w, http.StatusForbidden, catalogClientMessage(err))
+	case errors.Is(err, service.ErrRateLimited):
+		writeError(w, http.StatusTooManyRequests, catalogClientMessage(err))
 	default:
 		log.Printf("%s: %v", op, err)
 		writeError(w, http.StatusInternalServerError, "internal server error")

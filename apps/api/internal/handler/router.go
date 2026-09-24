@@ -2,7 +2,9 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/ekkywi/sailorport/apps/api/internal/ratelimit"
 	"github.com/ekkywi/sailorport/apps/api/internal/service"
 )
 
@@ -32,7 +34,8 @@ func NewRouter(api API) http.Handler {
 	currentUser := api.Auth
 
 	health := NewHealthHandler("sailorport-api", api.Version)
-	authH := NewAuthHandler(api.Auth)
+	loginLimiter := ratelimit.New(5, time.Minute)
+	authH := NewAuthHandler(api.Auth, loginLimiter)
 	setupH := NewSetupHandler(api.Setup)
 	services := NewServicesHandler(api.Catalog)
 	scaffold := NewScaffoldHandler(api.Scaffold)

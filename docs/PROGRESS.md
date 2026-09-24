@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 33c — unit tests webhook delivery dedupe (Step 33 complete)
+- **Step selesai:** 34c — login rate limit by IP (Step 34 complete)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** opsional — login rate limit (Tabel B); Pass B/C QC; backlog `docs/ROADMAP.md`
-- **Terakhir dikerjakan:** 2026-09-24 — Step 33c (dedupe tests + docs)
+- **Step berikutnya:** opsional — Pass B/C QC; backlog `docs/ROADMAP.md`
+- **Terakhir dikerjakan:** 2026-09-24 — Step 34 (login rate limit)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -127,6 +127,9 @@
 - [x] Step 33a — Store/migrasi catat `X-GitHub-Delivery` (dedupe webhook)
 - [x] Step 33b — Service: skip create deploy jika delivery sudah pernah diproses
 - [x] Step 33c — Tes + docs (replay = ignored / no second deployment)
+- [x] Step 34a — `ratelimit.Limiter` in-memory + unit tests
+- [x] Step 34b — Wire login: Allow / Fail / Reset + 429
+- [x] Step 34c — Handler tests + docs/QC
 
 ## Yang sudah jalan
 
@@ -1165,6 +1168,24 @@ Replay GitHub delivery yang sama tidak membuat deployment kedua. HMAC tetap waji
 cd apps/api && go test ./internal/service/ -run 'HandleGitHub_(Records|Duplicate|Different)' -v
 ```
 
+### Step 34 — Login rate limit ✅
+
+`POST /api/v1/auth/login` di-throttle per IP (in-memory sliding window). Default: **5** gagal / **1 menit** → **429** `too many login attempts`. Sukses login → reset counter. HMAC/JWT tidak berubah.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 34a Limiter | ✅ | `internal/ratelimit` — `Allow` / `Fail` / `Reset` + unit tests |
+| 34b Wire | ✅ | `clientIP`, `ErrRateLimited` → 429; Fail hanya pada `ErrUnauthorized` |
+| 34c Tests | ✅ | Handler `TestLogin_RateLimited*` + `client_ip_test` |
+
+**Tes 34c (unit):**
+
+```bash
+cd apps/api && go test ./internal/handler/ ./internal/ratelimit/ -v
+```
+
+**Smoke:** 5× login salah → `401`; ke-6 → `429` (restart API dulu agar kode ter-load).
+
 ### Checkpoint — Product vision (2026-08-20)
 
 Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
@@ -1175,21 +1196,19 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** Pass B/C QC; login rate limit (Tabel B); backlog lain di `docs/ROADMAP.md`.
+**Yang belum di kode:** Pass B/C QC; backlog lain di `docs/ROADMAP.md`.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| — | Login rate limit | Hardening Tabel B berikutnya |
 | — | Pass B/C QC | Agent + portal production review |
-| — | Backlog ide | `docs/ROADMAP.md` Tabel A/C |
+| — | Backlog ide | `docs/ROADMAP.md` Tabel A/C (CORS, agent identity, fitur, …) |
 
 ## Next action
 
-1. Opsional: **login rate limit** (Tabel B hardening).
-2. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`).
-3. Opsional: backlog fitur di `docs/ROADMAP.md`.
+1. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`).
+2. Opsional: backlog fitur / harden di `docs/ROADMAP.md`.
 
 ## Cara lanjut di mesin lain
 

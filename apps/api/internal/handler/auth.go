@@ -2,18 +2,22 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"fmt"
 
 	"github.com/ekkywi/sailorport/apps/api/internal/model"
+	"github.com/ekkywi/sailorport/apps/api/internal/ratelimit"
 	"github.com/ekkywi/sailorport/apps/api/internal/service"
 )
 
 type AuthHandler struct {
-	auth *service.Auth
+	auth    *service.Auth
+	logins	*ratelimit.Limiter
 }
 
-func NewAuthHandler(auth *service.Auth) *AuthHandler {
-	return &AuthHandler{auth: auth}
+func NewAuthHandler(auth *service.Auth, logins *ratelimit.Limiter) *AuthHandler {
+	return &AuthHandler{auth: auth, logins: logins}
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -40,10 +44,23 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	key := clientIP(r)
+	if h.logins != nil && !h.logins.Allow(key) {
+		writeCatalogError(w, "login", fmt.Errorf("%w: too many login attempts", service.ErrRateLimited))
+		return
+	}
+
 	res, err := h.auth.Login(r.Context(), req)
 	if err != nil {
+		if h.logins != nil && errors.Is(err, service.ErrUnauthorized) {
+			h.logins.Fail(key)
+		}
 		writeCatalogError(w, "login", err)
 		return
+	}
+
+	if h.logins != nil {
+		h.logins.Reset(key)
 	}
 	writeJSON(w, http.StatusOK, res)
 }

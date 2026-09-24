@@ -122,4 +122,4 @@ Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sa
 
 `docker compose up` → agent → worker online → service di catalog → deploy → status/logs.
 
-**Selesai:** MVP core + Step 18–33 (webhook delivery dedupe + tests). **Next:** opsional login rate limit atau Pass B/C. Backlog: `docs/ROADMAP.md`.
+**Selesai:** MVP core + Step 18–34 (webhook dedupe + login rate limit). **Next:** opsional Pass B/C. Backlog: `docs/ROADMAP.md`.
