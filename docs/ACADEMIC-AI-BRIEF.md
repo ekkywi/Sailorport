@@ -109,7 +109,7 @@ Jika user mengunggah jurnal / paper:
 ### Yang boleh disebut sebagai keterbatasan (jika relevan, jangan dilebih-lebihkan)
 
 - Endpoint webhook publik perlu proteksi signature
-- Ide perbaikan masa depan (bukan klaim sudah ada): rate limit webhook, memakai `git_sha` dari payload push; **dedupe `X-GitHub-Delivery`** → Step 33a–b (tes formal 33c)
+- Ide perbaikan masa depan (bukan klaim sudah ada): rate limit webhook, memakai `git_sha` dari payload push. **Dedupe `X-GitHub-Delivery`:** ✅ Step 33.
 
 ---
 

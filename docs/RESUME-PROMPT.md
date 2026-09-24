@@ -18,9 +18,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 33b** — auto-deploy skips duplicate `X-GitHub-Delivery` (33a store + 33b service/handler).
+**Step terakhir selesai:** **Step 33c** — unit tests webhook delivery dedupe; Step 33 complete.
 
-**Step berikutnya:** **Step 33c** — unit tests duplicate delivery + QC docs. Backlog lain: `docs/ROADMAP.md`.
+**Step berikutnya:** opsional — login rate limit (Tabel B), Pass B/C QC, backlog `docs/ROADMAP.md`.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -38,12 +38,11 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Step 30 first-run `/setup` (status, create admin, gate; bootstrap tidak lewat `/register`)
 - Step 31 app settings: `registration_open`, admin Settings page, public registration-status, Register → developer, portal Sign up kondisional
 - Step 32 global deployments list ACL (`ListByOwner` / admin sees all) + unit tests
-- Step 33a–b webhook delivery dedupe (`webhook_deliveries` + skip duplicate Create)
+- Step 33 webhook delivery dedupe (`webhook_deliveries` + unit tests replay)
 - Migrasi melalui `00024_create_webhook_deliveries.sql` (app_settings tetap `00023`)
 
 **Yang belum / opsional:**
-- **Step 33c:** unit tests duplicate delivery
-- Login rate limit (setelah 33 selesai)
+- Login rate limit (Tabel B)
 - Pass B/C production review
 - Backlog ide lain: `docs/ROADMAP.md`
 

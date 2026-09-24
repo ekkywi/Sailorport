@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 33b — webhook delivery dedupe wired (Exists → Create → Insert)
+- **Step selesai:** 33c — unit tests webhook delivery dedupe (Step 33 complete)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** **Step 33c** — unit tests duplicate delivery + docs/QC close-out
-- **Terakhir dikerjakan:** 2026-09-23 — Step 33b (auto-deploy dedupe)
+- **Step berikutnya:** opsional — login rate limit (Tabel B); Pass B/C QC; backlog `docs/ROADMAP.md`
+- **Terakhir dikerjakan:** 2026-09-24 — Step 33c (dedupe tests + docs)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -126,7 +126,7 @@
 - [x] Step 32d — Unit tests `Deployments.List` ACL (`deploymentsStore` + fake)
 - [x] Step 33a — Store/migrasi catat `X-GitHub-Delivery` (dedupe webhook)
 - [x] Step 33b — Service: skip create deploy jika delivery sudah pernah diproses
-- [ ] Step 33c — Tes + docs (replay = ignored / no second deployment)
+- [x] Step 33c — Tes + docs (replay = ignored / no second deployment)
 
 ## Yang sudah jalan
 
@@ -1147,7 +1147,7 @@ curl -sS http://localhost:8080/api/v1/deployments \
   -H "Authorization: Bearer $TOKEN_DEV" | jq 'map(.service_id) | unique'
 ```
 
-### Step 33 — Webhook delivery dedupe (in progress)
+### Step 33 — Webhook delivery dedupe ✅
 
 Replay GitHub delivery yang sama tidak membuat deployment kedua. HMAC tetap wajib; dedupe melengkapi idempotensi.
 
@@ -1155,9 +1155,15 @@ Replay GitHub delivery yang sama tidak membuat deployment kedua. HMAC tetap waji
 |----------|--------|-----|
 | 33a Store | ✅ | Migrasi `00024_create_webhook_deliveries.sql`; `Exists` / `Insert` |
 | 33b Service | ✅ | Handler baca `X-GitHub-Delivery`; `Exists` → skip Create; sukses Create → `Insert` |
-| 33c Tests | ⏳ | Unit test duplicate delivery + close QC debt |
+| 33c Tests | ✅ | `RecordsDeliveryAndDeploys` / `DuplicateDeliveryIgnored` / `DifferentDeliveryDeploysAgain` |
 
-**Alur 33b:** setelah signature + eligible → jika delivery sudah ada → `ignored: duplicate delivery` (200) → else `Create` → `Insert(delivery_id, service_id, deployment_id)`.
+**Alur:** setelah signature + eligible → jika delivery sudah ada → `ignored: duplicate delivery` (200) → else `Create` → `Insert(delivery_id, service_id, deployment_id)`.
+
+**Tes 33c (unit):**
+
+```bash
+cd apps/api && go test ./internal/service/ -run 'HandleGitHub_(Records|Duplicate|Different)' -v
+```
 
 ### Checkpoint — Product vision (2026-08-20)
 
@@ -1169,21 +1175,21 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** Step 33c (tes formal dedupe); Pass B/C QC; backlog lain di `docs/ROADMAP.md`.
+**Yang belum di kode:** Pass B/C QC; login rate limit (Tabel B); backlog lain di `docs/ROADMAP.md`.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| **33c** | Webhook dedupe tests | Unit test duplicate `X-GitHub-Delivery` + close QC debt |
-| — | Login rate limit | Setelah Step 33 selesai — hardening Tabel B |
-| — | Pass B/C QC | Setelah 1–2 fix hardening |
+| — | Login rate limit | Hardening Tabel B berikutnya |
+| — | Pass B/C QC | Agent + portal production review |
 | — | Backlog ide | `docs/ROADMAP.md` Tabel A/C |
 
 ## Next action
 
-1. **Step 33c** — unit tests replay/duplicate delivery + update QC Known debt.
-2. Setelah Step 33 selesai: kandidat berikutnya = login rate limit (Tabel B).
+1. Opsional: **login rate limit** (Tabel B hardening).
+2. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`).
+3. Opsional: backlog fitur di `docs/ROADMAP.md`.
 
 ## Cara lanjut di mesin lain
 

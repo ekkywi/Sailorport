@@ -214,7 +214,7 @@ Susun dari sitensis (bukan copy abstrak):
 ### BAB V Penutup
 
 - Kesimpulan menjawab rumusan masalah
-- Saran → menjadi benih proposal TA (perluas ke sistem utuh, dedupe delivery, rate limit, dsb.)
+- Saran → menjadi benih proposal TA (perluas ke sistem utuh, rate limit webhook, dsb.; dedupe delivery ✅ Step 33)
 
 ### Lampiran
 

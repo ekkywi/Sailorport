@@ -46,6 +46,48 @@ func (f *fakeWebhookDeployer) Create(ctx context.Context, serviceID string, req 
 	return out, nil
 }
 
+type fakeWebhookDeliveries struct {
+	seen      map[string]bool
+	inserts   int
+	lastID    string
+	lastSvc   string
+	lastDep   string
+	existErr  error
+	insertErr error
+}
+
+func (f *fakeWebhookDeliveries) Exists(ctx context.Context, deliveryID string) (bool, error) {
+	if f.existErr != nil {
+		return false, f.existErr
+	}
+	if f.seen == nil {
+		return false, nil
+	}
+	return f.seen[deliveryID], nil
+}
+
+func (f *fakeWebhookDeliveries) Insert(ctx context.Context, deliveryID, serviceID, deploymentID string) (model.WebhookDelivery, error) {
+	if f.insertErr != nil {
+		return model.WebhookDelivery{}, f.insertErr
+	}
+	if f.seen == nil {
+		f.seen = map[string]bool{}
+	}
+	if f.seen[deliveryID] {
+		return model.WebhookDelivery{}, errors.New("conflict")
+	}
+	f.seen[deliveryID] = true
+	f.inserts++
+	f.lastID = deliveryID
+	f.lastSvc = serviceID
+	f.lastDep = deploymentID
+	return model.WebhookDelivery{
+		DeliveryID:   deliveryID,
+		ServiceID:    serviceID,
+		DeploymentID: deploymentID,
+	}, nil
+}
+
 func signBody(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	_, _ = mac.Write(body)
@@ -150,8 +192,6 @@ func TestHandleGitHub_BadSignature(t *testing.T) {
 	}
 }
 
-// Repo yang tidak terdaftar harus terlihat sama dengan signature salah, supaya
-// endpoint publik ini tidak bisa dipakai mengintip isi catalog.
 func TestHandleGitHub_UnknownRepoIsUnauthorized(t *testing.T) {
 	body := []byte(`{
 		"ref": "refs/heads/main",
@@ -171,7 +211,6 @@ func TestHandleGitHub_UnknownRepoIsUnauthorized(t *testing.T) {
 	}
 }
 
-// Dua service satu repo: secret milik service lain tidak boleh memicu deploy.
 func TestHandleGitHub_OtherServiceSecretCannotDeploy(t *testing.T) {
 	body := []byte(`{
 		"ref": "refs/heads/main",
@@ -315,5 +354,134 @@ func TestNormalizeRepoURL(t *testing.T) {
 	b := normalizeRepoURL("https://github.com/acme/hello")
 	if a != b {
 		t.Fatalf("%q vs %q", a, b)
+	}
+}
+
+func TestHandleGitHub_RecordsDeliveryAndDeploys(t *testing.T) {
+	secret := "test-secret"
+	body := []byte(`{
+		"ref": "refs/heads/main",
+		"after": "abc123",
+		"repository": {
+			"full_name": "acme/hello",
+			"clone_url": "https://github.com/acme/hello.git"
+		},
+		"pusher": {"name": "alice"}
+	}`)
+	cat := &fakeWebhookCatalog{
+		services: []model.Service{{
+			ID:                    "svc-1",
+			SourceType:            "git",
+			RepoURL:               "https://github.com/acme/hello.git",
+			Branch:                "main",
+			WebhookSecret:         secret,
+			AutoDeployEnabled:     true,
+			AutoDeployEnvironment: "staging",
+		}},
+	}
+	dep := &fakeWebhookDeployer{deployment: model.Deployment{ID: "dep-1"}}
+	del := &fakeWebhookDeliveries{}
+
+	ack, err := NewWebhook(cat, dep, del).HandleGitHub(
+		context.Background(), "push", "delivery-aaa", signBody(secret, body), body,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ack.Ignored {
+		t.Fatalf("first delivery must deploy, got %+v", ack)
+	}
+	if !dep.called || dep.lastServiceID != "svc-1" {
+		t.Fatalf("deployer: %+v", dep)
+	}
+	if del.inserts != 1 || del.lastID != "delivery-aaa" {
+		t.Fatalf("inserts=%d lastID=%q", del.inserts, del.lastID)
+	}
+	if del.lastSvc != "svc-1" || del.lastDep != "dep-1" {
+		t.Fatalf("insert svc=%q dep %q", del.lastSvc, del.lastDep)
+	}
+}
+
+func TestHandleGitHub_DuplicateDeliveryIgnored(t *testing.T) {
+	secret := "test-secret"
+	body := []byte(`{
+		"ref": "refs/heads/main",
+		"after": "abc123",
+		"repository": {
+			"full_name": "acme/hello",
+			"clone_url": "https://github.com/acme/hello.git"
+		},
+		"pusher": {"name": "alice"}
+	}`)
+	cat := &fakeWebhookCatalog{
+		services: []model.Service{{
+			ID:                    "svc-1",
+			SourceType:            "git",
+			RepoURL:               "https://github.com/acme/hello.git",
+			Branch:                "main",
+			WebhookSecret:         secret,
+			AutoDeployEnabled:     true,
+			AutoDeployEnvironment: "staging",
+		}},
+	}
+	dep := &fakeWebhookDeployer{deployment: model.Deployment{ID: "dep-1"}}
+	del := &fakeWebhookDeliveries{
+		seen: map[string]bool{"delivery-aaa": true},
+	}
+
+	ack, err := NewWebhook(cat, dep, del).HandleGitHub(
+		context.Background(), "push", "delivery-aaa", signBody(secret, body), body,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ack.Ignored || ack.Reason != "duplicate delivery" {
+		t.Fatalf("want duplicate ignored, got %+v", ack)
+	}
+	if dep.called {
+		t.Fatal("deployer must not run on duplicate delivery")
+	}
+	if del.inserts != 0 {
+		t.Fatalf("no insert on duplicated, got %d", del.inserts)
+	}
+}
+
+func TestHandleGitHub_DifferentDeliveryDeploysAgain(t *testing.T) {
+	secret := "test-secret"
+	body := []byte(`{
+		"ref": "refs/heads/main",
+		"after": "abc123",
+		"repository": {
+			"full_name": "acme/hello",
+			"clone_url": "https://github.com/acme/hello.git"
+		},
+		"pusher": {"name": "alice"}
+	}`)
+	cat := &fakeWebhookCatalog{
+		services: []model.Service{{
+			ID:                    "svc-1",
+			SourceType:            "git",
+			RepoURL:               "https://github.com/acme/hello.git",
+			Branch:                "main",
+			WebhookSecret:         secret,
+			AutoDeployEnabled:     true,
+			AutoDeployEnvironment: "staging",
+		}},
+	}
+	dep := &fakeWebhookDeployer{deployment: model.Deployment{ID: "dep-2"}}
+	del := &fakeWebhookDeliveries{
+		seen: map[string]bool{"delivery-aaa": true},
+	}
+	ack, err := NewWebhook(cat, dep, del).HandleGitHub(
+		context.Background(), "push", "delivery-bbb", signBody(secret, body), body,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ack.Ignored {
+		t.Fatalf("new delivery id must deploy: %+v", ack)
+	}
+	if !dep.called || del.inserts != 1 || del.lastID != "delivery-bbb" {
+		t.Fatalf("dep.called=%v inserts=%d last=%q", dep.called, del.inserts, del.lastID)
 	}
 }
