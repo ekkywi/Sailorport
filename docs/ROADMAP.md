@@ -64,7 +64,7 @@ Urutan berikutnya: opsional — **login rate limit** (Tabel B) atau Pass B/C. St
 ## Saran pengembangan ke depan (backlog ide)
 
 > Dicatat 2026-09-23 agar chat/mesin baru tidak kehilangan state.  
-> **Step 33 dikunci (2026-09-23):** webhook delivery dedupe — jalur hardening Tabel B.  
+> **Step 33 ✅ (2026-09-24):** webhook delivery dedupe complete.  
 > Item lain tetap kandidat; jangan kerjakan bersamaan. Detail Known debt: `docs/QC.md`.
 
 ### Cara pakai
