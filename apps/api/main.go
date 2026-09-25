@@ -113,9 +113,11 @@ func main() {
 		Audit:        auditSvc,
 		Webhooks:     webhookSvc,
 		Settings:     settingsSvc,
+		CORSOrigins:  cfg.CORSOrigins,
 	})
 
 	addr := ":" + cfg.Port
+	log.Printf("CORS origins: %v", cfg.CORSOrigins)
 	log.Printf("Sailorport API (%s) running on http://localhost%s", cfg.AppEnv, addr)
 
 	if err := http.ListenAndServe(addr, router); err != nil {

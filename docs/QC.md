@@ -69,7 +69,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | `webhook_secret` tidak bisa dikosongkan lewat API | Sedang | Pass A. `service/catalog.go:339` — empty = pertahankan yang lama; perlu sentinel eksplisit untuk revoke |
 | Claim job: `worker_id` self-reported + satu shared agent token | Sedang | Pass A. `store/deployment.go:112` — agen mana pun bisa kirim `worker_id` node lain dan mencuri job bertarget. `FOR UPDATE SKIP LOCKED` sendiri sudah benar (tidak ada double-claim) |
 | `DeploymentsStore.Update` pakai `COALESCE(NULLIF($n,''))` | Sedang | Pass A. `store/deployment.go:142` — `error_message` tidak bisa dikosongkan setelah retry sukses; transisi status tidak dijaga (`running` → `pending` diterima) |
-| CORS: `Access-Control-Allow-Methods` tanpa `PATCH`, origin hardcode | Sedang | Pass A. `handler/cors.go:8` — belum terasa karena dev pakai vite proxy dan compose pakai nginx same-origin (`apps/web/nginx.conf:7`); pecah kalau portal diarahkan langsung ke `:8080` (PATCH users role/disable gagal preflight) |
+| CORS: `Access-Control-Allow-Methods` tanpa `PATCH`, origin hardcode | — | ✅ Fixed Step 35 — `CORS_ORIGINS` allowlist; methods include PATCH; empty list = no ACAO (proxy OK) |
 | Login tanpa rate limit / lockout | — | ✅ Fixed Step 34 — 5 failures / minute per IP → 429; reset on success |
 | `handler/scaffold.go` mengembalikan `model.Service` tanpa `PublicService` | Rendah | Pass A. `handler/scaffold.go:47` — aman sekarang (scaffold selalu menulis secret `""`), tapi satu-satunya jalur serialisasi service yang tidak lewat redaksi |
 | `webhook_secret` tanpa `omitempty` | Rendah | Pass A. `model/service.go:20` — response portal selalu memuat `"webhook_secret":""` (noise kontrak, bukan kebocoran) |
@@ -97,6 +97,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | 2026-09-14 | Bootstrap masih lewat `/register`; portal menampilkan Sign up | **Step 30:** first-run `/setup` + gate; register publik ditutup sebagai bootstrap |
 | 2026-09-21 | Butuh buka/tutup self-register tanpa ubah kode | **Step 31:** `app_settings.registration_open`; admin Settings; `Auth.Register` → developer; portal Sign up kondisional |
 | 2026-09-22 | `GET /api/v1/deployments` global tidak difilter by owner | **Step 32:** `ListByOwner` + service/handler ACL (admin all / owner scoped) |
+| 2026-09-25 | CORS tanpa PATCH + origin hardcode | **Step 35:** `CORS_ORIGINS` + middleware allowlist; Allow-Methods includes PATCH; unit tests |
 | 2026-09-24 | Login tanpa rate limit (brute force murah) | **Step 34:** in-memory limiter 5/min per IP; `ErrRateLimited` → 429; handler + ratelimit tests |
 | 2026-09-23 | Replay webhook GitHub bisa buat banyak deployment untuk delivery yang sama | **Step 33:** `webhook_deliveries` + skip Create; unit tests Records/Duplicate/Different (33c) |
 | 2026-08-26 | **A-H1** Webhook membalas beda-beda sebelum HMAC diverifikasi (`no matching service` / `secret not configured` / `no auto-deploy`) → oracle enumerasi repo bagi penyerang tanpa signature | `HandleGitHub` memverifikasi signature dulu; semua kegagalan auth jadi satu `ErrUnauthorized` (**401**) dan `ack` baru diisi setelah terverifikasi. Tes lama yang mengunci `no matching service` diganti `TestHandleGitHub_UnknownRepoIsUnauthorized` |

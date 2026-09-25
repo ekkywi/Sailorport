@@ -107,7 +107,7 @@ Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sa
 - Alur API: `handler` → `service` → `store` (jangan bypass service untuk domain logic)
 - Error API JSON: `{"error":"..."}`
 - Portal: fitur di `src/features/<domain>/`; `App.tsx` hanya shell + routing
-- CORS: izinkan `http://localhost:5173` di development
+- CORS: `CORS_ORIGINS` allowlist (dev defaults Vite); methods include PATCH
 - Commit: `feat(api):`, `feat(web):`, `feat(agent):`, `docs:`, `fix:`
 
 ## Resume workflow
@@ -122,4 +122,4 @@ Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sa
 
 `docker compose up` → agent → worker online → service di catalog → deploy → status/logs.
 
-**Selesai:** MVP core + Step 18–34 (webhook dedupe + login rate limit). **Next:** opsional Pass B/C. Backlog: `docs/ROADMAP.md`.
+**Selesai:** MVP core + Step 18–35 (webhook dedupe, login rate limit, CORS). **Next:** opsional Pass B/C. Backlog: `docs/ROADMAP.md`.

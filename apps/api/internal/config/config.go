@@ -25,6 +25,34 @@ type Config struct {
 	AgentToken    string
 	CatalogAppDir string
 	SecretsKey    string
+	CORSOrigins   []string
+}
+
+func parseCORSOrigins(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		out = append(out, p)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func defaultDevCORSOrigins() []string {
+	return []string{
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+	}
 }
 
 func Load() Config {
@@ -41,6 +69,11 @@ func Load() Config {
 	agentToken := getenv("SAILORPORT_AGENT_TOKEN", devAgentToken)
 	catalogAppsDir := getenv("SAILORPORT_CATALOG_APPS", defaultCatalogAppsDir())
 	secretsKey := getenv("SAILORPORT_SECRETS_KEY", "")
+	corsRaw := strings.TrimSpace(os.Getenv("CORS_ORIGINS"))
+	corsOrigins := parseCORSOrigins(corsRaw)
+	if len(corsOrigins) == 0 && appEnv == "development" {
+		corsOrigins = defaultDevCORSOrigins()
+	}
 
 	return Config{
 		Port:          port,
@@ -53,6 +86,7 @@ func Load() Config {
 		AgentToken:    agentToken,
 		CatalogAppDir: catalogAppsDir,
 		SecretsKey:    secretsKey,
+		CORSOrigins:   corsOrigins,
 	}
 }
 

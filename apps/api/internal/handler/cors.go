@@ -1,12 +1,25 @@
 package handler
 
-import "net/http"
+import (
+	"net/http"
+	"slices"
+)
 
-func CORS(next http.Handler) http.Handler {
+const corsAllowMethods = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+const corsAllowHeaders = "Content-Type, Authorization"
+
+func CORS(next http.Handler, allowedOrigins []string) http.Handler {
+	allowed := slices.Clone(allowedOrigins)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		origin := r.Header.Get("Origin")
+		if origin != "" && slices.Contains(allowed, origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+		}
+
+		w.Header().Set("Access-Control-Allow-Methods", corsAllowMethods)
+		w.Header().Set("Access-Control-Allow-Headers", corsAllowHeaders)
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

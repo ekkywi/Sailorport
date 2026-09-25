@@ -59,7 +59,7 @@ Flow yang sudah jalan:
 | 21 | Rollback / redeploy commit or tag | ✅ done |
 | 22 | Catalog apps (Postgres, Redis, Gitea, …) | ✅ 22a–22f done |
 
-Urutan berikutnya: opsional — Pass B/C atau backlog Tabel A/C. Step 33–34 hardening (webhook dedupe + login rate limit) ✅.
+Urutan berikutnya: opsional — Pass B/C atau backlog Tabel A/C. Step 33–35 hardening (webhook dedupe, login rate limit, CORS) ✅.
 
 ## Saran pengembangan ke depan (backlog ide)
 
@@ -93,7 +93,7 @@ Urutan berikutnya: opsional — Pass B/C atau backlog Tabel A/C. Step 33–34 ha
 | **Webhook dedupe** (`X-GitHub-Delivery`) | Cegah double deploy dari replay | ✅ Step 33 complete |
 | **Login rate limit** | Brute force murah | ✅ Step 34 complete |
 | **Pass B** lalu **Pass C** QC | Agent + portal belum review formal | kandidat |
-| **CORS PATCH / origin** | Pecah jika portal tidak lewat proxy | kandidat (QC) |
+| **CORS PATCH / origin** | Pecah jika portal tidak lewat proxy | ✅ Step 35 complete |
 | **Agent identity lebih ketat** | Shared token + `worker_id` self-reported | kandidat (QC) |
 
 ### C — Modul belajar (Go/TS naik level)

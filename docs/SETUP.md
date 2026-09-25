@@ -274,6 +274,7 @@ curl http://localhost:18080/healthz   # service pertama; service berikutnya 1808
 | `SAILORPORT_AGENT_TOKEN` | `dev-agent-token` (hanya dev) | shared secret agent↔API; aturan sama seperti di atas |
 | `SAILORPORT_WORKSPACE` | `<repo>/data/workspaces` (dev) / `/data/workspaces` (compose) | folder hasil scaffold; Compose pakai named volume |
 | `SAILORPORT_TEMPLATES` | `<repo>/templates` | template di disk |
+| `CORS_ORIGINS` | (dev: `localhost` + `127.0.0.1` `:5173`) | daftar Origin browser dipisah koma; production kosong = tidak set Allow-Origin (cocok nginx same-origin). Portal langsung ke `:8080` harus mencantumkan Origin-nya. |
 
 Agent (`apps/agent`):
 

@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 34c — login rate limit by IP (Step 34 complete)
+- **Step selesai:** 35c — CORS allowlist + PATCH (Step 35 complete)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
 - **Step berikutnya:** opsional — Pass B/C QC; backlog `docs/ROADMAP.md`
-- **Terakhir dikerjakan:** 2026-09-24 — Step 34 (login rate limit)
+- **Terakhir dikerjakan:** 2026-09-25 — Step 35 (CORS production-ready)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar
@@ -130,6 +130,9 @@
 - [x] Step 34a — `ratelimit.Limiter` in-memory + unit tests
 - [x] Step 34b — Wire login: Allow / Fail / Reset + 429
 - [x] Step 34c — Handler tests + docs/QC
+- [x] Step 35a — Config `CORS_ORIGINS` + default dev
+- [x] Step 35b — Middleware allowlist + methods termasuk PATCH
+- [x] Step 35c — CORS tests + docs/SETUP/QC
 
 ## Yang sudah jalan
 
@@ -1186,6 +1189,31 @@ cd apps/api && go test ./internal/handler/ ./internal/ratelimit/ -v
 
 **Smoke:** 5× login salah → `401`; ke-6 → `429` (restart API dulu agar kode ter-load).
 
+### Step 35 — CORS production-ready ✅
+
+Cross-origin API calls: allowlist Origin dari env; methods lengkap termasuk **PATCH** (preflight admin users/settings). Production di belakang nginx same-origin boleh biarkan allowlist kosong.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 35a Config | ✅ | `CORS_ORIGINS` parse; default dev `localhost` + `127.0.0.1` `:5173` |
+| 35b Middleware | ✅ | Echo Origin jika di allowlist; `Vary: Origin`; methods + PATCH |
+| 35c Tests/docs | ✅ | `cors_test.go`; SETUP + `.env.example`; QC debt closed |
+
+**Tes 35c (unit):**
+
+```bash
+cd apps/api && go test ./internal/handler/ -run CORS -v
+```
+
+**Smoke preflight:**
+
+```bash
+curl -sS -D - -o /dev/null -X OPTIONS http://localhost:8080/api/v1/users/x \
+  -H "Origin: http://localhost:5173" \
+  -H "Access-Control-Request-Method: PATCH"
+# Harapan: 204, Allow-Origin, Allow-Methods mengandung PATCH
+```
+
 ### Checkpoint — Product vision (2026-08-20)
 
 Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
@@ -1203,7 +1231,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
 | — | Pass B/C QC | Agent + portal production review |
-| — | Backlog ide | `docs/ROADMAP.md` Tabel A/C (CORS, agent identity, fitur, …) |
+| — | Backlog ide | `docs/ROADMAP.md` Tabel A/C (agent identity, fitur, …) |
 
 ## Next action
 

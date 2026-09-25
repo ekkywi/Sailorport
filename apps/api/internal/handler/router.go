@@ -25,6 +25,7 @@ type API struct {
 	Audit        *service.Audit
 	Webhooks     *service.Webhook
 	Settings     *service.Settings
+	CORSOrigins  []string
 }
 
 func NewRouter(api API) http.Handler {
@@ -114,5 +115,5 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("POST /api/v1/agent/runtime/next", withAgentToken(token, runtimeH.ClaimNext))
 	mux.Handle("PATCH /api/v1/agent/runtime/{id}", withAgentToken(token, runtimeH.Update))
 
-	return CORS(mux)
+	return CORS(mux, api.CORSOrigins)
 }
