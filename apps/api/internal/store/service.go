@@ -41,7 +41,7 @@ func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 	const q = `
 	SELECT id , name, description, owner, owner_user_id, template_id, workspace_path,
 		source_type, repo_url, branch, dockerfile_path,
-		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+		webhook_secret, git_token, auto_deploy_enabled, auto_deploy_environment,
 		catalog_app_id, image, container_port,
 		created_at, updated_at
 	FROM services
@@ -71,6 +71,7 @@ func (s *ServicesStore) List(ctx context.Context) ([]model.Service, error) {
 			&svc.Branch,
 			&svc.DockerfilePath,
 			&svc.WebhookSecret,
+			&svc.GitToken,
 			&svc.AutoDeployEnabled,
 			&svc.AutoDeployEnvironment,
 			&svc.CatalogAppID,
@@ -99,7 +100,7 @@ func (s *ServicesStore) ListByOwner(ctx context.Context, ownerUserID string) ([]
 	const q = `
 	SELECT id, name , description, owner, owner_user_id, template_id, workspace_path,
 		source_type, repo_url, branch, dockerfile_path,
-		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+		webhook_secret, git_token, auto_deploy_enabled, auto_deploy_environment,
 		catalog_app_id, image, container_port,
 		created_at, updated_at
 	FROM services
@@ -130,6 +131,7 @@ func (s *ServicesStore) ListByOwner(ctx context.Context, ownerUserID string) ([]
 			&svc.Branch,
 			&svc.DockerfilePath,
 			&svc.WebhookSecret,
+			&svc.GitToken,
 			&svc.AutoDeployEnabled,
 			&svc.AutoDeployEnvironment,
 			&svc.CatalogAppID,
@@ -153,7 +155,7 @@ func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, erro
 	const q = `
 	SELECT id, name, description, owner, owner_user_id, template_id, workspace_path,
 		source_type, repo_url, branch, dockerfile_path,
-		webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+		webhook_secret, git_token, auto_deploy_enabled, auto_deploy_environment,
 		catalog_app_id, image, container_port,
 		created_at, updated_at
 	FROM services
@@ -175,6 +177,7 @@ func (s *ServicesStore) Get(ctx context.Context, id string) (model.Service, erro
 		&svc.Branch,
 		&svc.DockerfilePath,
 		&svc.WebhookSecret,
+		&svc.GitToken,
 		&svc.AutoDeployEnabled,
 		&svc.AutoDeployEnvironment,
 		&svc.CatalogAppID,
@@ -198,13 +201,13 @@ func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceReque
 		INSERT INTO services (
 			name, description, owner, owner_user_id, template_id, workspace_path,
 			source_type, repo_url, branch, dockerfile_path,
-			webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+			webhook_secret, git_token, auto_deploy_enabled, auto_deploy_environment,
 			catalog_app_id, image, container_port
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 		RETURNING id, name, description, owner, owner_user_id, template_id, workspace_path,
 			source_type, repo_url, branch, dockerfile_path,
-			webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+			webhook_secret, git_token, auto_deploy_enabled, auto_deploy_environment,
 			catalog_app_id, image, container_port,
 			created_at, updated_at
 	`
@@ -223,6 +226,7 @@ func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceReque
 		req.Branch,
 		req.DockerfilePath,
 		req.WebhookSecret,
+		req.GitToken,
 		req.AutoDeployEnabled,
 		req.AutoDeployEnvironment,
 		req.CatalogAppID,
@@ -241,6 +245,7 @@ func (s *ServicesStore) Create(ctx context.Context, req model.CreateServiceReque
 		&svc.Branch,
 		&svc.DockerfilePath,
 		&svc.WebhookSecret,
+		&svc.GitToken,
 		&svc.AutoDeployEnabled,
 		&svc.AutoDeployEnvironment,
 		&svc.CatalogAppID,
@@ -270,16 +275,17 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 			branch = $6,
 			dockerfile_path = $7,
 			webhook_secret = $8,
-			auto_deploy_enabled = $9,
-			auto_deploy_environment = $10,
-			catalog_app_id = $11,
-			image = $12,
-			container_port = $13,
+			git_token = $9,
+			auto_deploy_enabled = $10,
+			auto_deploy_environment = $11,
+			catalog_app_id = $12,
+			image = $13,
+			container_port = $14,
 			updated_at = NOW()
-		WHERE id = $14
+		WHERE id = $15
 		RETURNING id, name, description, owner, owner_user_id, template_id, workspace_path,
 			source_type, repo_url, branch, dockerfile_path,
-			webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+			webhook_secret, git_token, auto_deploy_enabled, auto_deploy_environment,
 			catalog_app_id, image, container_port,
 			created_at, updated_at
 	`
@@ -295,6 +301,7 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 		req.Branch,
 		req.DockerfilePath,
 		req.WebhookSecret,
+		req.GitToken,
 		*req.AutoDeployEnabled,
 		req.AutoDeployEnvironment,
 		req.CatalogAppID,
@@ -314,6 +321,7 @@ func (s *ServicesStore) Update(ctx context.Context, id string, req model.UpdateS
 		&svc.Branch,
 		&svc.DockerfilePath,
 		&svc.WebhookSecret,
+		&svc.GitToken,
 		&svc.AutoDeployEnabled,
 		&svc.AutoDeployEnvironment,
 		&svc.CatalogAppID,
@@ -379,7 +387,7 @@ func (s *ServicesStore) UpdateOwner(ctx context.Context, id, ownerUserID, ownerL
 		WHERE id = $3
 		RETURNING id, name, description, owner, owner_user_id, template_id, workspace_path,
 			source_type, repo_url, branch, dockerfile_path,
-			webhook_secret, auto_deploy_enabled, auto_deploy_environment,
+			webhook_secret, git_token, auto_deploy_enabled, auto_deploy_environment,
 			catalog_app_id, image, container_port,
 			created_at, updated_at
 	`
@@ -399,6 +407,7 @@ func (s *ServicesStore) UpdateOwner(ctx context.Context, id, ownerUserID, ownerL
 		&svc.Branch,
 		&svc.DockerfilePath,
 		&svc.WebhookSecret,
+		&svc.GitToken,
 		&svc.AutoDeployEnabled,
 		&svc.AutoDeployEnvironment,
 		&svc.CatalogAppID,

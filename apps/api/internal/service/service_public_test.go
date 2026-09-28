@@ -29,3 +29,27 @@ func TestPublicService_EmptySecret(t *testing.T) {
 		t.Fatal("expected webhook_secret_set false")
 	}
 }
+
+func TestPublicService_RedactsGitToken(t *testing.T) {
+	svc := model.Service{
+		Name:     "demo",
+		GitToken: "ghp_secret",
+	}
+	out := PublicService(svc)
+	if out.GitToken != "" {
+		t.Fatalf("token leaked: %q", out.GitToken)
+	}
+	if !out.GitTokenSet {
+		t.Fatal("expected git_token_set true")
+	}
+	if svc.GitToken != "ghp_secret" {
+		t.Fatal("input should stay intact (value copy)")
+	}
+}
+
+func TestPublicService_EmptyGitToken(t *testing.T) {
+	out := PublicService(model.Service{Name: "demo"})
+	if out.GitTokenSet {
+		t.Fatal("expected git_token_set false")
+	}
+}

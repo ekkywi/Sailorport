@@ -258,6 +258,45 @@ func TestNormalizeUpdate_MergesWebhookFields(t *testing.T) {
 	}
 }
 
+func TestNormalizeUpdate_KeepsGitToken(t *testing.T) {
+	existing := model.Service{
+		SourceType: "git",
+		RepoURL:    "https://github.com/acme/hello.git",
+		GitToken:   "ghp_old",
+	}
+	req, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name:        "from-git",
+		Description: "x",
+		Owner:       "team",
+	}, existing)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.GitToken != "ghp_old" {
+		t.Fatalf("token wiped: %q", req.GitToken)
+	}
+}
+
+func TestNormalizeUpdate_ReplaceGitToken(t *testing.T) {
+	existing := model.Service{
+		SourceType: "git",
+		RepoURL:    "https://github.com/acme/hello.git",
+		GitToken:   "ghp_old",
+	}
+	req, err := normalizeUpdate(model.UpdateServiceRequest{
+		Name:        "from-git",
+		Description: "x",
+		Owner:       "team",
+		GitToken:    "ghp_new",
+	}, existing)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if req.GitToken != "ghp_new" {
+		t.Fatalf("want ghp_new, got %q", req.GitToken)
+	}
+}
+
 func TestNormalizeUpdate_InvalidAutoDeployEnv(t *testing.T) {
 	existing := model.Service{
 		SourceType:            "scaffold",

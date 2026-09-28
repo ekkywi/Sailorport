@@ -9,6 +9,8 @@ import (
 func PublicService(svc model.Service) model.Service {
 	svc.WebhookSecretSet = strings.TrimSpace(svc.WebhookSecret) != ""
 	svc.WebhookSecret = ""
+	svc.GitTokenSet = strings.TrimSpace(svc.GitToken) != ""
+	svc.GitToken = ""
 	return svc
 }
 

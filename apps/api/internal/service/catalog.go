@@ -475,6 +475,7 @@ func normalizeCreate(req model.CreateServiceRequest) (model.CreateServiceRequest
 	req.Branch = strings.TrimSpace(req.Branch)
 	req.DockerfilePath = strings.TrimSpace(req.DockerfilePath)
 	req.WebhookSecret = strings.TrimSpace(req.WebhookSecret)
+	req.GitToken = strings.TrimSpace(req.GitToken)
 	req.AutoDeployEnvironment = strings.TrimSpace(req.AutoDeployEnvironment)
 	req.CatalogAppID = strings.TrimSpace(req.CatalogAppID)
 	req.Image = strings.TrimSpace(req.Image)
@@ -516,6 +517,7 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 	req.Branch = strings.TrimSpace(req.Branch)
 	req.DockerfilePath = strings.TrimSpace(req.DockerfilePath)
 	req.WebhookSecret = strings.TrimSpace(req.WebhookSecret)
+	req.GitToken = strings.TrimSpace(req.GitToken)
 	req.AutoDeployEnvironment = strings.TrimSpace(req.AutoDeployEnvironment)
 	req.CatalogAppID = strings.TrimSpace(req.CatalogAppID)
 	req.Image = strings.TrimSpace(req.Image)
@@ -550,6 +552,9 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 	}
 	if req.WebhookSecret == "" {
 		req.WebhookSecret = existing.WebhookSecret
+	}
+	if req.GitToken == "" {
+		req.GitToken = existing.GitToken
 	}
 	if req.AutoDeployEnvironment == "" {
 		req.AutoDeployEnvironment = existing.AutoDeployEnvironment
@@ -641,6 +646,7 @@ func (c *Catalog) applyCatalogAppDefaults(req model.CreateServiceRequest) (model
 	req.DockerfilePath = ""
 	req.TemplateID = ""
 	req.WebhookSecret = ""
+	req.GitToken = ""
 	req.AutoDeployEnabled = false
 
 	return req, nil

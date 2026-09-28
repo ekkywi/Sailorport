@@ -20,6 +20,8 @@ type Service struct {
 	DockerfilePath        string                `json:"dockerfile_path"`
 	WebhookSecret         string                `json:"webhook_secret"`
 	WebhookSecretSet      bool                  `json:"webhook_secret_set"`
+	GitToken              string                `json:"git_token"`
+	GitTokenSet           bool                  `json:"git_token_set"`
 	AutoDeployEnabled     bool                  `json:"auto_deploy_enabled"`
 	AutoDeployEnvironment string                `json:"auto_deploy_environment"`
 	CatalogAppID          string                `json:"catalog_app_id"`
@@ -40,6 +42,7 @@ type CreateServiceRequest struct {
 	Branch                string            `json:"branch"`
 	DockerfilePath        string            `json:"dockerfile_path"`
 	WebhookSecret         string            `json:"webhook_secret"`
+	GitToken              string            `json:"git_token"`
 	AutoDeployEnabled     bool              `json:"auto_deploy_enabled"`
 	AutoDeployEnvironment string            `json:"auto_deploy_environment"`
 	CatalogAppID          string            `json:"catalog_app_id"`
@@ -57,6 +60,7 @@ type UpdateServiceRequest struct {
 	Branch                string            `json:"branch"`
 	DockerfilePath        string            `json:"dockerfile_path"`
 	WebhookSecret         string            `json:"webhook_secret"`
+	GitToken              string            `json:"git_token"`
 	AutoDeployEnabled     *bool             `json:"auto_deploy_enabled"`
 	AutoDeployEnvironment string            `json:"auto_deploy_environment"`
 	CatalogAppID          string            `json:"catalog_app_id"`
