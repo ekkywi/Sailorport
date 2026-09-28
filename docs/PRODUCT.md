@@ -1,13 +1,13 @@
 # Sailorport — Product Vision
 
-> Dokumen positioning produk. Baca ini sebelum fitur besar (Git deploy, catalog apps, webhook).
-> Detail implementasi harian: `docs/PROGRESS.md`. Peta step + **backlog ide pasca-MVP**: `docs/ROADMAP.md`.
+> Product positioning. Read before large features (Git deploy, catalog apps, webhook).  
+> Implementation status: `docs/PROGRESS.md`. Backlog: `docs/ROADMAP.md`. Doc map: `docs/README.md`.
 
 ## Apa itu Sailorport?
 
-**Self-hosted Internal Developer Platform (IDP)** — portal + API + agent untuk **mendaftar, deploy, dan mengoperasikan service** di infra sendiri.
+**Self-hosted Internal Developer Platform (IDP)** — portal + API + agent untuk **mendaftar, deploy, dan mengoperasikan service** di infrastruktur sendiri.
 
-Bukan hanya “tempat scaffold template”. **Catalog** (`/catalog`, API `services`) = **inventory pusat** semua yang di-deploy: custom app, infra app, atau hasil scaffold.
+Bukan hanya “penyimpan template scaffold”. **Catalog** (`/catalog`, API `services`) = **inventory pusat** semua yang di-deploy: custom app, infra app, atau hasil scaffold.
 
 Tagline evolusi:
 

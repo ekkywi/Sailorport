@@ -1,7 +1,6 @@
 # Sailorport — Roadmap
 
-Peta besar proyek. Detail step harian ada di `docs/PROGRESS.md`.  
-**Visi produk & dua jalur deploy:** `docs/PRODUCT.md`.
+Peta besar dan backlog. Detail harian: `docs/PROGRESS.md`. Visi: `docs/PRODUCT.md`. Peta docs: `docs/README.md`.
 
 ## Visi produk
 
@@ -92,19 +91,19 @@ Urutan berikutnya: opsional — backlog Tabel A/C atau Known debt Medium. Pass A
 |-----|--------|--------|
 | **Webhook dedupe** (`X-GitHub-Delivery`) | Cegah double deploy dari replay | ✅ Step 33 complete |
 | **Login rate limit** | Brute force murah | ✅ Step 34 complete |
-| **Pass B** lalu **Pass C** QC | Agent + portal review formal | Pass B ✅ + Pass C ✅ 2026-09-28 |
+| **Agent identity lebih ketat** | Shared token + `worker_id` self-reported on **claim** | **Partial:** PATCH must match claimer ✅ Pass B. **Remaining (candidate):** per-worker token / bind identity on claim |
+| **Pass B** lalu **Pass C** QC | Agent + portal formal review | Pass B ✅ + Pass C ✅ 2026-09-28 |
 | **CORS PATCH / origin** | Pecah jika portal tidak lewat proxy | ✅ Step 35 complete |
-| **Agent identity lebih ketat** | Shared token + `worker_id` self-reported | kandidat (QC) — PATCH claimer match ✅ Pass B |
 
-### C — Modul belajar (Go/TS naik level)
+### C — Modul / polish teknis
 
 | Ide | Yang dipelajari | Status |
 |-----|-----------------|--------|
-| Unit test agent `git.Sync` | Test tanpa DB penuh; temporary repo | kandidat |
-| Pagination + search catalog / directory | Query + UI combobox | kandidat |
-| OpenAPI / typed client | Kontrak API (`packages/shared` nanti) | kandidat |
-| Template kedua (mis. `node-api` minimal) | Scaffold path, arsitektur tetap | kandidat |
-| Interceptor **401 logout** portal | Pass C debt; web auth UX | kandidat |
+| Unit test agent `git.Sync` (temp repo) | Test tanpa DB penuh | kandidat |
+| Pagination + search catalog / directory | Query + UI | kandidat |
+| OpenAPI / typed client | Kontrak API | kandidat |
+| Template kedua (mis. `node-api`) | Scaffold path | kandidat |
+| Interceptor **401 logout** portal | Session hygiene | ✅ Pass C complete |
 
 ### D — Sengaja jangan dulu
 
@@ -118,11 +117,11 @@ Kecuali keputusan produk baru (diskusi dulu):
 
 ### Panduan pilih cepat
 
-| Prioritas kamu | Sarankan mulai dari |
-|----------------|---------------------|
-| Produk terlihat berkembang | Gitea catalog app **atau** service detail page |
-| IDP terasa “sungguhan” | Private Git credentials **atau** persistent volumes |
-| TA / keamanan | Webhook dedupe + Pass B; polish modul webhook |
+| Prioritas | Sarankan mulai dari |
+|-----------|---------------------|
+| Fitur terlihat | Catalog app Gitea **atau** service detail page |
+| IDP lebih lengkap | Private Git credentials **atau** persistent volumes |
+| Keamanan sisa | Agent identity (per-worker token) **atau** webhook rate limit |
 
 ## Fase 3 — Ops & polish
 
@@ -141,7 +140,9 @@ Kecuali keputusan produk baru (diskusi dulu):
 - Policy engine (OPA)
 - Multi-cluster Kubernetes deep
 
-## Fase pembelajaran (Step 0–18) — ✅ selesai
+## Early milestones (Step 0–18) — ✅ complete
+
+Historical reference. Full checklist: `docs/PROGRESS.md`.
 
 | Step | Topik |
 |------|-------|

@@ -1,6 +1,8 @@
-# Setup Mesin Baru (Sailorport)
+# Setup — Sailorport
 
-Panduan ini dipakai saat pertama kali membuka proyek di laptop/komputer lain.
+Panduan instalasi dan menjalankan control plane + agent di lingkungan lokal atau mesin baru.
+
+Peta dokumentasi: [`README.md`](README.md) (folder `docs/`).
 
 ## Prasyarat
 

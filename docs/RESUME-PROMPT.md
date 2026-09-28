@@ -1,26 +1,30 @@
 # Prompt untuk Lanjut Chat Baru
 
-Copy semua teks di bawah ini ke chat Cursor baru di mesin lain.
+> Maintainer workflow — paste ke chat Cursor baru. Bukan dokumen produk untuk visitor.  
+> Peta docs: `docs/README.md`.
+
+Copy teks di bawah ke chat baru.
 
 ---
 
 Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via agent).
 
-**Mode belajar:** saya coding manual, Anda pandu step-by-step dengan penjelasan detail baris per baris. Jangan refactor besar tanpa diminta.
+**Mode kerja:** coding manual, panduan step-by-step dengan penjelasan jelas. Jangan refactor besar tanpa diminta.
 
-**Baca dulu file ini di repo (urutan penting):**
-- `docs/PRODUCT.md` — **visi produk & dua jalur deploy** (wajib baca)
-- `docs/PROGRESS.md` — step terakhir yang selesai + rencana berikutnya
-- `docs/ROADMAP.md` — peta besar + **Saran pengembangan ke depan** (backlog ide pasca-MVP)
-- `docs/ARCHITECTURE.md` — aturan lapisan (wajib diikuti)
-- `docs/AGENTS.md` — konvensi & konteks proyek
-- `docs/QC.md` — automated/smoke + **prompt Production review** (Pass A/B/C) untuk model mahal
+**Baca dulu (urutan):**
+- `docs/README.md` — peta dokumentasi
+- `docs/PRODUCT.md` — visi produk & dua jalur deploy
+- `docs/PROGRESS.md` — status + next (sumber kebenaran)
+- `docs/ROADMAP.md` — backlog kandidat
+- `docs/ARCHITECTURE.md` — aturan lapisan
+- `docs/AGENTS.md` — konvensi proyek
+- `docs/QC.md` — checks, Known debt, Pass A/B/C
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 35** + **Pass B/C** (2026-09-28) Critical/High clear.
+**Step terakhir selesai:** **Step 35** + **Pass B/C** (2026-09-28) Critical/High clear; docs map/tone update.
 
-**Step berikutnya:** opsional — backlog `docs/ROADMAP.md` / Known debt.
+**Step berikutnya:** opsional — backlog `docs/ROADMAP.md` / Known debt Medium di `docs/QC.md`.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat

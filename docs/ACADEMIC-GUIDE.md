@@ -1,8 +1,8 @@
 # Sailorport — Panduan Akademik (Laporan → Tugas Akhir)
 
-> Dokumen ini untuk penyusunan laporan semester dan perluasan ke TA.
-> Bukan pengganti `PRODUCT.md` / `ARCHITECTURE.md` / `PROGRESS.md`.
-> Sumber teknis produk tetap dokumen engineering; dokumen ini hanya kerangka akademik.
+> **Audience:** coursework / thesis (laporan semester, TA).  
+> **Not** core product documentation. Engineering truth: `PRODUCT.md`, `ARCHITECTURE.md`, `PROGRESS.md`.  
+> Documentation map: `README.md` (folder ini).
 
 **Terakhir diisi:** 2026-09-15  
 **Status laporan:** judul dikunci; sitensis jurnal  

@@ -5,11 +5,11 @@ alwaysApply: true
 
 # Sailorport — Project Rules
 
-Baca `docs/AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/PROGRESS.md` sebelum kerja besar. Backlog ide pasca-MVP: `docs/ROADMAP.md` (**Saran pengembangan ke depan**). Ini sumber kebenaran, bukan chat lama.
+Baca `docs/README.md` (peta docs), lalu `docs/AGENTS.md`, `docs/PRODUCT.md`, `docs/ARCHITECTURE.md`, `docs/PROGRESS.md` sebelum kerja besar. Backlog: `docs/ROADMAP.md`. **PROGRESS** adalah sumber kebenaran status — bukan chat lama.
 
-## Learning mode
+## Structured learning / contribution mode
 
-User belajar coding manual — jangan asumsikan mahir Go/TS.
+Maintainer belajar sambil mengimplementasikan — jangan asumsikan mahir Go/TS.
 
 - Satu step = satu hasil yang bisa dijalankan + ditest.
 - Jangan refactor besar atau tambah fitur di luar step yang diminta.

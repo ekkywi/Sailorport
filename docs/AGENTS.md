@@ -1,16 +1,17 @@
-# Agent Context — Sailorport
+# AI / contributor context — Sailorport
 
-Dokumen ini memberi konteks ke AI saat user membuka chat baru di mesin lain.
+Context for assistants and maintainers continuing work in this repository.
 
 ## Project
 
-**Sailorport** — self-hosted internal developer platform OSS.
+**Sailorport** — self-hosted internal developer platform (OSS).
 
 Tagline: *Self-hosted developer port — catalog, deploy, and ship.*
 
-Fitur inti: **software catalog** (inventory pusat), deploy via agent, environments, worker health/policy, RBAC, audit. Golden path scaffold = **opsional** (bukan jalur utama).
+Core capabilities: **software catalog**, agent-based deploy, environments, worker health/policy, RBAC, audit. Scaffold golden path is **optional** (not the primary path).
 
-**Visi produk lengkap:** `docs/PRODUCT.md` — baca sebelum fitur Git deploy / catalog apps.
+**Product vision:** `docs/PRODUCT.md` — read before Git deploy / catalog-app features.  
+**Doc map:** `docs/README.md`.
 
 ## Repo
 
@@ -20,106 +21,107 @@ Fitur inti: **software catalog** (inventory pusat), deploy via agent, environmen
 
 ## Stack
 
-| Komponen | Path | Status |
-|----------|------|--------|
-| Portal | `apps/web` | auth + app shell + catalog deploy/runtime + workers + users (create/role/disable/reset/soft-delete) + RBAC |
-| API | `apps/api` | layered + scaffold/templates + workers + deployments |
-| Worker | `apps/worker` | belum (job queue / orchestrator) |
-| Agent | `apps/agent` | register + heartbeat + poll deploy/runtime (stop/start/remove); host port unik; Bearer agent token |
-| Templates | `templates/` | `go-api` (disk, bukan DB) |
-| Shared contracts | `packages/shared` | belum |
-| Compose | `deploy/compose` | Postgres + API + web; workspaces = named volume (no host chown) |
+| Component | Path | Status |
+|-----------|------|--------|
+| Portal | `apps/web` | auth + catalog deploy/runtime + workers + users + RBAC |
+| API | `apps/api` | layered + scaffold + workers + deployments |
+| Worker | `apps/worker` | not implemented (job queue / orchestrator) |
+| Agent | `apps/agent` | register + heartbeat + poll deploy/runtime; host ports; Bearer agent token |
+| Templates | `templates/` | `go-api` (on disk) |
+| Shared contracts | `packages/shared` | not yet |
+| Compose | `deploy/compose` | Postgres + API + web; workspaces named volume |
 
-Infra: PostgreSQL (ada), Redis (belum), auth JWT lokal (ada), OIDC (belum).
+Infra: PostgreSQL (yes), Redis (not yet), local JWT (yes), OIDC (not yet).
 
-## Learning mode (PENTING)
+## Contribution / learning guidance
 
-User **belum bisa coding** — belajar sambil mengetik manual.
+Work is done in **small, testable steps** (this repo is also used as a structured learning path).
 
-Aturan panduan:
+When guiding implementation:
 
-1. Satu step = satu hasil yang bisa dijalankan dan ditest
-2. Beri kode lengkap per file, bukan potongan acak
-3. Jelaskan baris per baris untuk konsep baru
-4. Jangan refactor besar atau tambah fitur di luar step
-5. Akhiri setiap step dengan: cara test + commit message
+1. One step = one runnable, testable outcome
+2. Prefer complete file contents over fragmentary snippets for new concepts
+3. Explain new ideas clearly; avoid drive-by refactors
+4. Do not add features outside the requested step
+5. End each step with: how to test + suggested commit message
 
-## Arsitektur
+## Architecture
 
 ```
 Developer → Web Portal
               → API (Go)
-                 → PostgreSQL + Redis
-                 → Worker (jobs) [belum]
-                 → Agent di node (register, heartbeat, poll job, docker build/run)
-                 → callback status
+                 → PostgreSQL (+ Redis later)
+                 → Worker (jobs) [not yet]
+                 → Agent on node (register, heartbeat, poll, docker build/run)
+                 → status callback
 ```
 
-Prinsip: control plane tidak menjalankan container langsung; agent yang eksekusi.
+Principle: the control plane does not run containers directly; the agent does.
 
 ## Workers (runtime nodes)
 
-- Worker = node dengan Docker + agent; **bukan** sama dengan environment dev/staging/prod.
-- Satu worker boleh menjalankan banyak environment (container `sailorport-{service}-{env}` terpisah).
-- Data worker dari **agent register + heartbeat** — tidak ada admin CRUD create/delete worker di MVP.
-- Kolom `labels` (JSONB): agent kirim saat register (Step 18a). Env `SAILORPORT_WORKER_TIER`, `SAILORPORT_WORKER_ENVIRONMENTS`, optional `SAILORPORT_WORKER_LABELS` JSON. Deploy policy (18b): API 409 jika env tidak diizinkan labels. Portal (18c): DeployDialog filter worker; Workers page kolom Tier/Environments.
-- Deploy: optional `worker_id`; `target_worker_id` + claim filter memastikan job ke node yang benar.
+- Worker = node with Docker + agent; **not** the same as environment `dev`/`staging`/`prod`.
+- One worker may run many environments (containers `sailorport-{service}-{env}`).
+- Workers appear via **agent register + heartbeat** — no admin CRUD create/delete in MVP.
+- `labels` (JSONB): sent on register (Step 18). Env `SAILORPORT_WORKER_TIER`, `SAILORPORT_WORKER_ENVIRONMENTS`, optional `SAILORPORT_WORKER_LABELS`. Deploy policy returns 409 if env not allowed.
+- Deploy: optional `worker_id`; `target_worker_id` + claim filter route jobs.
 
-## Portal routes (setelah login)
+**Auth note:** agents currently share one `SAILORPORT_AGENT_TOKEN`. Pass B requires PATCH updates to send matching claimer `worker_id`. Per-worker tokens remain a backlog item (`ROADMAP` / `QC` Known debt).
 
-| Path | Isi |
-|------|-----|
-| `/overview` | ringkasan services + workers |
-| `/catalog` | daftar services + deploy terakhir; History; Deploy; **Stop/Start** (runtime); create/edit/delete |
-| `/worker` | daftar workers + status (read-only; self-register via agent) |
-| `/users` | admin: list, create, role, disable/enable (confirm), reset password, soft-delete |
-| `/settings` | admin: toggle public registration (`registration_open`) |
-| `/audit` | admin: jejak aksi (catalog + user admin) |
+## Portal routes (after login)
 
-Auth: `/login`, `/setup` (first-run), `/register` (hanya jika Settings membuka registrasi) — layout `AuthLayout`.
+| Path | Content |
+|------|---------|
+| `/overview` | services + workers summary |
+| `/catalog` | services, deploy history, runtime, CRUD |
+| `/worker` | workers + status (admin can edit labels / decommission) |
+| `/users` | admin user management |
+| `/settings` | admin: `registration_open` |
+| `/audit` | admin audit trail |
 
-## Catalog — mental model (penting)
+Auth: `/login`, `/setup` (first-run), `/register` (when registration is open).
 
-**Catalog = daftar semua service yang dikelola platform** (bukan “template store”).
+## Catalog — mental model
 
-| Cara masuk catalog | Status | Deploy |
-|--------------------|--------|--------|
-| Scaffold template (`go-api`) | ✅ ada | Build `workspace_path` lokal |
-| Register existing (metadata) | ✅ ada | Belum auto-deploy |
-| Git repo + Dockerfile | ✅ Step 19 | clone/pull → build → run |
-| Catalog app (Postgres, Redis, …) | ✅ Step 22 | pull image → run |
+**Catalog = all platform-managed services** (not a “template store”).
 
-Semua jalur berakhir di **satu UI `/catalog`** — deploy, env, logs, runtime sama.
+| Entry path | Status | Deploy |
+|------------|--------|--------|
+| Scaffold (`go-api`) | ✅ | Build local `workspace_path` |
+| Register metadata | ✅ | No auto workspace |
+| Git + Dockerfile | ✅ | clone/pull → build → run |
+| Catalog app (Postgres, Redis, …) | ✅ | pull image → run |
 
-## Scaffold (golden path — opsional)
+All paths share **`/catalog`** for deploy, env, logs, and runtime.
 
-- **Create service** (scaffold) = pilih template → generate `data/workspaces/{name}/` → daftar catalog
-- Developer **mengembangkan kode di workspace** setelah scaffold; template dipakai **sekali** di awal
-- **Register existing** = metadata saja, tanpa folder
-- **Delete service** = enqueue job `remove` → hapus row DB + folder workspace → agent `docker rm`
+## Scaffold (optional golden path)
+
+- Scaffold = template → `data/workspaces/{name}/` → catalog row
+- Develop in the workspace after scaffold; template used once
+- Register existing = metadata only
+- Delete = enqueue `remove` → DB + workspace cleanup → `docker rm`
 
 ## Coding conventions
 
-- Baca `docs/ARCHITECTURE.md` sebelum menambah fitur
-- API routes: `/api/v1/...`
-- Health check: `GET /healthz`
-- `main.go` tipis — hanya wiring
-- Alur API: `handler` → `service` → `store` (jangan bypass service untuk domain logic)
-- Error API JSON: `{"error":"..."}`
-- Portal: fitur di `src/features/<domain>/`; `App.tsx` hanya shell + routing
-- CORS: `CORS_ORIGINS` allowlist (dev defaults Vite); methods include PATCH
-- Commit: `feat(api):`, `feat(web):`, `feat(agent):`, `docs:`, `fix:`
+- Read `docs/ARCHITECTURE.md` before new features
+- API: `/api/v1/...`; health: `GET /healthz`
+- Thin `main.go` — wiring only
+- Flow: `handler` → `service` → `store` (no domain SQL in handlers)
+- API errors: `{"error":"..."}`
+- Portal: `src/features/<domain>/`; thin `App.tsx`
+- CORS: `CORS_ORIGINS` allowlist; methods include PATCH
+- Commits: `feat(api):`, `feat(web):`, `feat(agent):`, `docs:`, `fix:`
 
 ## Resume workflow
 
-1. Baca `docs/PROGRESS.md` — cek "Step berikutnya"
-2. Kalau next belum dikunci: lihat backlog di `docs/ROADMAP.md` (**Saran pengembangan ke depan**)
-3. Lanjutkan dari step itu, jangan ulang step selesai
-4. Setelah step selesai, minta user update `docs/PROGRESS.md` (+ centang/status ide di ROADMAP jika selesai) + commit
-5. QC berkala / sebelum production review: `docs/QC.md` (automated + smoke + prompt model mahal)
+1. Read `docs/PROGRESS.md` — “Step berikutnya”
+2. If unset: pick from `docs/ROADMAP.md` backlog
+3. Do not redo completed steps
+4. After a step: update PROGRESS (+ ROADMAP/QC if needed) + commit
+5. QC / production review: `docs/QC.md`
 
-## MVP v1 success criteria
+## MVP success criteria
 
-`docker compose up` → agent → worker online → service di catalog → deploy → status/logs.
+`docker compose up` → agent → worker online → catalog service → deploy → status/logs.
 
-**Selesai:** MVP core + Step 18–35 + Pass A/B/C Critical+High. **Next:** backlog `docs/ROADMAP.md`.
+**Done:** MVP core + Steps 18–35 + Pass A/B/C Critical/High. **Next:** optional backlog in `docs/ROADMAP.md`.

@@ -1,16 +1,19 @@
 # Sailorport — Progress
 
-> Update file ini setiap selesai 1 step. Ini sumber kebenaran saat pindah mesin.
+> Implementation journal and status. **Source of truth** for what is finished and what is next.
+> Documentation map: `docs/README.md`.
 
 ## Status saat ini
 
-- **Step selesai:** 35c + Pass B/C (agent + web harden)
+- **Step selesai:** 35 + Pass B/C (agent + portal harden)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** opsional — backlog `docs/ROADMAP.md` (Known debt Medium)
-- **Terakhir dikerjakan:** 2026-09-28 — Pass C (portal 401 logout, Redeploy ACL UI, secret redact client)
-- **Mesin terakhir:** rumah / lokal
+- **Step berikutnya:** opsional — backlog `docs/ROADMAP.md` atau Known debt Medium di `docs/QC.md`
+- **Terakhir dikerjakan:** 2026-09-28 — dokumentasi (peta baca + tone publik); sebelumnya Pass C
+- **Catatan maintainer:** local / primary workstation
 
-## Checklist step belajar
+## Implementation checklist
+
+<!-- Historis: checklist step implementasi (dahulu “step belajar”). Jangan hapus centang tanpa alasan. -->
 
 - [x] Step 0 — Struktur repo + README + git init
 - [x] Step 1 — Go install + endpoint GET `/healthz`

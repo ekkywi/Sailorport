@@ -1,6 +1,7 @@
 # Sailorport — QC Checkpoint
 
-> Checklist kualitas ringan, dijalankan berkala (tiap 3–5 step atau sebelum step besar berikutnya). Bukan audit penuh — fokus: bug nyata, kontrak API, smoke path utama. Update tanggal + temuan setiap kali dijalankan.
+> Quality checks: automated build/test, smoke paths, known debt, and production-review passes (A/B/C).  
+> Doc map: `docs/README.md`. Status of features: `docs/PROGRESS.md`.
 
 ## Cara pakai
 

@@ -1,13 +1,14 @@
 # Sailorport — AI Context Brief (Gemini / NotebookLM)
 
-> Upload atau tempel dokumen ini sebagai **sumber konteks tetap**.
-> Lalu unggah jurnal PDF / bib sebagai sumber tambahan.
-> Tujuan AI: membantu sitensis jurnal, outline bab, dan menyambungkan teori ke modul nyata — **bukan** mengarang fitur yang tidak ada.
+> **Audience:** academic writing assistants (sitensis jurnal, outline bab).  
+> **Not** core product docs. Engineering truth: `PRODUCT.md` / `ARCHITECTURE.md` / `PROGRESS.md`.  
+> Related: `ACADEMIC-GUIDE.md`. Doc map: `README.md`.
 
-**Bahasa kerja:** Indonesia (kecuali kutipan istilah teknis EN yang sudah baku).  
-**Peran AI:** asisten riset & penulisan akademik untuk mahasiswa konsentrasi software / pengembangan perangkat lunak.
+> Upload atau tempel dokumen ini sebagai **sumber konteks tetap**, lalu unggah jurnal sebagai sumber tambahan.  
+> Tujuan AI: sitensis dan outline — **bukan** mengarang fitur yang tidak ada di repo.
 
-**Dokumen terkait:** `docs/ACADEMIC-GUIDE.md` (outline laporan→TA, tabel sitensis, checklist).
+**Bahasa kerja:** Indonesia (kecuali istilah teknis EN baku).  
+**Peran AI:** asisten riset & penulisan akademik.
 
 ---
 

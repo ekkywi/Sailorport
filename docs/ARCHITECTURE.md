@@ -1,6 +1,8 @@
 # Sailorport — Architecture
 
-Modular monolith berlapis. Cukup untuk industri di tahap MVP; hindari over-engineering (hexagonal penuh, CQRS, microservices) sampai domain lebih besar.
+Modular monolith berlapis untuk tahap MVP. Hindari over-engineering (hexagonal penuh, CQRS, microservices) sampai domain membutuhkan.
+
+Peta dokumentasi: `docs/README.md`.
 
 ## Prinsip
 
