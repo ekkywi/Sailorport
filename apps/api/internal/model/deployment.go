@@ -34,6 +34,11 @@ type UpdateDeploymentRequest struct {
 	WorkerID     string `json:"worker_id"`
 }
 
+type CatalogVolume struct {
+	Name          string `json:"name"`
+	ContainerPath string `json:"container_path"`
+}
+
 type DeploymentJob struct {
 	Deployment
 	ServiceName    string            `json:"service_name"`
@@ -47,4 +52,5 @@ type DeploymentJob struct {
 	CatalogAppID   string            `json:"-"`
 	CatalogEnv     map[string]string `json:"catalog_env,omitempty"`
 	CatalogCommand []string          `json:"catalog_command,omitempty"`
+	CatalogVolumes []CatalogVolume   `json:"catalog_volumes,omitempty"`
 }

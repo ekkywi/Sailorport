@@ -31,5 +31,11 @@
       "secret": false,
       "default": "postgres"
     }
+  ],
+  "volumes": [
+    {
+      "name": "data",
+      "container_path": "/var/lib/postgresql/data"
+    }
   ]
 }

@@ -193,3 +193,71 @@ func TestRegistry_GetRedisManifest(t *testing.T) {
 		t.Fatal("missing REDIS_PASSWORD secret required")
 	}
 }
+
+func TestValidateVolumes_EmptyOK(t *testing.T) {
+	if err := validateVolumes("postgres", nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateVolumes_DuplicateName(t *testing.T) {
+	err := validateVolumes("postgres", []Volume{
+		{Name: "data", ContainerPath: "/var/lib/postgresql/data"},
+		{Name: "data", ContainerPath: "/other"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "duplicate") {
+		t.Fatalf("expected duplicate error, got %v", err)
+	}
+}
+
+func TestValidateVokumes_PathMustBeAbsolute(t *testing.T) {
+	err := validateVolumes("postgres", []Volume{
+		{Name: "data", ContainerPath: "relative/path"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "absolute") {
+		t.Fatalf("expected absolute error, got %v", err)
+	}
+}
+
+func TestValidateVolumes_RejectsDotDot(t *testing.T) {
+	err := validateVolumes("postgres", []Volume{
+		{Name: "data", ContainerPath: "/var/../etc"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "..") {
+		t.Fatalf("expected '..' error, got %v", err)
+	}
+}
+
+func TestValidateVolumes_OK(t *testing.T) {
+	err := validateVolumes("postgres", []Volume{
+		{Name: "data", ContainerPath: "/var/lib/postgresql/data"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRegistry_GetPostgresHasDataVolume(t *testing.T) {
+	root := findCatalogAppsRoot(t)
+	m, err := NewRegistry(root).Get("postgres")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if len(m.Volumes) != 1 || m.Volumes[0].Name != "data" {
+		t.Fatalf("volumes: %+v", m.Volumes)
+	}
+	if m.Volumes[0].ContainerPath != "/var/lib/postgresql/data" {
+		t.Fatalf("path: %q", m.Volumes[0].ContainerPath)
+	}
+}
+
+func TestRegistry_GetRedisHasDataVolume(t *testing.T) {
+	root := findCatalogAppsRoot(t)
+	m, err := NewRegistry(root).Get("redis")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if len(m.Volumes) != 1 || m.Volumes[0].ContainerPath != "/data" {
+		t.Fatalf("volumes: %+v", m.Volumes)
+	}
+}

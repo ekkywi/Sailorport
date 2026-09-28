@@ -63,7 +63,8 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | Tes unit untuk `Deployments.Redeploy` / `Create` dengan `git_sha` | Sedang | Belum ada `deployment_test.go`; behavior baru divalidasi manual |
 | Tes untuk `git.Sync` end-to-end (clone temp repo) | Rendah | Validasi URL/branch/SHA + unit `safepath` ✅ Pass B; full `Sync` di temp repo masih opsional |
 | Redeploy = rebuild dari SHA, bukan restore container instan | Rendah (by design) | Didokumentasikan di `PROGRESS.md` Step 21; jangan "perbaiki" tanpa diskusi |
-| Private Git repo credentials | Rendah | Belum didukung; hanya public clone URL |
+| Private Git repo credentials | Sedang | Belum; Step 37 kandidat. Hanya public clone URL |
+| Catalog app data hilang saat recreate container | — | ✅ Fixed Step 36 — named volumes from manifest; agent `-v` |
 | Bundle web >500KB (vite warning) | Rendah | Belum perlu code-splitting di skala MVP ini |
 | Webhook: tanpa rate limit pada endpoint publik | Sedang | Pass A sisa. Dedupe delivery ✅ Step 33; rate limit webhook masih terbuka |
 | Webhook deploy tidak mengirim `payload.After` sebagai `git_sha` | Sedang | Pass A. `service/webhook.go:113` — `ack.commit_sha` melaporkan SHA push, tapi deploy pakai tip branch (konsisten keputusan terkunci; bisa beda commit kalau ada push menyusul) |
@@ -118,7 +119,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | 2026-09-28 | **B-H3** PATCH agent deploy/runtime tanpa cek claimer | Wajib `worker_id` = claimer; agent selalu kirim worker id |
 | 2026-09-28 | **C-H1** Portal tidak logout pada 401 mid-session | `apiFetch`: clearToken + `/login` jika request ber-token |
 | 2026-09-28 | **C-M1** Viewer melihat tombol Redeploy | `DeploymentsDialog` prop `canWrite` |
-| 2026-09-28 | **C-M2** Defense-in-depth secret di client state | `catalog/api` redact `webhook_secret` setelah parse |
+| 2026-09-28 | Catalog app data hilang saat recreate container | **Step 36:** manifest `volumes` + claim `catalog_volumes` + agent named `-v`; smoke persist OK |
 
 ---
 

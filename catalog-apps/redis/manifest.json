@@ -21,5 +21,11 @@
     "redis-server",
     "--requirepass",
     "${REDIS_PASSWORD}"
+  ],
+  "volumes": [
+    {
+      "name": "data",
+      "container_path": "/data"
+    }
   ]
 }

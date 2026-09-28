@@ -158,7 +158,23 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 			return fail(fmt.Errorf("catalog_app job has no catalog_env"))
 		}
 
-		cid, err := docker.Run(containerName, image, port, containerPort, env, job.CatalogCommand)
+		var mounts []docker.VolumeMount
+		for _, v := range job.CatalogVolumes {
+			name := strings.TrimSpace(v.Name)
+			path := strings.TrimSpace(v.ContainerPath)
+			if name == "" || path == "" {
+				continue
+			}
+			mounts = append(mounts, docker.VolumeMount{
+				Name:          docker.VolumeName(job.ServiceName, job.EnvironmentSlug, name),
+				ContainerPath: path,
+			})
+		}
+		if len(mounts) == 0 {
+			log.Printf("catalog_app volumes=%v", mounts)
+		}
+
+		cid, err := docker.Run(containerName, image, port, containerPort, env, job.CatalogCommand, mounts)
 		if err != nil {
 			return fail(err)
 		}
@@ -182,7 +198,7 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 		return fail(err)
 	}
 
-	cid, err := docker.Run(containerName, imageTag, port, 8080, nil, nil)
+	cid, err := docker.Run(containerName, imageTag, port, 8080, nil, nil, nil)
 	if err != nil {
 		return fail(err)
 	}

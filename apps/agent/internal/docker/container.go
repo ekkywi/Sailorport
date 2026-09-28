@@ -61,3 +61,10 @@ func Logs(containerName string, tail int) (string, error) {
 	}
 	return string(out), nil
 }
+
+func VolumeName(serviceName, envSlug, logicalName string) string {
+	if envSlug == "" {
+		envSlug = "dev"
+	}
+	return "sailorport-" + serviceName + "-" + envSlug + "-" + logicalName
+}

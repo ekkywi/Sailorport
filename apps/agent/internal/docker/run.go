@@ -8,6 +8,11 @@ import (
 	"github.com/ekkywi/sailorport/apps/agent/internal/safepath"
 )
 
+type VolumeMount struct {
+	Name          string
+	ContainerPath string
+}
+
 func Build(workspace, imageTag, dockerfilePath string) error {
 	rel, err := safepath.Dockerfile(workspace, dockerfilePath)
 	if err != nil {
@@ -35,7 +40,7 @@ func Pull(image string) error {
 	return nil
 }
 
-func Run(containerName, imageTag string, hostPort, containerPort int, env []string, cmdArgs []string) (containerID string, err error) {
+func Run(containerName, imageTag string, hostPort, containerPort int, env []string, cmdArgs []string, volumes []VolumeMount) (containerID string, err error) {
 	if err := Remove(containerName); err != nil {
 		return "", err
 	}
@@ -56,6 +61,17 @@ func Run(containerName, imageTag string, hostPort, containerPort int, env []stri
 			continue
 		}
 		args = append(args, "-e", e)
+	}
+	for _, v := range volumes {
+		name := strings.TrimSpace(v.Name)
+		path := strings.TrimSpace(v.ContainerPath)
+		if name == "" || path == "" {
+			continue
+		}
+		if !strings.HasPrefix(path, "/") || strings.Contains(path, "..") {
+			return "", fmt.Errorf("invalid volume path: %q", path)
+		}
+		args = append(args, "-v", name+":"+path)
 	}
 	args = append(args, imageTag)
 

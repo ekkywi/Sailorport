@@ -246,6 +246,18 @@ func (d *Deployments) attachCatalogEnvForJob(ctx context.Context, job *model.Dep
 		return fmt.Errorf("%w: resolve catalog command: %v", ErrInvalid, err)
 	}
 	job.CatalogCommand = cmd
+
+	if len(m.Volumes) > 0 {
+		vols := make([]model.CatalogVolume, len(m.Volumes))
+		for i, v := range m.Volumes {
+			vols[i] = model.CatalogVolume{
+				Name:          v.Name,
+				ContainerPath: v.ContainerPath,
+			}
+		}
+		job.CatalogVolumes = vols
+	}
+
 	return nil
 }
 

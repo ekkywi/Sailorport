@@ -22,6 +22,11 @@ type APIClient struct {
 	http    *http.Client
 }
 
+type CatalogVolume struct {
+	Name          string `json:"name"`
+	ContainerPath string `json:"container_path"`
+}
+
 type DeploymentJob struct {
 	ID              string            `json:"id"`
 	ServiceID       string            `json:"service_id"`
@@ -40,6 +45,7 @@ type DeploymentJob struct {
 	ContainerPort   int               `json:"container_port"`
 	CatalogEnv      map[string]string `json:"catalog_env,omitempty"`
 	CatalogCommand  []string          `json:"catalog_command,omitempty"`
+	CatalogVolumes  []CatalogVolume   `json:"catalog_volumes,omitempty"`
 }
 
 type UpdateDeploymentRequest struct {

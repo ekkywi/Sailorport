@@ -22,9 +22,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 35** + **Pass B/C** (2026-09-28) Critical/High clear; docs map/tone update.
+**Step terakhir selesai:** **Step 36** — catalog app volume persist (2026-09-28).
 
-**Step berikutnya:** opsional — backlog `docs/ROADMAP.md` / Known debt Medium di `docs/QC.md`.
+**Step berikutnya:** **Step 37** — Private Git credentials (setelah Volume persist).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat

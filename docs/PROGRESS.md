@@ -5,10 +5,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 35 + Pass B/C (agent + portal harden)
+- **Step selesai:** **36** — Volume persist catalog apps (36a–36d)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** opsional — backlog `docs/ROADMAP.md` atau Known debt Medium di `docs/QC.md`
-- **Terakhir dikerjakan:** 2026-09-28 — dokumentasi (peta baca + tone publik); sebelumnya Pass C
+- **Step berikutnya:** **37** — Private Git (credentials) — dikunci setelah Volume persist
+- **Terakhir dikerjakan:** 2026-09-28 — Step 36 smoke: container baru + volume reused + data `persist_probe` tetap
 - **Catatan maintainer:** local / primary workstation
 
 ## Implementation checklist
@@ -136,6 +136,10 @@
 - [x] Step 35a — Config `CORS_ORIGINS` + default dev
 - [x] Step 35b — Middleware allowlist + methods termasuk PATCH
 - [x] Step 35c — CORS tests + docs/SETUP/QC
+- [x] Step 36a — Manifest `volumes` + validate + Postgres/Redis manifests
+- [x] Step 36b — Volumes on claim job (API → agent payload)
+- [x] Step 36c — Agent `docker.Run` `-v` named volumes
+- [x] Step 36d — Tests smoke + docs (persist across redeploy)
 
 ## Yang sudah jalan
 
@@ -1216,6 +1220,27 @@ curl -sS -D - -o /dev/null -X OPTIONS http://localhost:8080/api/v1/users/x \
   -H "Access-Control-Request-Method: PATCH"
 # Harapan: 204, Allow-Origin, Allow-Methods mengandung PATCH
 ```
+
+### Step 36 — Volume persist (catalog apps) ✅
+
+Named Docker volumes dari **manifest** (generik). Redeploy/recreate container → data tetap. **Private Git = Step 37.**
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 36a Manifest + validate | ✅ | `Volume` + `validateVolumes`; postgres/redis manifests |
+| 36b Claim payload | ✅ | `catalog_volumes` pada `DeploymentJob` |
+| 36c Agent `-v` | ✅ | `VolumeName` + `docker.Run` mounts |
+| 36d Smoke + docs | ✅ | Deploy → INSERT → deploy ulang → SELECT masih ada; volume `CreatedAt` sama |
+
+**Smoke 36d (2026-09-28):** service `postgres` / env `dev`
+
+- Mount: `volume sailorport-postgres-dev-data -> /var/lib/postgresql/data`
+- Setelah deploy baru: **container id berubah**, **volume CreatedAt sama** (`volume_reused=yes`)
+- `SELECT * FROM persist_probe` → `1 | before-redeploy`
+
+Catatan: tombol **Redeploy** portal butuh `git_sha` (jalur Git). Untuk catalog app, recreate = **Deploy** lagi ke env yang sama (agent `rm` container + `run` dengan volume yang sama).
+
+---
 
 ### Checkpoint — Product vision (2026-08-20)
 

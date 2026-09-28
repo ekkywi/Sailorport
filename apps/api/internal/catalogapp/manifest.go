@@ -22,6 +22,11 @@ type Version struct {
 	Default bool   `json:"default,omitempty"`
 }
 
+type Volume struct {
+	Name          string `json:"name"`
+	ContainerPath string `json:"container_path"`
+}
+
 type Manifest struct {
 	ID            string     `json:"id"`
 	Name          string     `json:"name"`
@@ -32,6 +37,7 @@ type Manifest struct {
 	Tags          []string   `json:"tags,omitempty"`
 	Env           []EnvField `json:"env,omitempty"`
 	Command       []string   `json:"command,omitempty"`
+	Volumes       []Volume   `json:"volumes,omitempty"`
 }
 
 func validateEnvFields(appID string, fields []EnvField) error {
@@ -163,6 +169,44 @@ func validateCommand(appID string, env []EnvField, command []string) error {
 	return nil
 }
 
+func validateVolumes(appID string, volumes []Volume) error {
+	if len(volumes) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(volumes))
+	for i, v := range volumes {
+		name := strings.TrimSpace(v.Name)
+		path := strings.TrimSpace(v.ContainerPath)
+		if name == "" {
+			return fmt.Errorf("catalog app %q: volumes[%d]: name is required", appID, i)
+		}
+		if path == "" {
+			return fmt.Errorf("catalog app %q: volumes[%d]: container_path is required", appID, i)
+		}
+		if _, dup := seen[name]; dup {
+			return fmt.Errorf("catalog app %q: duplicate volume name %q", appID, name)
+		}
+		seen[name] = struct{}{}
+		
+		for j, r := range name {
+			ok := (r >= 'a' && r <= 'z') ||
+				(r >= '0' && r <= '9' && j > 0) ||
+				(r == '_' && j > 0)
+			if !ok {
+				return fmt.Errorf("catalog app %q: invalid volume name %q", appID, name)
+			}
+		}
+		
+		if !strings.HasPrefix(path, "/") {
+			return fmt.Errorf("catalog app %q: volumes[%d]: container_path must be absolute", appID, i)
+		}
+		if strings.Contains(path, "..") {
+			return fmt.Errorf("catalog app %q: volumes[%d]: container_path must not contain '..", appID, i)
+		}
+	}
+	return nil
+}
+
 type Registry struct {
 	root string
 }
@@ -237,6 +281,14 @@ func (r *Registry) Get(id string) (Manifest, error) {
 		m.Command[i] = strings.TrimSpace(m.Command[i])
 	}
 	if err := validateCommand(id, m.Env, m.Command); err != nil {
+		return Manifest{}, err
+	}
+
+	for i := range m.Volumes {
+		m.Volumes[i].Name = strings.TrimSpace(m.Volumes[i].Name)
+		m.Volumes[i].ContainerPath = strings.TrimSpace(m.Volumes[i].ContainerPath)
+	}
+	if err := validateVolumes(id, m.Volumes); err != nil {
 		return Manifest{}, err
 	}
 
