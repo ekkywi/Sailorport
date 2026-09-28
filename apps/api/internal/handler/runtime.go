@@ -146,6 +146,12 @@ func writeRuntimeError(w http.ResponseWriter, op string, err error) {
 		writeError(w, http.StatusBadRequest, msg)
 	case errors.Is(err, service.ErrNotFound):
 		writeError(w, http.StatusNotFound, "Not found")
+	case errors.Is(err, service.ErrConflict):
+		msg := err.Error()
+		if i := strings.Index(msg, ": "); i >= 0 {
+			msg = msg[i+2:]
+		}
+		writeError(w, http.StatusConflict, msg)
 	case errors.Is(err, service.ErrForbidden):
 		msg := err.Error()
 		if i := strings.Index(msg, ": "); i >= 0 {

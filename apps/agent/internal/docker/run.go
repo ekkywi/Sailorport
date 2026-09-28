@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/ekkywi/sailorport/apps/agent/internal/safepath"
 )
 
 func Build(workspace, imageTag, dockerfilePath string) error {
-	dockerfilePath = strings.TrimSpace(dockerfilePath)
-	if dockerfilePath == "" {
-		dockerfilePath = "Dockerfile"
+	rel, err := safepath.Dockerfile(workspace, dockerfilePath)
+	if err != nil {
+		return fmt.Errorf("build: %w", err)
 	}
 
-	cmd := exec.Command("docker", "build", "-t", imageTag, "-f", dockerfilePath, ".")
+	cmd := exec.Command("docker", "build", "-t", imageTag, "-f", rel, ".")
 	cmd.Dir = workspace
 	out, err := cmd.CombinedOutput()
 	if err != nil {

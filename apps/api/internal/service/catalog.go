@@ -203,6 +203,9 @@ func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest, ac
 	if err != nil {
 		return model.Service{}, err
 	}
+	if err := c.sanitizeCreateWorkspacePath(&req); err != nil {
+		return model.Service{}, err
+	}
 
 	var envEntries []model.CatalogEnv
 	if req.SourceType == "catalog_app" {
@@ -240,6 +243,37 @@ func (c *Catalog) Create(ctx context.Context, req model.CreateServiceRequest, ac
 
 	c.recordService(ctx, actorID, actorEmail, "service.create", svc)
 	return svc, nil
+}
+
+// sanitizeCreateWorkspacePath clears client-supplied paths for non-scaffold
+// sources, and requires scaffold paths (if set) to stay under workspaceDir.
+func (c *Catalog) sanitizeCreateWorkspacePath(req *model.CreateServiceRequest) error {
+	if req.SourceType != "scaffold" {
+		req.WorkspacePath = ""
+		return nil
+	}
+	path := strings.TrimSpace(req.WorkspacePath)
+	if path == "" {
+		req.WorkspacePath = ""
+		return nil
+	}
+	if strings.TrimSpace(c.workspaceDir) == "" {
+		return fmt.Errorf("%w: workspace root not configured", ErrInvalid)
+	}
+	cleanRoot, err := filepath.Abs(filepath.Clean(c.workspaceDir))
+	if err != nil {
+		return fmt.Errorf("resolve workspace root: %w", err)
+	}
+	cleanPath, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return fmt.Errorf("resolve workspace_path: %w", err)
+	}
+	sep := string(filepath.Separator)
+	if cleanPath != cleanRoot && !strings.HasPrefix(cleanPath+sep, cleanRoot+sep) {
+		return fmt.Errorf("%w: workspace_path escapes workspace root", ErrInvalid)
+	}
+	req.WorkspacePath = cleanPath
+	return nil
 }
 
 func (c *Catalog) Update(ctx context.Context, id string, req model.UpdateServiceRequest, actorID, actorEmail, role string) (model.Service, error) {
@@ -461,6 +495,9 @@ func normalizeCreate(req model.CreateServiceRequest) (model.CreateServiceRequest
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
 	}
+	if !namePattern.MatchString(req.Name) {
+		return req, fmt.Errorf("%w: name must be lowercase kebab-case (e.g. payments-api)", ErrInvalid)
+	}
 	if err := validateSourceFields(req.SourceType, req.RepoURL, req.CatalogAppID); err != nil {
 		return req, err
 	}
@@ -485,6 +522,9 @@ func normalizeUpdate(req model.UpdateServiceRequest, existing model.Service) (mo
 
 	if req.Name == "" {
 		return req, fmt.Errorf("%w: name is required", ErrInvalid)
+	}
+	if !namePattern.MatchString(req.Name) {
+		return req, fmt.Errorf("%w: name must be lowercase kebab-case (e.g. payments-api)", ErrInvalid)
 	}
 
 	if req.SourceType == "" {

@@ -22,6 +22,7 @@ type UpdateRuntimeJobRequest struct {
 	Status       string `json:"status"`
 	ErrorMessage string `json:"error_message"`
 	Output       string `json:"output"`
+	WorkerID     string `json:"worker_id"`
 }
 
 type RuntimeActionRequest struct {

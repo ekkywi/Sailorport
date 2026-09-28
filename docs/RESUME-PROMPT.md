@@ -18,9 +18,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 35c** — CORS allowlist + PATCH methods; Step 35 complete.
+**Step terakhir selesai:** **Step 35** + **Pass B/C** (2026-09-28) Critical/High clear.
 
-**Step berikutnya:** opsional — Pass B/C QC, backlog `docs/ROADMAP.md`.
+**Step berikutnya:** opsional — backlog `docs/ROADMAP.md` / Known debt.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat
@@ -41,11 +41,12 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 - Step 33 webhook delivery dedupe (`webhook_deliveries` + unit tests replay)
 - Step 34 login rate limit (in-memory per IP, 429)
 - Step 35 CORS (`CORS_ORIGINS` allowlist + PATCH in Allow-Methods)
+- **Pass B** (2026-09-28): agent path containment, git/docker arg harden, PATCH `worker_id` = claimer
+- **Pass C** (2026-09-28): portal 401 → logout; Redeploy `canWrite`; client redact `webhook_secret`
 - Migrasi melalui `00024_create_webhook_deliveries.sql` (app_settings tetap `00023`)
 
 **Yang belum / opsional:**
-- Pass B/C production review
-- Backlog ide lain: `docs/ROADMAP.md`
+- Backlog / Known debt Medium: `docs/ROADMAP.md`, `docs/QC.md`
 
 **Auth / setup (ingat):**
 - Instalasi kosong → paksa `/setup` → admin pertama

@@ -1139,6 +1139,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         serviceName={historyTarget?.name ?? ""}
         sourceType={historyTarget?.source_type}
         containerPort={historyTarget?.container_port}
+        canWrite={canWrite}
         onOpenChange={(open) => {
           if (!open) setHistoryTarget(null);
         }}

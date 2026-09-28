@@ -1,12 +1,22 @@
 import { apiFetch, readErrorMessage } from "../../lib/http";
 import type { CatalogApp, CreateServiceInput, Service, UpdateServiceInput } from "./types";
 
+/** Pass C (C-M2): never keep webhook_secret in client state even if API mis-redacts. */
+function redactService(svc: Service): Service {
+  return { ...svc, webhook_secret: "" };
+}
+
+function redactServices(list: Service[]): Service[] {
+  return list.map(redactService);
+}
+
 export async function listServices(): Promise<Service[]> {
   const res = await apiFetch("/api/v1/services");
   if (!res.ok) {
     throw new Error(await readErrorMessage(res, `Failed to list services: ${res.status}`));
   }
-  return res.json();
+  const data = (await res.json()) as Service[];
+  return redactServices(data);
 }
 
 export async function createService(input: CreateServiceInput): Promise<Service> {
@@ -17,7 +27,7 @@ export async function createService(input: CreateServiceInput): Promise<Service>
   if (!res.ok) {
     throw new Error(await readErrorMessage(res, `Failed to create service: ${res.status}`));
   }
-  return res.json();
+  return redactService((await res.json()) as Service);
 }
 
 export async function updateService(
@@ -31,7 +41,7 @@ export async function updateService(
   if (!res.ok) {
     throw new Error(await readErrorMessage(res, `Failed to update service: ${res.status}`));
   }
-  return res.json();
+  return redactService((await res.json()) as Service);
 }
 
 export async function deleteService(id: string): Promise<void> {
@@ -54,7 +64,7 @@ export async function transferService(
   if (!res.ok) {
     throw new Error(await readErrorMessage(res, `Failed to transfer: ${res.status}`));
   }
-  return res.json();
+  return redactService((await res.json()) as Service);
 }
 
 export async function listCatalogApps(): Promise<CatalogApp[]> {

@@ -198,6 +198,22 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 	req.Status = strings.TrimSpace(req.Status)
 	req.ErrorMessage = strings.TrimSpace(req.ErrorMessage)
 	req.Output = strings.TrimSpace(req.Output)
+	req.WorkerID = strings.TrimSpace(req.WorkerID)
+
+	if req.WorkerID == "" {
+		return model.RuntimeJob{}, fmt.Errorf("%w: worker_id is required", ErrInvalid)
+	}
+
+	existing, err := r.store.Get(ctx, id)
+	if err != nil {
+		return model.RuntimeJob{}, mapRepoErr(err)
+	}
+	if existing.WorkerID == nil || strings.TrimSpace(*existing.WorkerID) == "" {
+		return model.RuntimeJob{}, fmt.Errorf("%w: runtime job is not claimed", ErrConflict)
+	}
+	if strings.TrimSpace(*existing.WorkerID) != req.WorkerID {
+		return model.RuntimeJob{}, fmt.Errorf("%w: worker_id does not match claimer", ErrForbidden)
+	}
 
 	if req.Status != "" {
 		switch req.Status {
@@ -207,31 +223,33 @@ func (r *Runtime) UpdateFromAgent(ctx context.Context, id string, req model.Upda
 		}
 	}
 
-	existing, err := r.store.Update(ctx, id, req)
+	updated, err := r.store.Update(ctx, id, req)
 	if err != nil {
 		return model.RuntimeJob{}, mapRepoErr(err)
 	}
 
 	if req.Status == "done" {
 		deployStatus := ""
-		switch existing.Action {
+		switch updated.Action {
 		case "stop":
 			deployStatus = "stopped"
 		case "start":
 			deployStatus = "running"
 		case "remove", "logs":
 		}
-		if deployStatus != "" && existing.DeploymentID != "" {
-			_, err := r.deployments.Update(ctx, existing.DeploymentID, model.UpdateDeploymentRequest{
-				Status: deployStatus,
+		if deployStatus != "" && updated.DeploymentID != "" {
+			_, err := r.deployments.Update(ctx, updated.DeploymentID, model.UpdateDeploymentRequest{
+				Status:   deployStatus,
+				WorkerID: req.WorkerID,
 			})
-			if err != nil && !errors.Is(err, ErrNotFound) {
+			if err != nil && !errors.Is(err, ErrNotFound) && !errors.Is(err, ErrForbidden) && !errors.Is(err, ErrConflict) {
 				return model.RuntimeJob{}, err
 			}
+			// Forbidden/Conflict: deployment claimed by another worker — runtime job still done.
 		}
 	}
 
-	return existing, nil
+	return updated, nil
 }
 
 func (r *Runtime) ValidateDelete(ctx context.Context, svc model.Service) error {

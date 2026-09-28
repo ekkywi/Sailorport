@@ -27,7 +27,7 @@ cd apps/web && npm run build   # tsc -b && vite build
 
 Semua harus **exit 0** sebelum lanjut step baru. Kalau salah satu merah, itu blocker — jangan lanjut fitur baru dulu.
 
-**Terakhir dijalankan:** 2026-08-28 — API ✅ (build+vet+test), Agent ✅ (build+vet+test), Web ✅ (tsc+vite build).
+**Terakhir dijalankan:** 2026-09-28 — API ✅, Agent ✅, Web ✅. Pass B + Pass C Critical/High fixed.
 
 ---
 
@@ -60,27 +60,30 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | Item | Dampak | Catatan |
 |------|--------|---------|
 | Tes unit untuk `Deployments.Redeploy` / `Create` dengan `git_sha` | Sedang | Belum ada `deployment_test.go`; behavior baru divalidasi manual |
-| Tes untuk `git.Sync` + `checkoutSHA` (agent) | Sedang | Butuh repo git lokal di test; belum ada `sync_test.go` |
+| Tes untuk `git.Sync` end-to-end (clone temp repo) | Rendah | Validasi URL/branch/SHA + unit `safepath` ✅ Pass B; full `Sync` di temp repo masih opsional |
 | Redeploy = rebuild dari SHA, bukan restore container instan | Rendah (by design) | Didokumentasikan di `PROGRESS.md` Step 21; jangan "perbaiki" tanpa diskusi |
 | Private Git repo credentials | Rendah | Belum didukung; hanya public clone URL |
 | Bundle web >500KB (vite warning) | Rendah | Belum perlu code-splitting di skala MVP ini |
 | Webhook: tanpa rate limit pada endpoint publik | Sedang | Pass A sisa. Dedupe delivery ✅ Step 33; rate limit webhook masih terbuka |
 | Webhook deploy tidak mengirim `payload.After` sebagai `git_sha` | Sedang | Pass A. `service/webhook.go:113` — `ack.commit_sha` melaporkan SHA push, tapi deploy pakai tip branch (konsisten keputusan terkunci; bisa beda commit kalau ada push menyusul) |
 | `webhook_secret` tidak bisa dikosongkan lewat API | Sedang | Pass A. `service/catalog.go:339` — empty = pertahankan yang lama; perlu sentinel eksplisit untuk revoke |
-| Claim job: `worker_id` self-reported + satu shared agent token | Sedang | Pass A. `store/deployment.go:112` — agen mana pun bisa kirim `worker_id` node lain dan mencuri job bertarget. `FOR UPDATE SKIP LOCKED` sendiri sudah benar (tidak ada double-claim) |
+| Claim job: `worker_id` self-reported + satu shared agent token | Sedang | Pass A/B. Claim masih self-reported. **Pass B:** PATCH deploy/runtime wajib `worker_id` = claimer (B-H3). Sisa: per-agent identity / token binding |
 | `DeploymentsStore.Update` pakai `COALESCE(NULLIF($n,''))` | Sedang | Pass A. `store/deployment.go:142` — `error_message` tidak bisa dikosongkan setelah retry sukses; transisi status tidak dijaga (`running` → `pending` diterima) |
 | CORS: `Access-Control-Allow-Methods` tanpa `PATCH`, origin hardcode | — | ✅ Fixed Step 35 — `CORS_ORIGINS` allowlist; methods include PATCH; empty list = no ACAO (proxy OK) |
 | Login tanpa rate limit / lockout | — | ✅ Fixed Step 34 — 5 failures / minute per IP → 429; reset on success |
 | `handler/scaffold.go` mengembalikan `model.Service` tanpa `PublicService` | Rendah | Pass A. `handler/scaffold.go:47` — aman sekarang (scaffold selalu menulis secret `""`), tapi satu-satunya jalur serialisasi service yang tidak lewat redaksi |
 | `webhook_secret` tanpa `omitempty` | Rendah | Pass A. `model/service.go:20` — response portal selalu memuat `"webhook_secret":""` (noise kontrak, bukan kebocoran) |
 | Batas body webhook 1 MiB | Rendah | Pass A. `handler/webhook.go:13` — push dengan banyak commit bisa dibalas 413 dan deploy terlewat senyap |
-| `UpdateDeploymentRequest.WorkerID` diabaikan store | Rendah | Pass A. `service/deployment.go:156` — di-trim lalu tidak pernah dipakai `store.Update` |
+| Agent HTTP client timeout 10s pada PATCH setelah build panjang | Rendah | Pass B Medium — risiko status macet `building` meski container sudah jalan |
 | JWT tanpa validasi `iss` / `aud` | Rendah | Pass A. `internal/auth/jwt.go:32` — aman karena `SigningMethodHS256` dipaksa dan secret tunggal |
 | Compose: password Postgres default + port 5433 dipublish | Rendah | Pass A. `deploy/compose/docker-compose.yml:6` — dev convenience; jangan dipakai apa adanya di host publik |
 | Portal masih menampilkan form `/register` padahal register sudah tertutup | — | ✅ Fixed Step 31f — Sign up / `/register` hanya jika `registration_open`; tertutup → redirect login |
 | `model.RegisterRequest.Role` diabaikan | Rendah | By design Step 31d — self-register selalu `developer`; field legacy boleh ada |
 | Dua register serentak di instalasi kosong bisa jadi dua admin | — | ✅ Mitigated Step 30 — bootstrap lewat `/setup/admin`; race tetap ada di Count+Insert (rendah) |
-| Portal tidak auto-logout saat 401 di tengah sesi | Rendah | Efek fix A-H3. Token user yang di-disable langsung ditolak API, tapi portal baru menghapus token saat `me()` gagal (refresh / buka ulang); interceptor 401 global = Pass C |
+| Portal tidak auto-logout saat 401 di tengah sesi | — | ✅ Fixed Pass C — `apiFetch` clearToken + redirect `/login` on authenticated 401 |
+| JWT di `localStorage` (risiko XSS) | Rendah | Pass C Low — pola SPA MVP; httpOnly cookie = redesign |
+| Redeploy tanpa dialog konfirmasi | Rendah | Pass C Low — UX; API tetap ACL writer |
+| Input webhook secret `type="text"` saat generate | Rendah | Pass C Low — sengaja agar Copy mudah |
 | Satu query user tambahan per request ber-JWT | Rendah (by design) | Efek fix A-H3. Alternatif `token_version`/cache sengaja tidak dipakai supaya disable & ganti role langsung berlaku |
 | Transfer owner: native `<select>` + `GET /users/directory` tanpa search/limit | Rendah (MVP) | Step 29e. Cocok puluhan user; ratusan+ → combobox searchable + `?q=`/`limit` di directory. Estetika option list native terbatas |
 | `GET /api/v1/deployments` global belum difilter by owner | — | ✅ Fixed Step 32 — admin `List`; non-admin `ListByOwner` |
@@ -108,13 +111,20 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | 2026-09-03 | Tidak bisa update `catalog_env` service existing | Step 26: PUT merge + portal `CatalogEnvFields`; secret kosong = keep; redeploy setelah ubah |
 | 2026-09-04 | Catalog app hanya `-e`; Redis butuh `--requirepass` | Step 27: manifest `command` + claim `catalog_command` + agent argv setelah image; Redis manifest |
 | 2026-09-08 | Portal workers read-only; stale workers tetap targetable | Step 28: admin labels/decommission (`draining`), deploy gate, Workers UI |
+| 2026-09-28 | **B-C1/C2** Path escape: `Join(WorkspaceDir, serviceName)` + `RemoveAll`; scaffold `workspace_path` arbitrer | Agent `safepath`; API kebab-case name + sanitize workspace_path |
+| 2026-09-28 | **B-H1** `docker build -f` path bisa keluar context | `safepath.Dockerfile` — relative, no `..` |
+| 2026-09-28 | **B-H2** git argv `repoURL`/`branch`/`sha` bisa diawali `-` | Validasi + `--` separator; SHA hex 7–40 |
+| 2026-09-28 | **B-H3** PATCH agent deploy/runtime tanpa cek claimer | Wajib `worker_id` = claimer; agent selalu kirim worker id |
+| 2026-09-28 | **C-H1** Portal tidak logout pada 401 mid-session | `apiFetch`: clearToken + `/login` jika request ber-token |
+| 2026-09-28 | **C-M1** Viewer melihat tombol Redeploy | `DeploymentsDialog` prop `canWrite` |
+| 2026-09-28 | **C-M2** Defense-in-depth secret di client state | `catalog/api` redact `webhook_secret` setelah parse |
 
 ---
 
 ## Hasil Production review — Pass A (2026-08-26)
 
 Scope: API auth, webhook, deploy, secret. Diff `ce88e2b^..HEAD` + uncommitted (Step 19–21). Evidence: build/vet/test API hijau.
-Status: **Critical clear, High clear** — A-C1, A-C2, A-H1, A-H2, A-H4, A-H3 semua difix 2026-08-26 (lihat tabel **Fixed**). Sisa Pass A hanya Medium/Low di **Known debt**. Pass B (agent) dan Pass C (web) belum pernah dijalankan.
+Status: **Critical clear, High clear** — A-C1, A-C2, A-H1, A-H2, A-H4, A-H3 semua difix 2026-08-26 (lihat tabel **Fixed**). Sisa Pass A hanya Medium/Low di **Known debt**. Pass B ✅ / Pass C ✅ 2026-09-28.
 
 ### Blocker sebelum expose publik (Critical)
 
@@ -145,6 +155,66 @@ Catatan pilihan desain A-H3 (jangan diubah tanpa diskusi): otorisasi dibaca dari
 - Redaksi `webhook_secret` konsisten hanya di handler (`handler/service.go:29,50,59,80`); `Catalog.List` tetap membawa secret asli untuk HMAC — keputusan terkunci dipatuhi dan dikunci tes.
 - Semua SQL pakai placeholder `$1…`, tidak ada concat input user; `ClaimNext` bebas double-claim.
 - Bug `GET /deployments/{id}` di tabel **Fixed** terverifikasi beres di working tree.
+
+---
+
+## Hasil Production review — Pass B (2026-09-28)
+
+Scope: agent git sync, docker build/run, claim/update job. Evidence: api + agent + web automated checks hijau.
+Status: **Critical clear, High clear** — B-C1, B-C2, B-H1, B-H2, B-H3 difix 2026-09-28 (lihat **Fixed**). Sisa Medium: claim masih self-reported + shared token (Known debt); HTTP timeout 10s.
+
+### Critical
+
+| # | Lokasi | Masalah | Status |
+|---|--------|---------|--------|
+| B-C1 | `agent/resolveWorkDir` + `git.Sync` `RemoveAll` | `filepath.Join(WorkspaceDir, serviceName)` bisa escape (`..`, separator); catalog name tidak kebab-case | ✅ Fixed — `safepath.JoinUnder`; API `namePattern` di create/update |
+| B-C2 | `agent` scaffold `workspace_path` | Path dari job dipakai apa adanya → `docker build` di luar workspace | ✅ Fixed — `safepath.UnderRoot`; API `sanitizeCreateWorkspacePath` |
+
+### High
+
+| # | Lokasi | Masalah | Status |
+|---|--------|---------|--------|
+| B-H1 | `docker.Build` `-f` | Absolute / `../` bisa baca file di luar context | ✅ Fixed — `safepath.Dockerfile` |
+| B-H2 | `git.Sync` argv | `repoURL` / `branch` / `sha` diawali `-` jadi flag | ✅ Fixed — validasi + `--`; SHA hex |
+| B-H3 | PATCH agent deploy/runtime | Update by id tanpa cek claimer (shared token) | ✅ Fixed — wajib `worker_id` = claimer; agent mengirim worker id. **Sisa:** claim self-reported (Known debt) |
+
+### Yang sudah solid
+
+- `exec.Command` argv terpisah (bukan shell) untuk git/docker.
+- Redeploy: checkout SHA + bandingkan `HeadSHA`.
+- Claim SQL `FOR UPDATE SKIP LOCKED`.
+- Runtime logs dipotong 64 KiB.
+
+---
+
+## Hasil Production review — Pass C (2026-09-28)
+
+Scope: portal Bearer auth, webhook secret UI, redeploy. Evidence: web build hijau (+ api/agent dari Pass B).
+Status: **Critical clear, High clear** — C-H1, C-M1, C-M2 difix 2026-09-28. Sisa Low: JWT localStorage, redeploy tanpa confirm, secret input type=text.
+
+### Critical
+
+Tidak ada.
+
+### High
+
+| # | Lokasi | Masalah | Status |
+|---|--------|---------|--------|
+| C-H1 | `web/src/lib/http.ts` | 401 mid-session tidak clear token / logout | ✅ Fixed — `apiFetch` clearToken + redirect `/login` (skip login/register/setup paths) |
+
+### Medium
+
+| # | Lokasi | Masalah | Status |
+|---|--------|---------|--------|
+| C-M1 | `DeploymentsDialog` | Viewer melihat Redeploy (API 403) | ✅ Fixed — prop `canWrite` |
+| C-M2 | `catalog/api.ts` | Secret bisa masuk state jika API mis-redact | ✅ Fixed — `redactService` setelah parse |
+
+### Yang sudah solid
+
+- Form edit: `webhook_secret: ""` + `webhook_secret_set`; generate/copy hanya secret baru.
+- Redeploy: `POST /deployments/{id}/redeploy` (bukan PATCH status).
+- SessionGate + `me()`; register/setup gated; admin routes `isAdmin`.
+- Catalog env secrets: `type=password`, kosong = keep.
 
 ---
 

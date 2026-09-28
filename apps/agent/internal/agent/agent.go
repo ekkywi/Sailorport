@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/ekkywi/sailorport/apps/agent/internal/config"
 	"github.com/ekkywi/sailorport/apps/agent/internal/docker"
 	"github.com/ekkywi/sailorport/apps/agent/internal/git"
+	"github.com/ekkywi/sailorport/apps/agent/internal/safepath"
 )
 
 type Agent struct {
@@ -110,16 +110,25 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 
 	log.Printf("claimed job id=%s service=%s env=%s path=%s", job.ID, job.ServiceName, job.EnvironmentSlug, job.WorkspacePath)
 
-	_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{Status: "building"})
+	fail := func(err error) error {
+		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+			Status: "failed", ErrorMessage: err.Error(), WorkerID: workerID,
+		})
+		return err
+	}
 
+	_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
+		Status: "building", WorkerID: workerID,
+	})
+
+	if len(job.ID) < 8 {
+		return fail(fmt.Errorf("deployment id too short"))
+	}
 	imageTag := fmt.Sprintf("sailorport/%s:%s", job.ServiceName, job.ID[:8])
 	containerName := docker.ContainerName(job.ServiceName, job.EnvironmentSlug)
 	port, err := docker.AllocateHostPort(containerName, a.cfg.PortBase, a.cfg.PortCount)
 	if err != nil {
-		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
-			Status: "failed", ErrorMessage: err.Error(),
-		})
-		return err
+		return fail(err)
 	}
 	log.Printf("host port=%d container=%s", port, containerName)
 
@@ -131,19 +140,12 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 	if source == "catalog_app" {
 		image := strings.TrimSpace(job.Image)
 		if image == "" {
-			err := fmt.Errorf("catalog_app job has empty image")
-			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
-				Status: "failed", ErrorMessage: err.Error(),
-			})
-			return err
+			return fail(fmt.Errorf("catalog_app job has empty image"))
 		}
 
 		log.Printf("catalog_app pull image=%s container_port=%d", image, job.ContainerPort)
 		if err := docker.Pull(image); err != nil {
-			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
-				Status: "failed", ErrorMessage: err.Error(),
-			})
-			return err
+			return fail(err)
 		}
 
 		containerPort := job.ContainerPort
@@ -153,19 +155,12 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 
 		env := catalogEnvSlice(job.CatalogEnv)
 		if len(env) == 0 {
-			err := fmt.Errorf("catalog_app job has no catalog_env")
-			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
-				Status: "failed", ErrorMessage: err.Error(),
-			})
-			return err
+			return fail(fmt.Errorf("catalog_app job has no catalog_env"))
 		}
 
 		cid, err := docker.Run(containerName, image, port, containerPort, env, job.CatalogCommand)
 		if err != nil {
-			_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
-				Status: "failed", ErrorMessage: err.Error(),
-			})
-			return err
+			return fail(err)
 		}
 
 		return a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
@@ -174,30 +169,22 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 			GitSHA:      "",
 			ContainerID: cid,
 			Port:        &port,
+			WorkerID:    workerID,
 		})
 	}
 
 	workDir, gitSHA, err := a.resolveWorkDir(job)
 	if err != nil {
-		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
-			Status: "failed", ErrorMessage: err.Error(),
-		})
-		return err
+		return fail(err)
 	}
 	log.Printf("work dir=%s source=%s git_sha=%s", workDir, job.SourceType, gitSHA)
 	if err := docker.Build(workDir, imageTag, job.DockerfilePath); err != nil {
-		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
-			Status: "failed", ErrorMessage: err.Error(),
-		})
-		return err
+		return fail(err)
 	}
 
 	cid, err := docker.Run(containerName, imageTag, port, 8080, nil, nil)
 	if err != nil {
-		_ = a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
-			Status: "failed", ErrorMessage: err.Error(),
-		})
-		return err
+		return fail(err)
 	}
 
 	return a.client.UpdateDeployment(job.ID, client.UpdateDeploymentRequest{
@@ -206,6 +193,7 @@ func (a *Agent) handleJob(ctx context.Context, workerID string) error {
 		GitSHA:      gitSHA,
 		ContainerID: cid,
 		Port:        &port,
+		WorkerID:    workerID,
 	})
 }
 
@@ -220,12 +208,19 @@ func (a *Agent) resolveWorkDir(job *client.DeploymentJob) (workDir string, gitSH
 		if path == "" {
 			return "", "", fmt.Errorf("scaffold service has empty workspace_path")
 		}
-		return path, "", nil
+		safe, err := safepath.UnderRoot(a.cfg.WorkspaceDir, path)
+		if err != nil {
+			return "", "", fmt.Errorf("workspace_path: %w", err)
+		}
+		return safe, "", nil
 	case "git":
 		if strings.TrimSpace(job.RepoURL) == "" {
 			return "", "", fmt.Errorf("git service has empty repo_url")
 		}
-		dir := filepath.Join(a.cfg.WorkspaceDir, job.ServiceName)
+		dir, err := safepath.JoinUnder(a.cfg.WorkspaceDir, job.ServiceName)
+		if err != nil {
+			return "", "", fmt.Errorf("service workspace: %w", err)
+		}
 		branch := strings.TrimSpace(job.Branch)
 		if branch == "" {
 			branch = "main"
@@ -280,8 +275,9 @@ func (a *Agent) handleRuntime(workerID string) error {
 			text = text[len(text)-maxLogBytes:]
 		}
 		return a.client.UpdateRuntime(job.ID, client.UpdateRuntimeRequest{
-			Status: "done",
-			Output: text,
+			Status:   "done",
+			Output:   text,
+			WorkerID: workerID,
 		})
 	default:
 		runErr = fmt.Errorf("unknown action %q", job.Action)
@@ -289,9 +285,11 @@ func (a *Agent) handleRuntime(workerID string) error {
 
 	if runErr != nil {
 		_ = a.client.UpdateRuntime(job.ID, client.UpdateRuntimeRequest{
-			Status: "failed", ErrorMessage: runErr.Error(),
+			Status: "failed", ErrorMessage: runErr.Error(), WorkerID: workerID,
 		})
 		return runErr
 	}
-	return a.client.UpdateRuntime(job.ID, client.UpdateRuntimeRequest{Status: "done"})
+	return a.client.UpdateRuntime(job.ID, client.UpdateRuntimeRequest{
+		Status: "done", WorkerID: workerID,
+	})
 }

@@ -262,6 +262,21 @@ func (d *Deployments) Update(ctx context.Context, id string, req model.UpdateDep
 	req.ErrorMessage = strings.TrimSpace(req.ErrorMessage)
 	req.WorkerID = strings.TrimSpace(req.WorkerID)
 
+	if req.WorkerID == "" {
+		return model.Deployment{}, fmt.Errorf("%w: worker_id is required", ErrInvalid)
+	}
+
+	existing, err := d.store.Get(ctx, id)
+	if err != nil {
+		return model.Deployment{}, mapRepoErr(err)
+	}
+	if existing.WorkerID == nil || strings.TrimSpace(*existing.WorkerID) == "" {
+		return model.Deployment{}, fmt.Errorf("%w: deployment is not claimed", ErrConflict)
+	}
+	if strings.TrimSpace(*existing.WorkerID) != req.WorkerID {
+		return model.Deployment{}, fmt.Errorf("%w: worker_id does not match claimer", ErrForbidden)
+	}
+
 	if req.Status != "" {
 		switch req.Status {
 		case "claimed", "building", "running", "failed", "stopped":

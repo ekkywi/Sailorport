@@ -4,10 +4,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** 35c — CORS allowlist + PATCH (Step 35 complete)
+- **Step selesai:** 35c + Pass B/C (agent + web harden)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** opsional — Pass B/C QC; backlog `docs/ROADMAP.md`
-- **Terakhir dikerjakan:** 2026-09-25 — Step 35 (CORS production-ready)
+- **Step berikutnya:** opsional — backlog `docs/ROADMAP.md` (Known debt Medium)
+- **Terakhir dikerjakan:** 2026-09-28 — Pass C (portal 401 logout, Redeploy ACL UI, secret redact client)
 - **Mesin terakhir:** rumah / lokal
 
 ## Checklist step belajar

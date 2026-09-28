@@ -26,6 +26,8 @@ type DeploymentsDialogProps = {
   serviceName: string;
   sourceType?: string;
   containerPort?: number;
+  /** When false (viewer), hide Redeploy — API would 403 anyway. */
+  canWrite?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRefreshCatalog?: () => void;
@@ -59,6 +61,7 @@ export function DeploymentsDialog({
   serviceName,
   sourceType = "",
   containerPort = 0,
+  canWrite = true,
   open,
   onOpenChange,
   onRefreshCatalog,
@@ -190,7 +193,7 @@ export function DeploymentsDialog({
           <ul className="max-h-[360px] space-y-0 divide-y divide-border overflow-y-auto rounded-lg border border-border">
             {items.map((d) => {
               const sha = shortSHA(d.git_sha);
-              const canRedeploy = Boolean(d.git_sha?.trim());
+              const canRedeploy = canWrite && Boolean(d.git_sha?.trim());
               const busy = redeployingId === d.id;
               return (
                 <li key={d.id} className="px-3 py-3">

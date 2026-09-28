@@ -49,6 +49,7 @@ type UpdateDeploymentRequest struct {
 	ContainerID  string `json:"container_id"`
 	Port         *int   `json:"port"`
 	ErrorMessage string `json:"error_message"`
+	WorkerID     string `json:"worker_id"`
 }
 
 type RuntimeJob struct {
@@ -65,6 +66,7 @@ type UpdateRuntimeRequest struct {
 	Status       string `json:"status"`
 	ErrorMessage string `json:"error_message"`
 	Output       string `json:"output"`
+	WorkerID     string `json:"worker_id"`
 }
 
 func New(baseURL, token string) *APIClient {

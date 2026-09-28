@@ -5,7 +5,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+)
+
+var (
+	shaPattern    = regexp.MustCompile(`^[0-9a-fA-F]{7,40}$`)
+	branchPattern = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 )
 
 func Sync(repoURL, branch, dir, sha string) error {
@@ -16,8 +22,14 @@ func Sync(repoURL, branch, dir, sha string) error {
 	if repoURL == "" {
 		return fmt.Errorf("repo URL is empty")
 	}
+	if err := validateRepoURL(repoURL); err != nil {
+		return err
+	}
 	if branch == "" {
 		branch = "main"
+	}
+	if err := validateBranch(branch); err != nil {
+		return err
 	}
 	if dir == "" {
 		return fmt.Errorf("target dir is empty")
@@ -34,7 +46,7 @@ func Sync(repoURL, branch, dir, sha string) error {
 		}
 		_ = os.RemoveAll(dir)
 
-		cmd := exec.Command("git", "clone", "--branch", branch, "--single-branch", repoURL, dir)
+		cmd := exec.Command("git", "clone", "--branch", branch, "--single-branch", "--", repoURL, dir)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("git clone: %w\n%s", err, out)
@@ -51,7 +63,7 @@ func Sync(repoURL, branch, dir, sha string) error {
 func pull(dir, branch string) error {
 	cmds := [][]string{
 		{"fetch", "origin"},
-		{"checkout", branch},
+		{"checkout", "--", branch},
 		{"pull", "origin", branch},
 	}
 	for _, args := range cmds {
@@ -85,12 +97,12 @@ func HeadSHA(dir string) (string, error) {
 
 func checkoutSHA(dir, sha string) error {
 	sha = strings.TrimSpace(sha)
-	if sha == "" {
-		return fmt.Errorf("git sha is empty")
+	if err := validateSHA(sha); err != nil {
+		return err
 	}
 
 	// Prefer fetching the exact object (helps with --single-branch clones).
-	fetch := exec.Command("git", "fetch", "origin", sha)
+	fetch := exec.Command("git", "fetch", "origin", "--", sha)
 	fetch.Dir = dir
 	if out, err := fetch.CombinedOutput(); err != nil {
 		fetchAll := exec.Command("git", "fetch", "origin")
@@ -100,11 +112,50 @@ func checkoutSHA(dir, sha string) error {
 		}
 	}
 
-	cmd := exec.Command("git", "checkout", "--detach", sha)
+	cmd := exec.Command("git", "checkout", "--detach", "--", sha)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git checkout %s: %w\n%s", sha, err, out)
+	}
+	return nil
+}
+
+func validateRepoURL(repoURL string) error {
+	if strings.HasPrefix(repoURL, "-") {
+		return fmt.Errorf("repo URL must not start with '-'")
+	}
+	lower := strings.ToLower(repoURL)
+	switch {
+	case strings.HasPrefix(lower, "https://"),
+		strings.HasPrefix(lower, "http://"),
+		strings.HasPrefix(lower, "git@"),
+		strings.HasPrefix(lower, "ssh://"):
+		return nil
+	default:
+		return fmt.Errorf("repo URL must be http(s), ssh, or git@")
+	}
+}
+
+func validateBranch(branch string) error {
+	if strings.HasPrefix(branch, "-") {
+		return fmt.Errorf("branch must not start with '-'")
+	}
+	if !branchPattern.MatchString(branch) {
+		return fmt.Errorf("invalid branch name")
+	}
+	return nil
+}
+
+func validateSHA(sha string) error {
+	if sha == "" {
+		return fmt.Errorf("git sha is empty")
+	}
+	if strings.HasPrefix(sha, "-") {
+		return fmt.Errorf("git sha must not start with '-'")
+	}
+	if !shaPattern.MatchString(sha) {
+		return fmt.Errorf("git sha must be 7–40 hex characters")
 	}
 	return nil
 }

@@ -70,6 +70,15 @@ func TestNormalizeCreate_TrimsFields(t *testing.T) {
 	}
 }
 
+func TestNormalizeCreate_RejectsInvalidName(t *testing.T) {
+	for _, name := range []string{"..", "Foo", "a/b", "x"} {
+		_, err := normalizeCreate(model.CreateServiceRequest{Name: name})
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("name %q: want ErrInvalid, got %v", name, err)
+		}
+	}
+}
+
 func TestNormalizeCreate_GitRequiresRepoURL(t *testing.T) {
 	_, err := normalizeCreate(model.CreateServiceRequest{
 		Name:       "from-git",
@@ -99,7 +108,7 @@ func TestNormalizeCreate_GitOK(t *testing.T) {
 
 func TestNormalizeCreate_InvalidSourceType(t *testing.T) {
 	_, err := normalizeCreate(model.CreateServiceRequest{
-		Name:       "x",
+		Name:       "bad-src",
 		SourceType: "ftp",
 	})
 	if !errors.Is(err, ErrInvalid) {
@@ -127,7 +136,7 @@ func TestNormalizeCreate_WebhookDefaults(t *testing.T) {
 
 func TestNormalizeCreate_InvalidAutoDeployEnv(t *testing.T) {
 	_, err := normalizeCreate(model.CreateServiceRequest{
-		Name:                  "x",
+		Name:                  "svc-one",
 		AutoDeployEnvironment: "qa",
 	})
 	if !errors.Is(err, ErrInvalid) {
@@ -157,7 +166,7 @@ func TestNormalizeCreate_TrimsCatalogFields(t *testing.T) {
 
 func TestNormalizeCreate_CatalogAppRequiresID(t *testing.T) {
 	_, err := normalizeCreate(model.CreateServiceRequest{
-		Name:       "pg",
+		Name:       "demo-pg",
 		SourceType: "catalog_app",
 		Image:      "postgres:16-alpine",
 	})
@@ -215,7 +224,7 @@ func TestNormalizeUpdate_MergesGitFields(t *testing.T) {
 func TestNormalizeUpdate_SwitchToGitRequiresRepo(t *testing.T) {
 	existing := model.Service{SourceType: "scaffold"}
 	_, err := normalizeUpdate(model.UpdateServiceRequest{
-		Name:       "x",
+		Name:       "from-git",
 		SourceType: "git",
 	}, existing)
 	if !errors.Is(err, ErrInvalid) {
@@ -255,7 +264,7 @@ func TestNormalizeUpdate_InvalidAutoDeployEnv(t *testing.T) {
 		AutoDeployEnvironment: "staging",
 	}
 	_, err := normalizeUpdate(model.UpdateServiceRequest{
-		Name:                  "x",
+		Name:                  "svc-one",
 		AutoDeployEnvironment: "qa",
 	}, existing)
 	if !errors.Is(err, ErrInvalid) {
@@ -312,7 +321,7 @@ func TestNormalizeUpdate_ClearsAutoDeployEnabled(t *testing.T) {
 func TestNormalizeUpdate_RejectsSwitchToCatalogApp(t *testing.T) {
 	existing := model.Service{SourceType: "scaffold"}
 	_, err := normalizeUpdate(model.UpdateServiceRequest{
-		Name:         "x",
+		Name:         "demo-pg",
 		SourceType:   "catalog_app",
 		CatalogAppID: "postgres",
 	}, existing)
