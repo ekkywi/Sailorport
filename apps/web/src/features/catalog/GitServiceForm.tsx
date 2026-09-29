@@ -48,7 +48,26 @@ export function GitServiceForm({
           className="h-9 font-mono text-[13px]"
         />
         <p className="text-[11px] text-muted-foreground">
-          Public repo with a Dockerfile. Private repos are not supported yet.
+          HTTPS URL with a Dockerfile. Public repos work without a token; private
+          repos need a read-only access token below.
+        </p>
+      </div>
+
+      <div className="space-y-1.5 sm:col-span-2">
+        <Label htmlFor="git-token" className="text-[12px] text-muted-foreground">
+          Git access token (optional)
+        </Label>
+        <Input
+          id="git-token"
+          type="password"
+          autoComplete="new-password"
+          value={values.git_token}
+          onChange={(e) => onChange("git_token", e.target.value)}
+          placeholder="ghp_… or glpat_…"
+          className="h-9 font-mono text-[13px]"
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Required for private repositories. Not shown again after save.
         </p>
       </div>
 

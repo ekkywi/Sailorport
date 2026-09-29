@@ -78,7 +78,7 @@ Urutan berikutnya: opsional — backlog Tabel A/C atau Known debt Medium. Pass A
 | Ide | Kenapa | Estimasi | Status |
 |-----|--------|----------|--------|
 | Catalog app **Gitea** (atau MinIO / AdGuard) | Jalur sekunder siap; pola `command` + env sudah ada | ~1–2 step kecil | kandidat |
-| **Private Git** (deploy key / token) | QC debt: sekarang hanya public clone | medium | kandidat — **Step 37** setelah Volume persist |
+| **Private Git** (deploy key / token) | QC debt: sekarang hanya public clone | medium | ✅ Step 37 complete — HTTPS PAT; SSH deploy key menyusul |
 | **Volume persist** catalog apps | Postgres/Redis hilang data saat recreate container | medium (agent + manifest) | ✅ Step 36 complete — generic `volumes` in manifest |
 | **Health / open URL** di catalog | Port sudah ada; UX klik buka app | kecil (web) | kandidat |
 | **Notifikasi deploy gagal** (audit + badge/toast) | Audit ada; kurang sinyal ke user | kecil–medium | kandidat |

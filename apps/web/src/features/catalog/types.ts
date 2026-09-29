@@ -28,6 +28,8 @@ export type Service = {
   webhook_secret_set: boolean;
   auto_deploy_enabled: boolean;
   auto_deploy_environment: string;
+  git_token: string;
+  git_token_set: boolean;
   catalog_app_id: string;
   image: string;
   container_port: number;
@@ -47,6 +49,7 @@ export type CreateServiceInput = {
   branch?: string;
   dockerfile_path?: string;
   webhook_secret?: string;
+  git_token?: string;
   auto_deploy_enabled?: boolean;
   auto_deploy_environment?: string;
   catalog_app_id?: string;
@@ -64,6 +67,7 @@ export type UpdateServiceInput = {
   branch?: string;
   dockerfile_path?: string;
   webhook_secret?: string;
+  git_token?: string;
   auto_deploy_enabled?: boolean;
   auto_deploy_environment?: string;
   catalog_app_id?: string;
@@ -81,6 +85,8 @@ export type ServiceFormValues = {
   webhook_secret_set: boolean;
   auto_deploy_enabled: boolean;
   auto_deploy_environment: string;
+  git_token: string;
+  git_token_set: boolean;
 };
 
 export type GitServiceFormValues = {
@@ -90,6 +96,7 @@ export type GitServiceFormValues = {
   repo_url: string;
   branch: string;
   dockerfile_path: string;
+  git_token: string;
 };
 
 export type CatalogAppEnvField = {
@@ -178,6 +185,8 @@ export const emptyServiceForm: ServiceFormValues = {
   webhook_secret_set: false,
   auto_deploy_enabled: false,
   auto_deploy_environment: "staging",
+  git_token: "",
+  git_token_set: false,
 };
 
 export function serviceToFormValues(svc: Service): ServiceFormValues {
@@ -187,6 +196,8 @@ export function serviceToFormValues(svc: Service): ServiceFormValues {
     owner: svc.owner,
     webhook_secret: "",
     webhook_secret_set: Boolean(svc.webhook_secret_set),
+    git_token: "",
+    git_token_set: Boolean(svc.git_token_set),
     auto_deploy_enabled: Boolean(svc.auto_deploy_enabled),
     auto_deploy_environment: svc.auto_deploy_environment || "staging",
   };
@@ -206,6 +217,10 @@ export function formValuesToUpdateInput(
   const secret = values.webhook_secret.trim();
   if (secret) {
     input.webhook_secret = secret;
+  }
+  const gitToken = values.git_token.trim();
+  if (gitToken) {
+    input.git_token = gitToken;
   }
   if (options?.catalog_env) {
     input.catalog_env = options.catalog_env;

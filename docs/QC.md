@@ -63,7 +63,7 @@ Jalankan minimal setelah perubahan di `deployments`, `webhook`, atau `agent`:
 | Tes unit untuk `Deployments.Redeploy` / `Create` dengan `git_sha` | Sedang | Belum ada `deployment_test.go`; behavior baru divalidasi manual |
 | Tes untuk `git.Sync` end-to-end (clone temp repo) | Rendah | Validasi URL/branch/SHA + unit `safepath` ✅ Pass B; full `Sync` di temp repo masih opsional |
 | Redeploy = rebuild dari SHA, bukan restore container instan | Rendah (by design) | Didokumentasikan di `PROGRESS.md` Step 21; jangan "perbaiki" tanpa diskusi |
-| Private Git repo credentials | Sedang | Belum; Step 37 kandidat. Hanya public clone URL |
+| Private Git repo credentials | — | ✅ Fixed Step 37 — HTTPS PAT on service; claim → agent Sync; portal write-only |
 | Catalog app data hilang saat recreate container | — | ✅ Fixed Step 36 — named volumes from manifest; agent `-v` |
 | Bundle web >500KB (vite warning) | Rendah | Belum perlu code-splitting di skala MVP ini |
 | Webhook: tanpa rate limit pada endpoint publik | Sedang | Pass A sisa. Dedupe delivery ✅ Step 33; rate limit webhook masih terbuka |

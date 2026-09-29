@@ -70,6 +70,7 @@ const emptyGitForm: GitServiceFormValues = {
   repo_url: "",
   branch: "main",
   dockerfile_path: "Dockerfile",
+  git_token: "",
 };
 
 const emptyCatalogForm: CatalogAppFormValues = {
@@ -490,6 +491,9 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
         repo_url: gitValues.repo_url.trim(),
         branch: gitValues.branch.trim() || "main",
         dockerfile_path: gitValues.dockerfile_path.trim() || "Dockerfile",
+        ...(gitValues.git_token.trim()
+          ? { git_token: gitValues.git_token.trim() }
+          : {}),
       });
       toast("Service added from Git");
       setGitCreated(created);
@@ -861,7 +865,7 @@ export function CatalogPage({currentUser}: {currentUser: AuthUser}) {
                 <DialogTitle>Edit service</DialogTitle>
                 <DialogDescription>
                   {editingSourceType === "git"
-                    ? "Update catalog metadata and GitHub webhook auto-deploy."
+                    ? "Update metadata, git access token, and GitHub webhook auto-deploy."
                     : editingSourceType === "catalog_app"
                       ? "Update metadata and catalog environment variables. Redeploy after changing secrets."
                       : "Update catalog metadata for this service."}

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Environment } from "../environments/types";
 import { CatalogEnvFields } from "./CatalogEnvFields";
+import { GitTokenFields } from "./GitTokenFields";
 import type { CatalogAppEnvField, ServiceFormValues } from "./types";
 import { WebhookSettingsFields } from "./WebhookSettingsFields";
 
@@ -99,12 +100,19 @@ export function ServiceForm({
       </div>
 
       {showWebhookSettings ? (
-        <WebhookSettingsFields
-          values={values}
-          environments={environments}
-          disabled={saving}
-          onChange={onChange}
-        />
+        <>
+          <GitTokenFields
+            values={values}
+            disabled={saving}
+            onChange={onChange}
+          />
+          <WebhookSettingsFields
+            values={values}
+            environments={environments}
+            disabled={saving}
+            onChange={onChange}
+          />
+        </>
       ) : null}
 
       {showCatalogEnv ? (

@@ -14,10 +14,12 @@ var (
 	branchPattern = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 )
 
-func Sync(repoURL, branch, dir, sha string) error {
+func Sync(repoURL, branch, dir, sha, token string) error {
 	repoURL = strings.TrimSpace(repoURL)
 	branch = strings.TrimSpace(branch)
 	dir = strings.TrimSpace(dir)
+	token = strings.TrimSpace(token)
+	sha = strings.TrimSpace(sha)
 
 	if repoURL == "" {
 		return fmt.Errorf("repo URL is empty")
@@ -35,8 +37,26 @@ func Sync(repoURL, branch, dir, sha string) error {
 		return fmt.Errorf("target dir is empty")
 	}
 
+	authURL, cleanURL, err := resolveAuthURL(repoURL, token)
+	if err != nil {
+		return err
+	}
+
+	// Keep credentials on origin only for network ops; scrub before return
+	// (including on error after a repo exists).
+	scrub := false
+	defer func() {
+		if scrub {
+			_ = setRemoteURL(dir, cleanURL)
+		}
+	}()
+
 	gitDir := filepath.Join(dir, ".git")
 	if _, err := os.Stat(gitDir); err == nil {
+		if err := setRemoteURL(dir, authURL); err != nil {
+			return err
+		}
+		scrub = true
 		if err := pull(dir, branch); err != nil {
 			return err
 		}
@@ -46,14 +66,14 @@ func Sync(repoURL, branch, dir, sha string) error {
 		}
 		_ = os.RemoveAll(dir)
 
-		cmd := exec.Command("git", "clone", "--branch", branch, "--single-branch", "--", repoURL, dir)
+		cmd := exec.Command("git", "clone", "--branch", branch, "--single-branch", "--", authURL, dir)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("git clone: %w\n%s", err, out)
 		}
+		scrub = true
 	}
 
-	sha = strings.TrimSpace(sha)
 	if sha == "" {
 		return nil
 	}

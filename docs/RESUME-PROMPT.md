@@ -22,9 +22,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 36** — catalog app volume persist (2026-09-28).
+**Step terakhir selesai:** **Step 37** — Private Git credentials (PAT HTTPS, 2026-09-29).
 
-**Step berikutnya:** **Step 37** — Private Git credentials (setelah Volume persist).
+**Step berikutnya:** pilih dari `docs/ROADMAP.md` (Health/open URL, Gitea catalog, agent identity, …).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat

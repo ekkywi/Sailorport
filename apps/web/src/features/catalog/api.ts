@@ -1,9 +1,9 @@
 import { apiFetch, readErrorMessage } from "../../lib/http";
 import type { CatalogApp, CreateServiceInput, Service, UpdateServiceInput } from "./types";
 
-/** Pass C (C-M2): never keep webhook_secret in client state even if API mis-redacts. */
+/** Pass C (C-M2): never keep secrets in client state even if API mis-redacts. */
 function redactService(svc: Service): Service {
-  return { ...svc, webhook_secret: "" };
+  return { ...svc, webhook_secret: "", git_token: "" };
 }
 
 function redactServices(list: Service[]): Service[] {

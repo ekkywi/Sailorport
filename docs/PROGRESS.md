@@ -5,10 +5,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** **36** — Volume persist catalog apps (36a–36d)
+- **Step selesai:** **37** — Private Git credentials (37a–37e)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** **37** — Private Git (credentials) — dikunci setelah Volume persist
-- **Terakhir dikerjakan:** 2026-09-28 — Step 36 smoke: container baru + volume reused + data `persist_probe` tetap
+- **Step berikutnya:** pilih dari `docs/ROADMAP.md` (mis. Health/open URL, catalog Gitea, atau agent identity)
+- **Terakhir dikerjakan:** 2026-09-29 — Step 37e portal git access token; agent Sync HTTPS auth (37d)
 - **Catatan maintainer:** local / primary workstation
 
 ## Implementation checklist
@@ -140,6 +140,11 @@
 - [x] Step 36b — Volumes on claim job (API → agent payload)
 - [x] Step 36c — Agent `docker.Run` `-v` named volumes
 - [x] Step 36d — Tests smoke + docs (persist across redeploy)
+- [x] Step 37a — `services.git_token` migration + store
+- [x] Step 37b — Portal redact `git_token_set`; empty update = keep
+- [x] Step 37c — Claim job includes `git_token` for agent
+- [x] Step 37d — Agent `git.Sync` HTTPS auth + scrub remote
+- [x] Step 37e — Portal UI optional git access token
 
 ## Yang sudah jalan
 
@@ -1239,6 +1244,20 @@ Named Docker volumes dari **manifest** (generik). Redeploy/recreate container �
 - `SELECT * FROM persist_probe` → `1 | before-redeploy`
 
 Catatan: tombol **Redeploy** portal butuh `git_sha` (jalur Git). Untuk catalog app, recreate = **Deploy** lagi ke env yang sama (agent `rm` container + `run` dengan volume yang sama).
+
+### Step 37 — Private Git credentials ✅
+
+HTTPS **Personal Access Token** (opsional) pada service `source_type=git`. Token write-only di portal; disimpan di `services.git_token`; ikut claim job; agent inject ke URL clone/pull lalu scrub `git remote`.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 37a DB + store | ✅ | Migrasi `00025`, model + store CRUD |
+| 37b API redact / keep | ✅ | `PublicService` → `git_token_set`; update kosong = keep |
+| 37c Claim | ✅ | `DeploymentJob.git_token` dari JOIN services |
+| 37d Agent Sync | ✅ | `resolveAuthURL` + scrub; log `auth=%v` saja |
+| 37e Portal UI | ✅ | Create/Edit field password opsional |
+
+**Kontrak:** repo publik → token kosong. Privat → isi PAT read-only. SSH `repo_url` + token → ditolak agent. Encrypt at-rest seperti catalog env masih opsional (plaintext DB seperti `webhook_secret` untuk MVP).
 
 ---
 

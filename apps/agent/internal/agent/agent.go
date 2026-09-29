@@ -242,8 +242,9 @@ func (a *Agent) resolveWorkDir(job *client.DeploymentJob) (workDir string, gitSH
 			branch = "main"
 		}
 		wantSHA := strings.TrimSpace(job.GitSHA)
-		log.Printf("git sync repo=%s branch=%s dir=%s sha=%q", job.RepoURL, branch, dir, wantSHA)
-		if err := git.Sync(job.RepoURL, branch, dir, wantSHA); err != nil {
+		log.Printf("git sync repo=%s branch=%s dir=%s sha=%q auth=%v",
+			job.RepoURL, branch, dir, wantSHA, strings.TrimSpace(job.GitToken) != "")
+		if err := git.Sync(job.RepoURL, branch, dir, wantSHA, job.GitToken); err != nil {
 			return "", "", err
 		}
 		gotSHA, err := git.HeadSHA(dir)
