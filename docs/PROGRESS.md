@@ -7,8 +7,8 @@
 
 - **Step selesai:** **38** — Health / Open URL (38a–38d)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** pilih dari `docs/ROADMAP.md` (mis. catalog Gitea, notifikasi deploy gagal, agent identity)
-- **Terakhir dikerjakan:** 2026-09-30 — Step 38 smoke UI Open/Health (scaffold running); agent default workspace → `data/workspaces` (samakan dengan API)
+- **Step berikutnya:** **39** — Notifikasi deploy gagal (lonceng topbar) — **dikunci**
+- **Terakhir dikerjakan:** 2026-09-30 — Step 38 smoke UI Open/Health; kunci Step 39 notifikasi
 - **Catatan maintainer:** local / primary workstation
 
 ## Implementation checklist
@@ -149,6 +149,11 @@
 - [x] Step 38b — `VITE_DEPLOY_HOST` / `defaultDeployHost`
 - [x] Step 38c — Catalog + history: Open & Health links
 - [x] Step 38d — Smoke + docs
+- [ ] Step 39a — Kontrak notifikasi + API daftar deploy failed (scoped by role)
+- [ ] Step 39b — Unread count / last-read (client atau API)
+- [ ] Step 39c — Topbar lonceng + badge di `AppShell` (sejajar theme toggle)
+- [ ] Step 39d — Dropdown panel + deep-link history/catalog
+- [ ] Step 39e — Smoke + docs
 
 ## Yang sudah jalan
 
@@ -1276,6 +1281,34 @@ Portal menampilkan **Open** (root app) dan **Health** (`/healthz`) untuk deploy 
 
 **Smoke / QC (2026-09-30):** `deployUrls` Vitest (4) + `npm run build` hijau. Manual: scaffold `go-api` **running** → **Open** + **Health** muncul; catalog Postgres → port saja. Agent default `SAILORPORT_WORKSPACE` diarahkan ke `<repo>/data/workspaces` agar path scaffold tidak ditolak `safepath`.
 
+### Step 39 — Notifikasi deploy gagal (dikunci)
+
+**Tujuan:** lonceng di topbar (sejajar theme toggle) sebagai **wadah notifikasi**; MVP isi = **deploy failed**. Jenis notifikasi lain bisa menyusul tanpa ganti shell UI.
+
+**Personalisasi (kontrak):**
+
+| Role | Isi lonceng |
+|------|-------------|
+| **developer** | Deploy gagal pada service yang mereka miliki (`owner_user_id`) |
+| **viewer** | MVP: **tidak** dapat lonceng (atau read-only kosong) — hindari noise |
+| **admin** | **Semua** deploy gagal di sistem (bukan semua event audit) |
+
+Bukan salinan audit penuh. Audit page tetap log lengkap; lonceng = sinyal tindak lanjut.
+
+**UI:** icon lonceng + badge angka unread → dropdown daftar (service, env, waktu, cuplikan error) → klik buka history/catalog terkait.
+
+**Pecahan:**
+
+| Sub-step | Hasil |
+|----------|--------|
+| **39a** | API/query deploy failed scoped role (+ tipe event `deploy_failed` jika perlu) |
+| **39b** | Unread: last-read di client dulu OK; API unread opsional |
+| **39c** | `NotificationBell` di `AppShell` sebelum `ThemeToggle` |
+| **39d** | Dropdown + navigasi ke service/deploy |
+| **39e** | Smoke + docs |
+
+**Di luar Step 39:** WebSocket/push, email, notifikasi sukses deploy, event non-deploy.
+
 ---
 
 ### Checkpoint — Product vision (2026-08-20)
@@ -1288,19 +1321,19 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** backlog di `docs/ROADMAP.md` (Gitea catalog, notifikasi deploy gagal, agent identity, …). Pass B/C Critical/High sudah ✅.
+**Yang belum di kode:** Step **39** notifikasi (dikunci); backlog lain di `docs/ROADMAP.md`. Pass B/C Critical/High sudah ✅.
 
 ## Rencana step berikutnya (belum dikerjakan)
 
 | Step | Topik | Isi singkat |
 |------|-------|-------------|
-| — | Pass B/C QC | Agent + portal production review |
-| — | Backlog ide | `docs/ROADMAP.md` Tabel A/C (agent identity, fitur, …) |
+| **39** | Notifikasi deploy gagal | Lonceng topbar + badge; scoped owner / admin sees all fails |
+| — | Backlog ide | Gitea, service detail, agent identity — `docs/ROADMAP.md` |
 
 ## Next action
 
-1. Opsional: Pass B/C QC sebelum expose publik (`docs/QC.md`).
-2. Opsional: backlog fitur / harden di `docs/ROADMAP.md`.
+1. Mulai **Step 39a** — kontrak + sumber data deploy failed (scoped).
+2. Opsional: backlog lain di `docs/ROADMAP.md` setelah 39.
 
 ## Cara lanjut di mesin lain
 

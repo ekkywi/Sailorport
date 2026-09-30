@@ -24,7 +24,7 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Step terakhir selesai:** **Step 38** — Health / Open URL; smoke Open/Health di scaffold running (2026-09-30). Agent workspace default selaras API (`data/workspaces`).
 
-**Step berikutnya:** pilih dari `docs/ROADMAP.md` (Gitea catalog, notifikasi deploy gagal, agent identity, …).
+**Step berikutnya:** **Step 39** — Notifikasi deploy gagal (lonceng topbar + badge unread). Dikunci: developer = fails on owned services; admin = all deploy fails; viewer = no bell (MVP); shell siap jenis notif lain nanti.
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat

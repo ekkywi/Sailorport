@@ -43,6 +43,7 @@ func NewRouter(api API) http.Handler {
 	catalogAppsH := NewCatalogAppsHandler(api.CatalogApps)
 	workersH := NewWorkersHandler(api.Workers)
 	deploymentsH := NewDeploymentsHandler(api.Deployments)
+	notificationsH := NewNotificationsHandler(api.Deployments)
 	runtimeH := NewRuntimeHandler(api.Runtime)
 	envsH := NewEnvironmentsHandler(api.Environments)
 	webhooksH := NewWebhookHandler(api.Webhooks)
@@ -102,6 +103,7 @@ func NewRouter(api API) http.Handler {
 	mux.Handle("POST /api/v1/services/{id}/deployments", withRole(secret, currentUser, writer, deploymentsH.Create))
 	mux.Handle("GET /api/v1/services/{id}/deployments", withRole(secret, currentUser, reader, deploymentsH.ListByService))
 	mux.Handle("GET /api/v1/deployments", withRole(secret, currentUser, reader, deploymentsH.List))
+	mux.Handle("GET /api/v1/notifications", withRole(secret, currentUser, reader, notificationsH.List))
 	mux.Handle("GET /api/v1/deployments/{id}", withRole(secret, currentUser, reader, deploymentsH.Get))
 	mux.Handle("POST /api/v1/deployments/{id}/redeploy", withRole(secret, currentUser, writer, deploymentsH.Redeploy))
 

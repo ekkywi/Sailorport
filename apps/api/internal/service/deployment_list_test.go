@@ -122,3 +122,7 @@ func TestDeploymentsList_AdminRoleTrimmed(t *testing.T) {
 		t.Fatalf("trimmed admin should use list all")
 	}
 }
+
+func (f *fakeDeploymentsStore) ListFailed(ctx context.Context, ownerUserid string, limit int) ([]model.Notification, error) {
+	return nil, errors.New("not implemented")
+}

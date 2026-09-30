@@ -21,6 +21,7 @@ type deploymentsStore interface {
 	ListByService(ctx context.Context, serviceID string) ([]model.Deployment, error)
 	ClaimNext(ctx context.Context, workerID string) (model.DeploymentJob, error)
 	Update(ctx context.Context, id string, req model.UpdateDeploymentRequest) (model.Deployment, error)
+	ListFailed(ctx context.Context, ownerUserID string, limit int) ([]model.Notification, error)
 }
 
 type Deployments struct {
