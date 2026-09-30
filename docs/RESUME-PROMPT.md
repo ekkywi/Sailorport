@@ -22,9 +22,9 @@ Saya lanjut proyek **Sailorport** (self-hosted IDP: catalog, deploy, ship via ag
 
 **Stack:** Go (api/agent) + React/TS (web) + PostgreSQL + Docker Compose.
 
-**Step terakhir selesai:** **Step 37** — Private Git credentials (PAT HTTPS, 2026-09-29).
+**Step terakhir selesai:** **Step 38** — Health / Open URL; smoke Open/Health di scaffold running (2026-09-30). Agent workspace default selaras API (`data/workspaces`).
 
-**Step berikutnya:** pilih dari `docs/ROADMAP.md` (Health/open URL, Gitea catalog, agent identity, …).
+**Step berikutnya:** pilih dari `docs/ROADMAP.md` (Gitea catalog, notifikasi deploy gagal, agent identity, …).
 
 **Visi produk (ringkas):**
 - Sailorport **tetap IDP**; **catalog** = inventory pusat

@@ -26,7 +26,6 @@ type DeploymentsDialogProps = {
   serviceName: string;
   sourceType?: string;
   containerPort?: number;
-  /** When false (viewer), hide Redeploy — API would 403 anyway. */
   canWrite?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -72,7 +71,6 @@ export function DeploymentsDialog({
   const [loadedOnce, setLoadedOnce] = useState(false);
   const [redeployingId, setRedeployingId] = useState<string | null>(null);
 
-  // Avoid putting parent inline callbacks in load deps (causes refresh loops / flicker).
   const onRefreshCatalogRef = useRef(onRefreshCatalog);
   onRefreshCatalogRef.current = onRefreshCatalog;
 
@@ -235,7 +233,7 @@ export function DeploymentsDialog({
                             sourceType,
                             containerPort,
                           )}
-                          linkHealthz={sourceType !== "catalog_app"}
+                          sourceType={sourceType}
                         />
                       ) : null}
                       {canRedeploy ? (

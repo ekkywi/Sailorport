@@ -66,7 +66,7 @@ func Load() Config {
 
 	workspaceDir := strings.TrimSpace(os.Getenv("SAILORPORT_WORKSPACE"))
 	if workspaceDir == "" {
-		workspaceDir = filepath.Join(".", "workspaces")
+		workspaceDir = defaultWorkspaceDir()
 	}
 
 	return Config{
@@ -80,6 +80,36 @@ func Load() Config {
 		Labels:            parseWorkerLabels(),
 		WorkspaceDir:      workspaceDir,
 	}
+}
+
+// defaultWorkspaceDir prefers the repo data/workspaces folder (same as API
+// scaffold) when the agent is started from apps/agent. Falls back to
+// ./workspaces for isolated/agent-only layouts.
+func defaultWorkspaceDir() string {
+	candidates := []string{
+		filepath.Join("..", "..", "data", "workspaces"),
+		filepath.Join("..", "data", "workspaces"),
+		filepath.Join("data", "workspaces"),
+		filepath.Join(".", "workspaces"),
+	}
+	for _, c := range candidates {
+		abs, err := filepath.Abs(c)
+		if err != nil {
+			continue
+		}
+		// Prefer Sailorport monorepo layout: .../data/workspaces next to templates/.
+		repoRoot := filepath.Dir(filepath.Dir(abs))
+		if info, err := os.Stat(filepath.Join(repoRoot, "templates")); err == nil && info.IsDir() {
+			return abs
+		}
+		if info, err := os.Stat(abs); err == nil && info.IsDir() {
+			return abs
+		}
+	}
+	if abs, err := filepath.Abs(filepath.Join(".", "workspaces")); err == nil {
+		return abs
+	}
+	return filepath.Join(".", "workspaces")
 }
 
 func parseWorkerLabels() map[string]any {

@@ -5,10 +5,10 @@
 
 ## Status saat ini
 
-- **Step selesai:** **37** — Private Git credentials (37a–37e)
+- **Step selesai:** **38** — Health / Open URL (38a–38d)
 - **MVP core:** selesai (catalog, scaffold, deploy agent, env, runtime, logs, audit, multi-agent)
-- **Step berikutnya:** pilih dari `docs/ROADMAP.md` (mis. Health/open URL, catalog Gitea, atau agent identity)
-- **Terakhir dikerjakan:** 2026-09-29 — Step 37e portal git access token; agent Sync HTTPS auth (37d)
+- **Step berikutnya:** pilih dari `docs/ROADMAP.md` (mis. catalog Gitea, notifikasi deploy gagal, agent identity)
+- **Terakhir dikerjakan:** 2026-09-30 — Step 38 smoke UI Open/Health (scaffold running); agent default workspace → `data/workspaces` (samakan dengan API)
 - **Catatan maintainer:** local / primary workstation
 
 ## Implementation checklist
@@ -145,6 +145,10 @@
 - [x] Step 37c — Claim job includes `git_token` for agent
 - [x] Step 37d — Agent `git.Sync` HTTPS auth + scrub remote
 - [x] Step 37e — Portal UI optional git access token
+- [x] Step 38a — Deploy Open/Health URL helpers + rules
+- [x] Step 38b — `VITE_DEPLOY_HOST` / `defaultDeployHost`
+- [x] Step 38c — Catalog + history: Open & Health links
+- [x] Step 38d — Smoke + docs
 
 ## Yang sudah jalan
 
@@ -1259,6 +1263,19 @@ HTTPS **Personal Access Token** (opsional) pada service `source_type=git`. Token
 
 **Kontrak:** repo publik → token kosong. Privat → isi PAT read-only. SSH `repo_url` + token → ditolak agent. Encrypt at-rest seperti catalog env masih opsional (plaintext DB seperti `webhook_secret` untuk MVP).
 
+### Step 38 — Health / Open URL ✅
+
+Portal menampilkan **Open** (root app) dan **Health** (`/healthz`) untuk deploy **git/scaffold** yang `running` + punya host port. Host dari `VITE_DEPLOY_HOST` (default `localhost`). **Catalog apps** (Postgres/Redis): mapping port saja, tanpa link HTTP.
+
+| Sub-step | Status | Isi |
+|----------|--------|-----|
+| 38a Helpers | ✅ | `deployUrls.ts` + Vitest (`canShowDeployLinks`, `buildDeployUrl`) |
+| 38b Host env | ✅ | `defaultDeployHost` + `apps/web/.env.example` |
+| 38c UI | ✅ | `DeployedPortInfo` + ServiceList + DeploymentsDialog |
+| 38d Smoke + docs | ✅ | Unit + build; portal smoke Open/Health |
+
+**Smoke / QC (2026-09-30):** `deployUrls` Vitest (4) + `npm run build` hijau. Manual: scaffold `go-api` **running** → **Open** + **Health** muncul; catalog Postgres → port saja. Agent default `SAILORPORT_WORKSPACE` diarahkan ke `<repo>/data/workspaces` agar path scaffold tidak ditolak `safepath`.
+
 ---
 
 ### Checkpoint — Product vision (2026-08-20)
@@ -1271,7 +1288,7 @@ Diskusi positioning produk (detail: **`docs/PRODUCT.md`**):
 4. **Scaffold `go-api`:** tetap ada sebagai **golden path opsional**, bukan syarat deploy.
 5. **Webhook / rollback:** masuk **setelah** Git deploy (Step 19), bukan sebelum kontrak repo jelas.
 
-**Yang belum di kode:** Pass B/C QC; backlog lain di `docs/ROADMAP.md`.
+**Yang belum di kode:** backlog di `docs/ROADMAP.md` (Gitea catalog, notifikasi deploy gagal, agent identity, …). Pass B/C Critical/High sudah ✅.
 
 ## Rencana step berikutnya (belum dikerjakan)
 

@@ -1,8 +1,13 @@
+import {
+  buildDeployUrl,
+  defaultDeployHost,
+  deployHttpLinksEnabled,
+} from "@/features/catalog/deployUrls";
+
 type DeployedPortInfoProps = {
   hostPort: number;
   containerPort: number;
-  /** HTTP apps: link host port to /healthz. Catalog apps: plain text only. */
-  linkHealthz?: boolean;
+  sourceType: string;
 };
 
 export function containerPortForSource(
@@ -18,32 +23,52 @@ export function containerPortForSource(
 export function DeployedPortInfo({
   hostPort,
   containerPort,
-  linkHealthz = false,
+  sourceType,
 }: DeployedPortInfoProps) {
   const mapping = `${hostPort} → ${containerPort}`;
   const title = `External (host) ${hostPort} → internal (container) ${containerPort}`;
+  const showLinks = deployHttpLinksEnabled(sourceType);
 
-  if (linkHealthz) {
-    return (
-      <a
-        href={`http://localhost:${hostPort}/healthz`}
-        target="_blank"
-        rel="noreferrer"
-        className="font-mono text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-        title={`${title} — open /healthz`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {mapping}
-      </a>
-    );
+  const mappingEl = (
+    <span className="font-mono text-[11px] text-muted-foreground" title={title}>
+      {mapping}
+    </span>
+  );
+
+  if (!showLinks) {
+    return mappingEl;
   }
 
+  const host = defaultDeployHost();
+  const openHref = buildDeployUrl({ host, hostPort, kind: "open" });
+  const healthHref = buildDeployUrl({ host, hostPort, kind: "healthz" });
+
+  const linkClass =
+    "text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline";
+
   return (
-    <span
-      className="font-mono text-[11px] text-muted-foreground"
-      title={title}
-    >
-      {mapping}
+    <span className="inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+      {mappingEl}
+      <a
+        href={openHref}
+        target="_blank"
+        rel="noreferrer"
+        className={linkClass}
+        title={`Open app — ${openHref}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        Open
+      </a>
+      <a
+        href={healthHref}
+        target="_blank"
+        rel="noreferrer"
+        className={linkClass}
+        title={`Health check — ${healthHref}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        Health
+      </a>
     </span>
   );
 }

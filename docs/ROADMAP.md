@@ -80,7 +80,7 @@ Urutan berikutnya: opsional — backlog Tabel A/C atau Known debt Medium. Pass A
 | Catalog app **Gitea** (atau MinIO / AdGuard) | Jalur sekunder siap; pola `command` + env sudah ada | ~1–2 step kecil | kandidat |
 | **Private Git** (deploy key / token) | QC debt: sekarang hanya public clone | medium | ✅ Step 37 complete — HTTPS PAT; SSH deploy key menyusul |
 | **Volume persist** catalog apps | Postgres/Redis hilang data saat recreate container | medium (agent + manifest) | ✅ Step 36 complete — generic `volumes` in manifest |
-| **Health / open URL** di catalog | Port sudah ada; UX klik buka app | kecil (web) | kandidat |
+| **Health / open URL** di catalog | Port sudah ada; UX klik buka app | kecil (web) | ✅ Step 38 complete |
 | **Notifikasi deploy gagal** (audit + badge/toast) | Audit ada; kurang sinyal ke user | kecil–medium | kandidat |
 | **Service detail page** | Catalog padat; butuh halaman satu service | medium (web) | kandidat |
 | **Invite user** (email / invite link) | Sekarang admin set password manual | medium | kandidat |
@@ -119,8 +119,8 @@ Kecuali keputusan produk baru (diskusi dulu):
 
 | Prioritas | Sarankan mulai dari |
 |-----------|---------------------|
-| Fitur terlihat | Catalog app Gitea **atau** service detail page |
-| IDP lebih lengkap | Private Git credentials **atau** persistent volumes |
+| Fitur terlihat | Catalog app Gitea **atau** service detail page **atau** notifikasi deploy gagal |
+| IDP lebih lengkap | Invite user **atau** service detail page |
 | Keamanan sisa | Agent identity (per-worker token) **atau** webhook rate limit |
 
 ## Fase 3 — Ops & polish

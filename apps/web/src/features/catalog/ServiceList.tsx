@@ -207,7 +207,7 @@ function EnvDeployCell({
                       svc.source_type,
                       svc.container_port,
                     )}
-                    linkHealthz={svc.source_type !== "catalog_app"}
+                    sourceType={svc.source_type}
                   />
                 ) : null}
                 {(d.status === "running" || d.status === "stopped") ? (
